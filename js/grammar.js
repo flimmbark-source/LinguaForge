@@ -150,15 +150,19 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     // Check if we moved significantly (to distinguish from clicks)
     const moved = Math.abs(e.clientX - dragState.startX) > 5 || Math.abs(e.clientY - dragState.startY) > 5;
 
-    // Reset chip styling before reordering (so it doesn't flash)
+    if (moved) {
+      // Calculate insertion index BEFORE resetting styling
+      // This ensures we query chip positions while the dragged chip is still out of flow
+      handleVerseWordDrop(e.clientX, e.clientY, instanceId, onUpdate);
+    }
+
+    // Reset chip styling after reordering
     chip.style.position = '';
     chip.style.left = '';
     chip.style.top = '';
     chip.style.zIndex = '';
 
-    if (moved) {
-      handleVerseWordDrop(e.clientX, e.clientY, instanceId, onUpdate);
-    } else {
+    if (!moved) {
       // Just a click, not a drag - still update UI
       if (onUpdate) onUpdate();
     }
@@ -198,7 +202,7 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
 
   // Calculate insertion index based on pointer position
   const chips = Array.from(verseArea.querySelectorAll('.line-word-chip'));
-  let insertIndex = chips.length;
+  let insertIndex = 0;  // Start at position 0
 
   for (let i = 0; i < chips.length; i++) {
     const chip = chips[i];
@@ -209,9 +213,12 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
     const midX = rect.left + rect.width / 2;
 
     if (clientX < midX) {
-      insertIndex = i;
+      // Drop before this chip
       break;
     }
+
+    // Drop after this chip, increment position
+    insertIndex++;
   }
 
   // Reorder the word
