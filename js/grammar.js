@@ -233,20 +233,26 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
 
   const isRTL = getComputedStyle(verseArea).direction === 'rtl';
   const chips = Array.from(verseArea.children).filter(el =>
+    el.classList.contains('line-word-chip') &&
     !el.classList.contains('line-word-chip-placeholder') &&
     el.dataset.instanceId !== instanceId
   );
 
+  // Sort chips by visual position (left to right on screen)
+  chips.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+
   let insertBeforeChip = null;
 
-  for (const chip of chips) {
+  // In RTL, iterate right to left (reverse visual order)
+  const chipsToCheck = isRTL ? [...chips].reverse() : chips;
+
+  for (const chip of chipsToCheck) {
     const rect = chip.getBoundingClientRect();
-    const midX = rect.left + rect.width / 2;
+    const chipStart = rect.left;
+    const chipEnd = rect.left + rect.width;
 
-    // Check if mouse is "before" this chip (left in LTR, right in RTL)
-    const isBeforeChip = isRTL ? (clientX > midX) : (clientX < midX);
-
-    if (isBeforeChip) {
+    // Check if mouse is before this chip's start edge
+    if ((isRTL && clientX > chipEnd) || (!isRTL && clientX < chipStart)) {
       insertBeforeChip = chip;
       break;
     }
@@ -277,16 +283,21 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
     el.dataset.instanceId !== instanceId
   );
 
+  // Sort chips by visual position (left to right on screen)
+  chips.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+
   let insertIndex = 0;
 
-  for (const chip of chips) {
+  // In RTL, iterate right to left (reverse visual order)
+  const chipsToCheck = isRTL ? [...chips].reverse() : chips;
+
+  for (const chip of chipsToCheck) {
     const rect = chip.getBoundingClientRect();
-    const midX = rect.left + rect.width / 2;
+    const chipStart = rect.left;
+    const chipEnd = rect.left + rect.width;
 
-    // Check if mouse is "before" this chip
-    const isBeforeChip = isRTL ? (clientX > midX) : (clientX < midX);
-
-    if (isBeforeChip) {
+    // Check if mouse is before this chip's start edge
+    if ((isRTL && clientX > chipEnd) || (!isRTL && clientX < chipStart)) {
       break;  // Insert at current index
     }
 
@@ -349,15 +360,21 @@ export function setupVerseAreaDrop(verseArea, onUpdate) {
       !el.classList.contains('line-word-chip-placeholder')
     );
 
+    // Sort chips by visual position (left to right on screen)
+    chips.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+
     let insertIndex = 0;
 
-    for (const chip of chips) {
+    // In RTL, iterate right to left (reverse visual order)
+    const chipsToCheck = isRTL ? [...chips].reverse() : chips;
+
+    for (const chip of chipsToCheck) {
       const rect = chip.getBoundingClientRect();
-      const midX = rect.left + rect.width / 2;
+      const chipStart = rect.left;
+      const chipEnd = rect.left + rect.width;
 
-      const isBeforeChip = isRTL ? (e.clientX > midX) : (e.clientX < midX);
-
-      if (isBeforeChip) {
+      // Check if mouse is before this chip's start edge
+      if ((isRTL && e.clientX > chipEnd) || (!isRTL && e.clientX < chipStart)) {
         break;
       }
 
@@ -393,15 +410,21 @@ function updateInventoryPlaceholderPosition(clientX, verseArea, placeholder) {
     !el.classList.contains('line-word-chip-placeholder')
   );
 
+  // Sort chips by visual position (left to right on screen)
+  chips.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+
   let insertBeforeChip = null;
 
-  for (const chip of chips) {
+  // In RTL, iterate right to left (reverse visual order)
+  const chipsToCheck = isRTL ? [...chips].reverse() : chips;
+
+  for (const chip of chipsToCheck) {
     const rect = chip.getBoundingClientRect();
-    const midX = rect.left + rect.width / 2;
+    const chipStart = rect.left;
+    const chipEnd = rect.left + rect.width;
 
-    const isBeforeChip = isRTL ? (clientX > midX) : (clientX < midX);
-
-    if (isBeforeChip) {
+    // Check if mouse is before this chip's start edge
+    if ((isRTL && clientX > chipEnd) || (!isRTL && clientX < chipStart)) {
       insertBeforeChip = chip;
       break;
     }
