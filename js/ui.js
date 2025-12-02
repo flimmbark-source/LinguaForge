@@ -234,8 +234,10 @@ export function renderScribeBlocks() {
     }
 
     // Click to toggle pause
-    block.addEventListener('click', () => {
+    block.addEventListener('click', (e) => {
+      console.log('Scribe block clicked! Scribe ID:', scribe.id, 'Current paused state:', scribe.paused);
       toggleScribePaused(scribe.id);
+      console.log('After toggle, paused state:', gameState.scribeList.find(s => s.id === scribe.id)?.paused);
       renderScribeBlocks();
     });
 
