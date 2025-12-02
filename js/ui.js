@@ -257,12 +257,13 @@ function verseWordsChanged() {
 
 /**
  * Render verse word chips (only when verse changes)
+ * @param {boolean} force - Force re-render even if verse hasn't changed
  */
-function renderVerseChips() {
+function renderVerseChips(force = false) {
   if (!elements.grammarHebrewLineDiv) return;
 
-  // Only recreate chips if verse actually changed
-  if (!verseWordsChanged()) return;
+  // Only recreate chips if verse actually changed (unless forced)
+  if (!force && !verseWordsChanged()) return;
 
   elements.grammarHebrewLineDiv.innerHTML = '';
 
@@ -273,7 +274,7 @@ function renderVerseChips() {
     chip.style.direction = 'rtl';
     chip.textContent = wordInstance.hebrew;
     chip.dataset.instanceId = wordInstance.instanceId;
-    setupVerseWordChipDrag(chip, wordInstance.instanceId, updateGrammarUI);
+    setupVerseWordChipDrag(chip, wordInstance.instanceId, () => updateGrammarUI(true));
     elements.grammarHebrewLineDiv.appendChild(chip);
   });
 
@@ -283,12 +284,13 @@ function renderVerseChips() {
 
 /**
  * Update grammar/verse UI
+ * @param {boolean} force - Force chip re-render (used after drag operations)
  */
-export function updateGrammarUI() {
+export function updateGrammarUI(force = false) {
   if (!elements.grammarHebrewLineDiv) return;
 
-  // Only recreate chips when needed
-  renderVerseChips();
+  // Only recreate chips when needed (or forced after drag)
+  renderVerseChips(force);
 
   // Always evaluate and update text (this is cheap)
   const { translit, literal, score } = evaluateVerse(gameState.verseWords);
