@@ -12,6 +12,9 @@ import { evaluateVerse, setupVerseWordChipDrag, isVerseSolved } from './grammar.
 // DOM element cache
 const elements = {};
 
+// Track last rendered verse state to avoid unnecessary recreations
+let lastRenderedVerseWords = [];
+
 /**
  * Initialize DOM element references
  */
@@ -239,10 +242,28 @@ export function renderScribeBlocks() {
 }
 
 /**
- * Update grammar/verse UI
+ * Check if verse words have changed since last render
+ * @returns {boolean} True if verse words changed
  */
-export function updateGrammarUI() {
+function verseWordsChanged() {
+  if (gameState.verseWords.length !== lastRenderedVerseWords.length) return true;
+
+  for (let i = 0; i < gameState.verseWords.length; i++) {
+    if (gameState.verseWords[i].instanceId !== lastRenderedVerseWords[i].instanceId) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Render verse word chips (only when verse changes)
+ */
+function renderVerseChips() {
   if (!elements.grammarHebrewLineDiv) return;
+
+  // Only recreate chips if verse actually changed
+  if (!verseWordsChanged()) return;
+
   elements.grammarHebrewLineDiv.innerHTML = '';
 
   // Render verse word chips
@@ -252,11 +273,24 @@ export function updateGrammarUI() {
     chip.style.direction = 'rtl';
     chip.textContent = wordInstance.hebrew;
     chip.dataset.instanceId = wordInstance.instanceId;
-    setupVerseWordChipDrag(chip, wordInstance.instanceId, updateUI);
+    setupVerseWordChipDrag(chip, wordInstance.instanceId, renderVerseChips);
     elements.grammarHebrewLineDiv.appendChild(chip);
   });
 
-  // Evaluate verse
+  // Update our tracking state
+  lastRenderedVerseWords = gameState.verseWords.map(w => ({ instanceId: w.instanceId }));
+}
+
+/**
+ * Update grammar/verse UI
+ */
+export function updateGrammarUI() {
+  if (!elements.grammarHebrewLineDiv) return;
+
+  // Only recreate chips when needed
+  renderVerseChips();
+
+  // Always evaluate and update text (this is cheap)
   const { translit, literal, score } = evaluateVerse(gameState.verseWords);
 
   if (elements.grammarTranslitDiv) {
