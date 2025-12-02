@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lingua Forge – Hebrew Grammar Prototype v4 (Free Verse Drop, Enscribe Check Only)</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #111827;
+      color: #f9fafb;
+      margin: 0;
+      padding: 16px;
+      display: flex;
+      gap: 16px;
+      height: 100vh;
+      padding-bottom: 180px;
+      box-sizing: border-box;
+    }
+    .column {
+      flex: 1;
+      background: #020617;
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: 0 0 0 1px rgba(148,163,184,0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: auto;
+    }
+    h2 { margin: 0 0 4px 0; font-size: 16px; }
+    h3 { margin: 8px 0 4px 0; font-size: 14px; }
+    .stat-row { display: flex; justify-content: space-between; font-size: 14px; }
+    button {
+      background: #4f46e5;
+      border: none;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    button:disabled { opacity: 0.4; cursor: default; }
+    button.secondary { background: #1f2937; }
+    .section {
+      border-radius: 10px;
+      padding: 8px;
+      background: #020617;
+      box-shadow: inset 0 0 0 1px rgba(55,65,81,0.8);
+    }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 6px; font-size: 13px; }
+    .pill { padding: 2px 8px; border-radius: 999px; font-size: 11px; background: #111827; }
+    .letter-board {
+      min-height: 72px;
+      border-radius: 8px;
+      border: 1px dashed #4b5563;
+      padding: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      background: #020617;
+    }
+    .letter-pool-dock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 8px 16px;
+      box-sizing: border-box;
+      background: #020617;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      height: 160px;
+    }
+    .bottom-dock-inner { display: flex; gap: 12px; }
+    .bottom-dock-column { flex: 1; min-width: 0; }
+    .letter-tile {
+      min-width: 24px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid #4b5563;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 18px;
+      background: #111827;
+      cursor: grab;
+      user-select: none;
+      position: relative;
+      line-height: 1;
+      touch-action: none; /* smoother pointer-drag on touch / trackpad */
+    }
+    .letter-tile:active { cursor: grabbing; }
+    .letter-count { font-size: 10px; opacity: 0.85; pointer-events: none; margin-top: 1px; }
+    .mold-list { display: flex; flex-direction: column; gap: 6px; }
+    .mold-card {
+      border-radius: 8px;
+      padding: 10px 10px;
+      background: #020617;
+      box-shadow: inset 0 0 0 1px rgba(55,65,81,0.7);
+      font-size: 13px;
+    }
+    .mold-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .mold-slots {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex-direction: row-reverse;
+      padding: 2px 0;
+    }
+    .slot {
+      flex: 0 0 32px;
+      height: 36px;
+      border-radius: 6px;
+      border: 2px dashed #4b5563;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      opacity: 0.7;
+      box-sizing: border-box;
+    }
+    .slot.filled {
+      border-style: solid;
+      background: #1f2937;
+      opacity: 1;
+      font-weight: 600;
+    }
+    .word-list { display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow-y: auto; font-size: 13px; }
+    .word-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 6px;
+      border-radius: 8px;
+      background: #020617;
+      box-shadow: inset 0 0 0 1px rgba(55,65,81,0.6);
+    }
+    .line-word-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3px 8px;
+      margin-right: 4px;
+      margin-bottom: 4px;
+      border-radius: 999px;
+      background: #1f2937;
+      border: 1px solid #4b5563;
+      font-size: 13px;
+      cursor: grab;
+      user-select: none;
+    }
+    .line-word-chip.translation { opacity: 0.95; cursor: default; }
+    .line-word-chip:active { cursor: grabbing; }
+    .strike-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 160px;
+      text-align: center;
+      pointer-events: auto;
+      z-index: 90;
+    }
+    .strike-bar button { padding-left: 18px; padding-right: 18px; }
+    .mold-viewport-bar {
+      position: fixed;
+      left: 16px;
+      bottom: 160px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      z-index: 95;
+    }
+    .mold-viewport {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #020617;
+      box-shadow: 0 0 0 1px rgba(55,65,81,0.8);
+      width: 320px;
+      box-sizing: border-box;
+    }
+    .mold-viewport .mold-list { flex: 1; overflow: hidden; }
+    .stats-wrap {
+      position: fixed;
+      right: 16px;
+      bottom: 160px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      z-index: 96;
+    }
+    .core-stats-float { width: 220px; }
+    .scribe-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .scribe-block {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: #030712;
+      box-shadow: inset 0 0 0 1px rgba(55,65,81,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .scribe-block.paused { opacity: 0.4; }
+    .scribe-progress {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 0%;
+      background: linear-gradient(to top, #4f46e5, #6366f1);
+      opacity: 0.85;
+      transition: height 0.1s linear;
+    }
+    .scribe-icon { position: relative; z-index: 1; font-size: 18px; }
+    .scribe-ghost {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 6px;
+      font-size: 10px;
+      color: #fef9c3;
+      pointer-events: none;
+      text-shadow: 0 0 4px rgba(0,0,0,0.8);
+    }
+    #grammarHebrewLine {
+      direction: rtl;
+      justify-content: flex-end;
+      min-height: 40px;
+    }
+    #grammarTranslit, #grammarLiteral, #grammarNatural, #grammarScore {
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <!-- LEFT COLUMN: SCRIBES -->
+  <div class="column">
+    <h2>Forge Core</h2>
+    <div class="section">
+      <h3>Apprentice Scribes</h3>
+      <div class="row">
+        <button id="buyScribeBtn">Hire Scribe</button>
+        <span style="font-size:12px;">Cost: <span id="scribeCost">10</span> letters</span>
+      </div>
+      <div id="scribeBlocks" class="scribe-grid"></div>
+    </div>
+  </div>
+
+  <!-- MIDDLE COLUMN: SELL LETTERS -->
+  <div class="column">
+    <div class="section">
+      <h3>Sell Letters</h3>
+      <div id="letterSell" class="letter-board"></div>
+      <div style="margin-top:6px; font-size:12px; opacity:0.75;">
+        Drop a letter tile here to dissolve it into <strong>Ink</strong> (1 Ink per letter for now).
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN: VERSE / GRAMMAR -->
+  <div class="column">
+    <h2>Verse: Foundations of Magic</h2>
+    <div class="section">
+      <div id="grammarHebrewLine" class="letter-board"></div>
+
+      <div id="grammarTranslit" style="font-size:13px; min-height:18px; margin:4px 0;"></div>
+
+      <div style="font-size:12px; opacity:0.8; margin-top:4px;">Translation</div>
+      <div id="grammarLiteral" style="font-size:13px; min-height:18px; margin-bottom:4px;"></div>
+
+      <div style="font-size:12px; opacity:0.8;">Verse</div>
+      <div id="grammarNatural" style="font-size:14px; font-weight:600; min-height:20px;"></div>
+
+      <div id="grammarScore" style="font-size:11px; opacity:0.7; margin-top:4px;"></div>
+
+      <div class="row" style="margin-top:10px;">
+        <button id="enscribeBtn" disabled>Enscribe Line</button>
+        <span class="pill">Lines completed: <span id="linesCompleted">0</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOLD VIEWPORT BAR -->
+  <div class="mold-viewport-bar">
+    <button id="forgeWordsBtn">Forge</button>
+    <div class="mold-viewport">
+      <button id="prevMoldBtn" class="secondary">&lt;</button>
+      <span id="moldIndexLabel" style="font-size:12px; opacity:0.8;"></span>
+      <div id="moldList" class="mold-list"></div>
+      <button id="nextMoldBtn" class="secondary">&gt;</button>
+    </div>
+  </div>
+
+  <!-- STRIKE BAR -->
+  <div class="strike-bar">
+    <button id="strikeBtn">Strike (+<span id="clickGain">1</span> letter tile)</button>
+  </div>
+
+  <!-- FLOATING STATS -->
+  <div class="stats-wrap">
+    <button id="upgradesBtn" class="secondary">Upgrades</button>
+    <div class="section core-stats-float">
+      <div class="stat-row"><span>Letters Crafted</span><strong id="lettersDisplay">0</strong></div>
+      <div class="stat-row"><span>Ink (currency)</span><strong id="inkDisplay">0</strong></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM DOCK: LETTER POOL + INVENTORY -->
+  <div class="section letter-pool-dock">
+    <div class="bottom-dock-inner">
+      <div class="bottom-dock-column">
+        <h3>Letter Pool</h3>
+        <div id="letterPool" class="letter-board"></div>
+        <div style="margin-top:6px; font-size:12px; opacity:0.75;">
+          Drag letters from the pool onto molds. Only letters that fit a mold will be consumed.
+        </div>
+      </div>
+      <div class="bottom-dock-column">
+        <h3>Inventory</h3>
+        <div id="wordList" class="word-list"></div>
+        <div style="margin-top:6px; font-size:12px; opacity:0.75;">
+          Drag a word into the verse box to build the sentence.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- BASIC ECONOMY STATE ---
+    let letters = 0;
+    let ink = 0;
+    let lettersPerClick = 1;
+
+    const words = [];
+    let nextWordId = 1;
+
+    // Per-scribe visual state
+    const SCRIBE_CYCLE_SECONDS = 5;
+    const SCRIBE_GHOST_LIFETIME = 0.8;
+    let scribeList = [];
+    let nextScribeId = 1;
+    let scribeGhosts = [];
+
+    // --- TEXT / VERSE / LINE / MOLDS ---
+    const currentLine = {
+      id: 1,
+      english: 'Fire is the first breath of power.',
+      molds: [
+        { id: 1, english: 'fire',    hebrew: 'אש',      pattern: 'אש',      slots: [] },
+        { id: 2, english: 'is',      hebrew: 'היא',     pattern: 'היא',     slots: [] },
+        { id: 3, english: 'the',     hebrew: 'ה',       pattern: 'ה',       slots: [] },
+        { id: 4, english: 'first',   hebrew: 'ראשונה',  pattern: 'ראשונה',  slots: [] },
+        { id: 5, english: 'breath',  hebrew: 'נשמת',    pattern: 'נשמת',    slots: [] },
+        { id: 6, english: 'of',      hebrew: 'של',      pattern: 'של',      slots: [] },
+        { id: 7, english: 'power',   hebrew: 'כוח',     pattern: 'כוח',     slots: [] },
+      ],
+    };
+
+    currentLine.molds.forEach(m => {
+      m.slots = new Array(m.pattern.length).fill(false);
+    });
+
+    const allowedLetters = Array.from(
+      new Set(
+        currentLine.molds
+          .map(m => m.pattern.split(''))
+          .flat()
+      )
+    );
+
+    // --- LETTER TILES (STACKED) ---
+    let letterIdCounter = 1;
+    let draggedWordId = null;
+    let activeLetterDrag = null;
+
+    // DOM ELEMENTS
+    const lettersDisplay = document.getElementById('lettersDisplay');
+    const inkDisplay = document.getElementById('inkDisplay');
+    const clickGainSpan = document.getElementById('clickGain');
+    const strikeBtn = document.getElementById('strikeBtn');
+
+    const buyScribeBtn = document.getElementById('buyScribeBtn');
+    const scribeCostSpan = document.getElementById('scribeCost');
+    const scribeBlocksContainer = document.getElementById('scribeBlocks');
+
+    const letterPoolDiv = document.getElementById('letterPool');
+    const letterSellDiv = document.getElementById('letterSell');
+    const moldListDiv = document.getElementById('moldList');
+    const forgeWordsBtn = document.getElementById('forgeWordsBtn');
+    const wordListDiv = document.getElementById('wordList');
+    const prevMoldBtn = document.getElementById('prevMoldBtn');
+    const nextMoldBtn = document.getElementById('nextMoldBtn');
+    const moldIndexLabel = document.getElementById('moldIndexLabel');
+    const moldViewportDiv = document.querySelector('.mold-viewport');
+
+    const enscribeBtn = document.getElementById('enscribeBtn');
+    const linesCompletedSpan = document.getElementById('linesCompleted');
+
+    const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
+    const grammarTranslitDiv = document.getElementById('grammarTranslit');
+    const grammarLiteralDiv = document.getElementById('grammarLiteral');
+    const grammarNaturalDiv = document.getElementById('grammarNatural');
+    const grammarScoreDiv = document.getElementById('grammarScore');
+
+    let currentMoldIndex = 0;
+
+    function randomAllowedLetter() {
+      if (allowedLetters.length === 0) return 'א';
+      const idx = Math.floor(Math.random() * allowedLetters.length);
+      return allowedLetters[idx];
+    }
+
+    function updateLetterTileLabel(tile) {
+      const char = tile.dataset.letterChar || '';
+      const count = parseInt(tile.dataset.count || '1', 10);
+      tile.innerHTML = '<span>' + char + '</span>';
+      if (count > 1) {
+        const badge = document.createElement('span');
+        badge.className = 'letter-count';
+        badge.textContent = 'x' + count;
+        tile.appendChild(badge);
+      }
+    }
+
+    function resetLetterTilePosition(tile) {
+      tile.style.position = '';
+      tile.style.left = '';
+      tile.style.top = '';
+      tile.style.zIndex = '';
+    }
+
+    function consumeLetterTile(tile) {
+      const count = parseInt(tile.dataset.count || '1', 10);
+      if (count > 1) {
+        tile.dataset.count = String(count - 1);
+        updateLetterTileLabel(tile);
+      } else {
+        tile.remove();
+      }
+    }
+
+    function sellOneLetterFromTile(tile) {
+      consumeLetterTile(tile);
+      ink += 1;
+    }
+
+    function handleLetterDrop(clientX, clientY, tile, dragState) {
+      const tileRect = tile.getBoundingClientRect();
+
+      const rectsIntersect = (r1, r2) => {
+        return !(
+          r2.left > r1.right ||
+          r2.right < r1.left ||
+          r2.top > r1.bottom ||
+          r2.bottom < r1.top
+        );
+      };
+
+      // 1) Sell board (priority so you can flick tiles into the sell zone)
+      if (letterSellDiv) {
+        const sellRect = letterSellDiv.getBoundingClientRect();
+        if (rectsIntersect(tileRect, sellRect)) {
+          sellOneLetterFromTile(tile);
+          resetLetterTilePosition(tile);
+          updateUI();
+          return;
+        }
+      }
+
+      // 2) Mold slots – generous hit test using tile/slot rect intersection
+      let matched = false;
+      const char = tile.dataset.letterChar || '';
+      if (moldListDiv) {
+        const visibleSlots = moldListDiv.querySelectorAll('.slot');
+        visibleSlots.forEach(slotEl => {
+          if (matched) return;
+          const moldId = Number(slotEl.dataset.moldId);
+          const slotIndex = Number(slotEl.dataset.slotIndex);
+          const mold = currentLine.molds.find(mm => mm.id === moldId);
+          if (!mold) return;
+          if (mold.slots[slotIndex]) return;
+          if (mold.pattern[slotIndex] !== char) return;
+
+          const slotRect = slotEl.getBoundingClientRect();
+          if (!rectsIntersect(tileRect, slotRect)) return;
+
+          // We have an overlapping, correct slot -> accept the drop
+          mold.slots[slotIndex] = true;
+          consumeLetterTile(tile);
+          matched = true;
+          updateUI();
+        });
+      }
+
+      if (matched) {
+        resetLetterTilePosition(tile);
+        return;
+      }
+
+      // 3) Letter pool – if overlapping anywhere, snap back into pool
+      if (letterPoolDiv) {
+        const poolRect = letterPoolDiv.getBoundingClientRect();
+        if (rectsIntersect(tileRect, poolRect)) {
+          letterPoolDiv.appendChild(tile);
+          resetLetterTilePosition(tile);
+          return;
+        }
+      }
+
+      // 4) Default – snap back to original parent
+      if (dragState.originalParent && dragState.originalParent.isConnected) {
+        dragState.originalParent.appendChild(tile);
+      }
+      resetLetterTilePosition(tile);
+    }
+
+    function setupLetterTilePointerDrag(tile) {
+      tile.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        const rect = tile.getBoundingClientRect();
+        activeLetterDrag = {
+          tile,
+          pointerId: e.pointerId,
+          offsetX: e.clientX - rect.left,
+          offsetY: e.clientY - rect.top,
+          originalParent: tile.parentElement,
+        };
+        tile.style.position = 'fixed';
+        tile.style.left = rect.left + 'px';
+        tile.style.top = rect.top + 'px';
+        tile.style.zIndex = '1000';
+        tile.setPointerCapture(e.pointerId);
+      });
+
+      tile.addEventListener('pointermove', e => {
+        if (!activeLetterDrag || activeLetterDrag.tile !== tile) return;
+        e.preventDefault();
+        const x = e.clientX - activeLetterDrag.offsetX;
+        const y = e.clientY - activeLetterDrag.offsetY;
+        tile.style.left = x + 'px';
+        tile.style.top = y + 'px';
+      });
+
+      tile.addEventListener('pointerup', e => {
+        if (!activeLetterDrag || activeLetterDrag.tile !== tile) return;
+        tile.releasePointerCapture(e.pointerId);
+        const dragState = activeLetterDrag;
+        activeLetterDrag = null;
+        handleLetterDrop(e.clientX, e.clientY, tile, dragState);
+      });
+    }
+
+    function createLetterTile(char) {
+      const tile = document.createElement('div');
+      tile.className = 'letter-tile';
+      tile.dataset.letterChar = char;
+      tile.dataset.count = '1';
+      tile.dataset.letterId = String(letterIdCounter++);
+      updateLetterTileLabel(tile);
+      setupLetterTilePointerDrag(tile);
+      return tile;
+    }
+
+    function spawnLetter() {
+      const char = randomAllowedLetter();
+      letters += 1;
+      if (!letterPoolDiv) return;
+
+      const existing = Array.from(letterPoolDiv.children).find(
+        el => el.classList && el.classList.contains('letter-tile') && el.dataset.letterChar === char
+      );
+      if (existing) {
+        const current = parseInt(existing.dataset.count || '1', 10);
+        existing.dataset.count = String(current + 1);
+        updateLetterTileLabel(existing);
+        return;
+      }
+
+      const tile = createLetterTile(char);
+      letterPoolDiv.appendChild(tile);
+    }
+
+    function getScribeCost(n) {
+      return Math.floor(10 * Math.pow(1.15, n));
+    }
+
+    function computeWordPower(len) {
+      return Math.sqrt(len) * 5;
+    }
+
+    function setMoldViewportWidth() {
+      if (!moldViewportDiv || !currentLine.molds.length) return;
+      const longest = currentLine.molds.reduce((max, m) => Math.max(max, m.pattern.length), 0);
+      const slotWidth = 32;
+      const gap = 6;
+      const extra = 96;
+      const innerWidth = longest > 0 ? (longest * slotWidth + (longest - 1) * gap) : 0;
+      const viewportWidth = innerWidth + extra;
+      moldViewportDiv.style.width = viewportWidth + 'px';
+    }
+
+    function renderMolds() {
+      if (!moldListDiv) return;
+      moldListDiv.innerHTML = '';
+      if (!currentLine.molds.length) return;
+
+      if (currentMoldIndex < 0) currentMoldIndex = 0;
+      if (currentMoldIndex >= currentLine.molds.length) currentMoldIndex = currentLine.molds.length - 1;
+
+      const mold = currentLine.molds[currentMoldIndex];
+
+      const card = document.createElement('div');
+      card.className = 'mold-card';
+      card.dataset.moldId = String(mold.id);
+
+      const header = document.createElement('div');
+      header.className = 'mold-header';
+      const left = document.createElement('div');
+      left.textContent = mold.english;
+      const right = document.createElement('div');
+      right.style.fontSize = '11px';
+      right.style.opacity = '0.8';
+      const filledCount = mold.slots.filter(x => x).length;
+      right.textContent = filledCount + '/' + mold.slots.length + ' letters';
+      header.appendChild(left);
+      header.appendChild(right);
+
+      const slotsRow = document.createElement('div');
+      slotsRow.className = 'mold-slots';
+
+      const chars = mold.pattern.split('');
+      chars.forEach((ch, idx) => {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        slot.dataset.moldId = String(mold.id);
+        slot.dataset.slotIndex = String(idx);
+
+        slot.textContent = ch;
+        if (mold.slots[idx]) {
+          slot.classList.add('filled');
+          slot.style.opacity = '1';
+        } else {
+          slot.style.opacity = '0.4';
+        }
+
+        slotsRow.appendChild(slot);
+      });
+
+      card.appendChild(header);
+      card.appendChild(slotsRow);
+      moldListDiv.appendChild(card);
+
+      if (moldIndexLabel) {
+        moldIndexLabel.textContent = (currentMoldIndex + 1) + ' / ' + currentLine.molds.length;
+      }
+    }
+
+    function renderWordList() {
+      if (!wordListDiv) return;
+      wordListDiv.innerHTML = '';
+      if (words.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.opacity = '0.6';
+        empty.style.fontSize = '12px';
+        empty.textContent = 'No words forged yet.';
+        wordListDiv.appendChild(empty);
+        return;
+      }
+
+      words.forEach(word => {
+        const card = document.createElement('div');
+        card.className = 'word-card';
+
+        const left = document.createElement('div');
+        left.style.display = 'flex';
+        left.style.alignItems = 'center';
+        left.style.gap = '6px';
+
+        const chip = document.createElement('div');
+        chip.className = 'line-word-chip';
+        chip.style.direction = 'rtl';
+        chip.textContent = word.text;
+        chip.draggable = true;
+        chip.dataset.wordId = String(word.id);
+        chip.addEventListener('dragstart', e => {
+          draggedWordId = word.id;
+          if (e.dataTransfer) {
+            e.dataTransfer.setData('text/plain', String(word.id));
+          }
+        });
+        chip.addEventListener('dragend', () => {
+          draggedWordId = null;
+        });
+        left.appendChild(chip);
+
+        const gloss = document.createElement('span');
+        gloss.style.fontSize = '11px';
+        gloss.style.opacity = '0.8';
+        gloss.textContent = word.english;
+        left.appendChild(gloss);
+
+        const right = document.createElement('div');
+        right.style.display = 'flex';
+        right.style.gap = '4px';
+
+        const sellBtn = document.createElement('button');
+        sellBtn.textContent = 'Sell';
+        sellBtn.onclick = () => {
+          const inkGain = word.length * 5;
+          ink += inkGain;
+          const idx = words.findIndex(w => w.id === word.id);
+          if (idx !== -1) words.splice(idx, 1);
+          updateUI();
+        };
+
+        right.appendChild(sellBtn);
+
+        card.appendChild(left);
+        card.appendChild(right);
+        wordListDiv.appendChild(card);
+      });
+    }
+
+    function renderScribeBlocks() {
+      if (!scribeBlocksContainer) return;
+      scribeBlocksContainer.innerHTML = '';
+      scribeList.forEach(scribe => {
+        const block = document.createElement('div');
+        block.className = 'scribe-block';
+        if (scribe.paused) {
+          block.classList.add('paused');
+        }
+
+        const progress = document.createElement('div');
+        progress.className = 'scribe-progress';
+        const clamped = Math.max(0, Math.min(1, scribe.progress));
+        progress.style.height = (clamped * 100).toFixed(1) + '%';
+        block.appendChild(progress);
+
+        const icon = document.createElement('div');
+        icon.className = 'scribe-icon';
+        icon.textContent = '✒️';
+        block.appendChild(icon);
+
+        const ghost = scribeGhosts.find(g => g.scribeId === scribe.id);
+        if (ghost) {
+          const ghostEl = document.createElement('div');
+          ghostEl.className = 'scribe-ghost';
+          const ratio = Math.max(0, Math.min(1, ghost.t / SCRIBE_GHOST_LIFETIME));
+          const opacity = 1 - ratio;
+          const offset = -6 - 10 * ratio;
+          ghostEl.style.opacity = opacity.toFixed(2);
+          ghostEl.style.transform = 'translate(-50%, ' + offset + 'px)';
+          ghostEl.textContent = '+1 Letter';
+          block.appendChild(ghostEl);
+        }
+
+        block.addEventListener('click', () => {
+          scribe.paused = !scribe.paused;
+          renderScribeBlocks();
+        });
+
+        scribeBlocksContainer.appendChild(block);
+      });
+    }
+
+    // --- GRAMMAR ENGINE ---
+    // Simple lexicon keyed by Hebrew surface form
+    const grammarLexicon = {
+      'אש':      { translit: 'esh',      gloss: 'fire' },
+      'היא':     { translit: 'hi',       gloss: 'is' },
+      'ה':       { translit: 'ha',       gloss: 'the' },
+      'ראשונה':  { translit: 'rishona',  gloss: 'first' },
+      'נשמת':    { translit: 'nishmat',  gloss: 'breath of' },
+      'של':      { translit: 'shel',     gloss: 'of' },
+      'כוח':     { translit: 'koach',    gloss: 'power' },
+    };
+
+    // The correct solution this line should match when Enscribe is pressed
+    const solutionHebrewOrder = ['אש', 'היא', 'ה', 'ראשונה', 'נשמת', 'של', 'כוח'];
+
+    // Verse is now instance-based: any word from inventory can be placed, in any order
+    let verseWords = []; // each: { instanceId, hebrew }
+    let draggedVerseInstanceId = null;
+
+    function evaluateVerse(verseWordsArr) {
+      const verseHebrew = verseWordsArr.map(w => w.hebrew);
+
+      // Build transliteration and literal gloss from lexicon when possible
+      const translitParts = [];
+      const literalParts = [];
+      verseHebrew.forEach(h => {
+        const entry = grammarLexicon[h];
+        if (entry) {
+          translitParts.push(entry.translit);
+          literalParts.push(entry.gloss);
+        } else {
+          translitParts.push(h);
+          literalParts.push(h);
+        }
+      });
+
+      // Score: how many positions match the solution order
+      const len = solutionHebrewOrder.length;
+      let matches = 0;
+      for (let i = 0; i < len; i++) {
+        if (verseHebrew[i] && verseHebrew[i] === solutionHebrewOrder[i]) {
+          matches++;
+        }
+      }
+      const score = len ? matches / len : 0;
+
+      return {
+        translit: translitParts.join(' '),
+        literal: literalParts.join(' '),
+        score,
+      };
+    }
+
+    function isVerseSolved() {
+      const verseHebrew = verseWords.map(w => w.hebrew);
+      if (verseHebrew.length !== solutionHebrewOrder.length) return false;
+      return solutionHebrewOrder.every((h, i) => verseHebrew[i] === h);
+    }
+
+    function updateGrammarUI() {
+      if (!grammarHebrewLineDiv) return;
+      grammarHebrewLineDiv.innerHTML = '';
+
+      // Render chips in current verse order
+      verseWords.forEach(wordInstance => {
+        const chip = document.createElement('div');
+        chip.className = 'line-word-chip';
+        chip.style.direction = 'rtl';
+        chip.textContent = wordInstance.hebrew;
+        chip.draggable = true;
+        chip.dataset.instanceId = wordInstance.instanceId;
+        chip.addEventListener('dragstart', e => {
+          draggedVerseInstanceId = wordInstance.instanceId;
+          if (e.dataTransfer) {
+            e.dataTransfer.setData('text/plain', wordInstance.instanceId);
+          }
+        });
+        chip.addEventListener('dragend', () => {
+          draggedVerseInstanceId = null;
+        });
+        grammarHebrewLineDiv.appendChild(chip);
+      });
+
+      const { translit, literal, score } = evaluateVerse(verseWords);
+
+      if (grammarTranslitDiv) grammarTranslitDiv.textContent = translit || '(drop words here)';
+      if (grammarLiteralDiv) grammarLiteralDiv.textContent = literal || '';
+      if (grammarNaturalDiv) grammarNaturalDiv.textContent = currentLine.english;
+      if (grammarScoreDiv) grammarScoreDiv.textContent = 'Grammar match: ' + Math.round(score * 100) + '%';
+    }
+
+    if (grammarHebrewLineDiv) {
+      grammarHebrewLineDiv.addEventListener('dragover', e => {
+        e.preventDefault();
+      });
+
+      grammarHebrewLineDiv.addEventListener('drop', e => {
+        e.preventDefault();
+
+        // Compute insertion index based on pointer X vs chip centers,
+        // so you can drop words out of order anywhere in the verse.
+        const chips = Array.from(grammarHebrewLineDiv.querySelectorAll('.line-word-chip'));
+        let insertIndex = chips.length;
+        for (let i = 0; i < chips.length; i++) {
+          const rect = chips[i].getBoundingClientRect();
+          const midX = rect.left + rect.width / 2;
+          if (e.clientX < midX) {
+            insertIndex = i;
+            break;
+          }
+        }
+
+        // Reordering existing verse chips (dragging within the verse)
+        if (draggedVerseInstanceId) {
+          const oldIndex = verseWords.findIndex(w => w.instanceId === draggedVerseInstanceId);
+          if (oldIndex !== -1) {
+            const [moved] = verseWords.splice(oldIndex, 1);
+            if (insertIndex > oldIndex) insertIndex--;
+            if (insertIndex < 0 || insertIndex > verseWords.length) insertIndex = verseWords.length;
+            verseWords.splice(insertIndex, 0, moved);
+          }
+          draggedVerseInstanceId = null;
+          updateGrammarUI();
+          updateUI();
+          return;
+        }
+
+        // Dropping a word from inventory into the verse in any order
+        if (draggedWordId !== null) {
+          const wIdx = words.findIndex(w => w.id === draggedWordId);
+          if (wIdx === -1) {
+            draggedWordId = null;
+            return;
+          }
+          const w = words[wIdx];
+          const instanceId = 'vw-' + Date.now() + '-' + Math.random();
+
+          if (insertIndex < 0 || insertIndex > verseWords.length) insertIndex = verseWords.length;
+          verseWords.splice(insertIndex, 0, { instanceId, hebrew: w.text });
+
+          // Remove that word instance from inventory
+          words.splice(wIdx, 1);
+          draggedWordId = null;
+          updateGrammarUI();
+          updateUI();
+        }
+      });
+    }
+
+    function updateUI() {
+      if (lettersDisplay) lettersDisplay.textContent = Math.floor(letters);
+      if (inkDisplay) inkDisplay.textContent = Math.floor(ink);
+      if (clickGainSpan) clickGainSpan.textContent = lettersPerClick;
+
+      const scribes = scribeList.length;
+      const scribeCost = getScribeCost(scribes);
+      if (scribeCostSpan) scribeCostSpan.textContent = scribeCost;
+      if (buyScribeBtn) buyScribeBtn.disabled = letters < scribeCost;
+
+      renderMolds();
+      renderWordList();
+      renderScribeBlocks();
+      updateGrammarUI();
+
+      const solved = isVerseSolved();
+      if (enscribeBtn) enscribeBtn.disabled = !solved;
+    }
+
+    function processScribeTick(scribe) {
+      if (scribe.lettersLeftInBatch <= 0) {
+        if (ink <= 0) {
+          scribe.progress = 1;
+          return false;
+        }
+        ink -= 1;
+        scribe.lettersLeftInBatch = 5;
+      }
+
+      scribe.progress -= 1;
+      spawnLetter();
+      scribe.lettersLeftInBatch -= 1;
+      scribeGhosts.push({ id: Date.now() + Math.random(), scribeId: scribe.id, t: 0 });
+      return true;
+    }
+
+    // --- EVENT HANDLERS ---
+    if (strikeBtn) {
+      strikeBtn.addEventListener('click', () => {
+        for (let i = 0; i < lettersPerClick; i++) {
+          spawnLetter();
+        }
+        updateUI();
+      });
+    }
+
+    if (buyScribeBtn) {
+      buyScribeBtn.addEventListener('click', () => {
+        const scribes = scribeList.length;
+        const cost = getScribeCost(scribes);
+        if (letters >= cost) {
+          letters -= cost;
+          const newScribe = {
+            id: nextScribeId++,
+            progress: 0,
+            paused: false,
+            lettersLeftInBatch: 0,
+          };
+          scribeList.push(newScribe);
+          updateUI();
+        }
+      });
+    }
+
+    if (prevMoldBtn && nextMoldBtn) {
+      prevMoldBtn.addEventListener('click', () => {
+        if (!currentLine.molds.length) return;
+        currentMoldIndex = (currentMoldIndex - 1 + currentLine.molds.length) % currentLine.molds.length;
+        renderMolds();
+      });
+      nextMoldBtn.addEventListener('click', () => {
+        if (!currentLine.molds.length) return;
+        currentMoldIndex = (currentMoldIndex + 1) % currentLine.molds.length;
+        renderMolds();
+      });
+    }
+
+    if (forgeWordsBtn) {
+      forgeWordsBtn.addEventListener('click', () => {
+        currentLine.molds.forEach(m => {
+          if (m.slots.every(s => s)) {
+            const w = {
+              id: nextWordId++,
+              text: m.pattern,
+              english: m.english,
+              length: m.pattern.length,
+              power: computeWordPower(m.pattern.length),
+            };
+            words.push(w);
+            m.slots = new Array(m.pattern.length).fill(false);
+          }
+        });
+        updateUI();
+      });
+    }
+
+    if (enscribeBtn) {
+      enscribeBtn.addEventListener('click', () => {
+        if (!isVerseSolved()) return;
+        ink += 100;
+        if (linesCompletedSpan) {
+          linesCompletedSpan.textContent = String(
+            Number(linesCompletedSpan.textContent || '0') + 1
+          );
+        }
+        alert('Verse completed! You gain 100 Ink (prototype value).');
+        verseWords = [];
+        updateUI();
+      });
+    }
+
+    // Spawn starting letters
+    for (let i = 0; i < 5; i++) {
+      spawnLetter();
+    }
+
+    setMoldViewportWidth();
+    updateUI();
+
+    // --- GAME LOOP ---
+    let lastTime = performance.now();
+    function gameLoop(timestamp) {
+      const dt = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      if (scribeList.length > 0) {
+        for (const scribe of scribeList) {
+          if (scribe.paused) continue;
+          scribe.progress += dt / SCRIBE_CYCLE_SECONDS;
+          while (scribe.progress >= 1) {
+            const produced = processScribeTick(scribe);
+            if (!produced) {
+              break;
+            }
+          }
+        }
+      }
+
+      if (scribeGhosts.length > 0) {
+        scribeGhosts.forEach(g => {
+          g.t += dt;
+        });
+        scribeGhosts = scribeGhosts.filter(g => g.t < SCRIBE_GHOST_LIFETIME);
+      }
+
+      updateUI();
+      requestAnimationFrame(gameLoop);
+    }
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
