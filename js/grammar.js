@@ -114,6 +114,17 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
   chip.addEventListener('pointerdown', e => {
     e.preventDefault();
     const rect = chip.getBoundingClientRect();
+
+    // Create placeholder element
+    const placeholder = document.createElement('div');
+    placeholder.className = 'line-word-chip-placeholder';
+    placeholder.style.width = rect.width + 'px';
+    placeholder.style.height = rect.height + 'px';
+    placeholder.style.opacity = '0.3';
+    placeholder.style.border = '2px dashed #666';
+    placeholder.style.background = 'transparent';
+    placeholder.style.boxSizing = 'border-box';
+
     dragState = {
       chip,
       instanceId,
@@ -122,13 +133,18 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
       offsetY: e.clientY - rect.top,
       startX: e.clientX,
       startY: e.clientY,
+      placeholder,
     };
+
+    // Insert placeholder at current position
+    chip.parentElement.insertBefore(placeholder, chip);
 
     // Make chip draggable
     chip.style.position = 'fixed';
     chip.style.left = rect.left + 'px';
     chip.style.top = rect.top + 'px';
     chip.style.zIndex = '1000';
+    chip.style.opacity = '0.8';
     chip.setPointerCapture(e.pointerId);
 
     gameState.draggedVerseInstanceId = instanceId;
@@ -141,6 +157,9 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     const y = e.clientY - dragState.offsetY;
     chip.style.left = x + 'px';
     chip.style.top = y + 'px';
+
+    // Update placeholder position based on where drop would occur
+    updatePlaceholderPosition(e.clientX, e.clientY, instanceId, dragState.placeholder);
   });
 
   chip.addEventListener('pointerup', e => {
@@ -156,11 +175,17 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
       handleVerseWordDrop(e.clientX, e.clientY, instanceId, onUpdate);
     }
 
+    // Remove placeholder
+    if (dragState.placeholder && dragState.placeholder.parentElement) {
+      dragState.placeholder.parentElement.removeChild(dragState.placeholder);
+    }
+
     // Reset chip styling after reordering
     chip.style.position = '';
     chip.style.left = '';
     chip.style.top = '';
     chip.style.zIndex = '';
+    chip.style.opacity = '';
 
     if (!moved) {
       // Just a click, not a drag - still update UI
@@ -175,11 +200,17 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     if (!dragState || dragState.chip !== chip) return;
     chip.releasePointerCapture(e.pointerId);
 
+    // Remove placeholder
+    if (dragState.placeholder && dragState.placeholder.parentElement) {
+      dragState.placeholder.parentElement.removeChild(dragState.placeholder);
+    }
+
     // Reset chip styling
     chip.style.position = '';
     chip.style.left = '';
     chip.style.top = '';
     chip.style.zIndex = '';
+    chip.style.opacity = '';
 
     gameState.draggedVerseInstanceId = null;
     dragState = null;
@@ -187,6 +218,43 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     // Update UI to refresh the chips
     if (onUpdate) onUpdate();
   });
+}
+
+/**
+ * Update placeholder position during drag to show where word will be inserted
+ * @param {number} clientX - Mouse X position
+ * @param {number} clientY - Mouse Y position
+ * @param {string} instanceId - Instance ID of the word being dragged
+ * @param {HTMLElement} placeholder - Placeholder element
+ */
+function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
+  const verseArea = document.getElementById('grammarHebrewLine');
+  if (!verseArea || !placeholder) return;
+
+  const chips = Array.from(verseArea.querySelectorAll('.line-word-chip'));
+  let insertBeforeChip = null;
+
+  for (let i = 0; i < chips.length; i++) {
+    const chip = chips[i];
+    // Skip the chip being dragged and the placeholder
+    if (chip.dataset.instanceId === instanceId || chip.classList.contains('line-word-chip-placeholder')) continue;
+
+    const rect = chip.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+
+    if (clientX < midX) {
+      insertBeforeChip = chip;
+      break;
+    }
+  }
+
+  // Move placeholder to the calculated position
+  if (insertBeforeChip) {
+    verseArea.insertBefore(placeholder, insertBeforeChip);
+  } else {
+    // Insert at the end
+    verseArea.appendChild(placeholder);
+  }
 }
 
 /**
@@ -233,12 +301,52 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
  * @param {Function} onUpdate - Callback when verse is updated
  */
 export function setupVerseAreaDrop(verseArea, onUpdate) {
+  let inventoryDragPlaceholder = null;
+
+  verseArea.addEventListener('dragenter', e => {
+    if (gameState.draggedWordId === null) return;
+
+    // Create placeholder if it doesn't exist
+    if (!inventoryDragPlaceholder) {
+      inventoryDragPlaceholder = document.createElement('div');
+      inventoryDragPlaceholder.className = 'line-word-chip-placeholder';
+      inventoryDragPlaceholder.style.width = '60px';
+      inventoryDragPlaceholder.style.height = '24px';
+      inventoryDragPlaceholder.style.opacity = '0.3';
+      inventoryDragPlaceholder.style.border = '2px dashed #666';
+      inventoryDragPlaceholder.style.background = 'transparent';
+      inventoryDragPlaceholder.style.boxSizing = 'border-box';
+      verseArea.appendChild(inventoryDragPlaceholder);
+    }
+  });
+
   verseArea.addEventListener('dragover', e => {
     e.preventDefault();
+
+    // Update placeholder position if dragging from inventory
+    if (gameState.draggedWordId !== null && inventoryDragPlaceholder) {
+      updateInventoryPlaceholderPosition(e.clientX, verseArea, inventoryDragPlaceholder);
+    }
+  });
+
+  verseArea.addEventListener('dragleave', e => {
+    // Only remove placeholder if leaving the verse area entirely
+    if (e.target === verseArea && inventoryDragPlaceholder) {
+      if (inventoryDragPlaceholder.parentElement) {
+        inventoryDragPlaceholder.parentElement.removeChild(inventoryDragPlaceholder);
+      }
+      inventoryDragPlaceholder = null;
+    }
   });
 
   verseArea.addEventListener('drop', e => {
     e.preventDefault();
+
+    // Remove placeholder
+    if (inventoryDragPlaceholder && inventoryDragPlaceholder.parentElement) {
+      inventoryDragPlaceholder.parentElement.removeChild(inventoryDragPlaceholder);
+      inventoryDragPlaceholder = null;
+    }
 
     // Calculate insertion index based on pointer position
     const chips = Array.from(verseArea.querySelectorAll('.line-word-chip'));
@@ -259,4 +367,39 @@ export function setupVerseAreaDrop(verseArea, onUpdate) {
       if (onUpdate) onUpdate();
     }
   });
+}
+
+/**
+ * Update placeholder position for inventory word drops
+ * @param {number} clientX - Mouse X position
+ * @param {HTMLElement} verseArea - Verse area element
+ * @param {HTMLElement} placeholder - Placeholder element
+ */
+function updateInventoryPlaceholderPosition(clientX, verseArea, placeholder) {
+  if (!verseArea || !placeholder) return;
+
+  const chips = Array.from(verseArea.querySelectorAll('.line-word-chip'));
+  let insertBeforeChip = null;
+
+  for (let i = 0; i < chips.length; i++) {
+    const chip = chips[i];
+    // Skip the placeholder itself
+    if (chip.classList.contains('line-word-chip-placeholder')) continue;
+
+    const rect = chip.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+
+    if (clientX < midX) {
+      insertBeforeChip = chip;
+      break;
+    }
+  }
+
+  // Move placeholder to the calculated position
+  if (insertBeforeChip) {
+    verseArea.insertBefore(placeholder, insertBeforeChip);
+  } else {
+    // Insert at the end
+    verseArea.appendChild(placeholder);
+  }
 }
