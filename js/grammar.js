@@ -231,7 +231,7 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
   const verseArea = document.getElementById('grammarHebrewLine');
   if (!verseArea || !placeholder) return;
 
-  const chips = Array.from(verseArea.querySelectorAll('.line-word-chip'));
+  const chips = Array.from(verseArea.querySelectorAll('.line-word-chip, .line-word-chip-placeholder'));
   let insertBeforeChip = null;
 
   for (let i = 0; i < chips.length; i++) {
@@ -269,13 +269,13 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
   if (!verseArea) return;
 
   // Calculate insertion index based on pointer position
-  const chips = Array.from(verseArea.querySelectorAll('.line-word-chip'));
+  const chips = Array.from(verseArea.querySelectorAll('.line-word-chip, .line-word-chip-placeholder'));
   let insertIndex = 0;  // Start at position 0
 
   for (let i = 0; i < chips.length; i++) {
     const chip = chips[i];
-    // Skip the chip being dragged
-    if (chip.dataset.instanceId === instanceId) continue;
+    // Skip the chip being dragged and any placeholders
+    if (chip.dataset.instanceId === instanceId || chip.classList.contains('line-word-chip-placeholder')) continue;
 
     const rect = chip.getBoundingClientRect();
     const midX = rect.left + rect.width / 2;
@@ -342,22 +342,28 @@ export function setupVerseAreaDrop(verseArea, onUpdate) {
   verseArea.addEventListener('drop', e => {
     e.preventDefault();
 
+    // Calculate insertion index based on pointer position (before removing placeholder)
+    const chips = Array.from(verseArea.querySelectorAll('.line-word-chip, .line-word-chip-placeholder'));
+    let insertIndex = 0;
+    for (let i = 0; i < chips.length; i++) {
+      const chip = chips[i];
+      // Skip any placeholders
+      if (chip.classList.contains('line-word-chip-placeholder')) continue;
+
+      const rect = chip.getBoundingClientRect();
+      const midX = rect.left + rect.width / 2;
+      if (e.clientX < midX) {
+        // Insert before this chip
+        break;
+      }
+      // Insert after this chip
+      insertIndex++;
+    }
+
     // Remove placeholder
     if (inventoryDragPlaceholder && inventoryDragPlaceholder.parentElement) {
       inventoryDragPlaceholder.parentElement.removeChild(inventoryDragPlaceholder);
       inventoryDragPlaceholder = null;
-    }
-
-    // Calculate insertion index based on pointer position
-    const chips = Array.from(verseArea.querySelectorAll('.line-word-chip'));
-    let insertIndex = chips.length;
-    for (let i = 0; i < chips.length; i++) {
-      const rect = chips[i].getBoundingClientRect();
-      const midX = rect.left + rect.width / 2;
-      if (e.clientX < midX) {
-        insertIndex = i;
-        break;
-      }
     }
 
     // Dropping a word from inventory (still uses HTML5 drag-and-drop)
@@ -378,7 +384,7 @@ export function setupVerseAreaDrop(verseArea, onUpdate) {
 function updateInventoryPlaceholderPosition(clientX, verseArea, placeholder) {
   if (!verseArea || !placeholder) return;
 
-  const chips = Array.from(verseArea.querySelectorAll('.line-word-chip'));
+  const chips = Array.from(verseArea.querySelectorAll('.line-word-chip, .line-word-chip-placeholder'));
   let insertBeforeChip = null;
 
   for (let i = 0; i < chips.length; i++) {
