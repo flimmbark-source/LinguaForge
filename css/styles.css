@@ -289,6 +289,13 @@ button.secondary {
   font-size: 13px;
   cursor: grab;
   user-select: none;
+  touch-action: none;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.line-word-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .line-word-chip.translation {

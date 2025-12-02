@@ -252,7 +252,7 @@ export function updateGrammarUI() {
     chip.style.direction = 'rtl';
     chip.textContent = wordInstance.hebrew;
     chip.dataset.instanceId = wordInstance.instanceId;
-    setupVerseWordChipDrag(chip, wordInstance.instanceId);
+    setupVerseWordChipDrag(chip, wordInstance.instanceId, updateUI);
     elements.grammarHebrewLineDiv.appendChild(chip);
   });
 

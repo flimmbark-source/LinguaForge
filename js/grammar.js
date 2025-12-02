@@ -103,25 +103,124 @@ export function completeVerse() {
 }
 
 /**
- * Setup drag-and-drop for verse word chips
+ * Setup pointer-based drag for verse word chips (more reliable than HTML5 drag-and-drop)
  * @param {HTMLElement} chip - Word chip element
  * @param {string} instanceId - Instance ID of the verse word
+ * @param {Function} onUpdate - Callback when verse is updated
  */
-export function setupVerseWordChipDrag(chip, instanceId) {
-  chip.draggable = true;
-  chip.addEventListener('dragstart', e => {
+export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
+  let dragState = null;
+
+  chip.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const rect = chip.getBoundingClientRect();
+    dragState = {
+      chip,
+      instanceId,
+      pointerId: e.pointerId,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+      startX: e.clientX,
+      startY: e.clientY,
+    };
+
+    // Make chip draggable
+    chip.style.position = 'fixed';
+    chip.style.left = rect.left + 'px';
+    chip.style.top = rect.top + 'px';
+    chip.style.zIndex = '1000';
+    chip.style.pointerEvents = 'none';
+    chip.setPointerCapture(e.pointerId);
+
     gameState.draggedVerseInstanceId = instanceId;
-    if (e.dataTransfer) {
-      e.dataTransfer.setData('text/plain', instanceId);
-    }
   });
-  chip.addEventListener('dragend', () => {
+
+  chip.addEventListener('pointermove', e => {
+    if (!dragState || dragState.chip !== chip) return;
+    e.preventDefault();
+    const x = e.clientX - dragState.offsetX;
+    const y = e.clientY - dragState.offsetY;
+    chip.style.left = x + 'px';
+    chip.style.top = y + 'px';
+  });
+
+  chip.addEventListener('pointerup', e => {
+    if (!dragState || dragState.chip !== chip) return;
+    chip.releasePointerCapture(e.pointerId);
+
+    // Check if we moved significantly (to distinguish from clicks)
+    const moved = Math.abs(e.clientX - dragState.startX) > 5 || Math.abs(e.clientY - dragState.startY) > 5;
+
+    if (moved) {
+      handleVerseWordDrop(e.clientX, e.clientY, instanceId, onUpdate);
+    }
+
+    // Reset chip styling
+    chip.style.position = '';
+    chip.style.left = '';
+    chip.style.top = '';
+    chip.style.zIndex = '';
+    chip.style.pointerEvents = '';
+
     gameState.draggedVerseInstanceId = null;
+    dragState = null;
+
+    if (onUpdate) onUpdate();
+  });
+
+  chip.addEventListener('pointercancel', e => {
+    if (!dragState || dragState.chip !== chip) return;
+    chip.releasePointerCapture(e.pointerId);
+
+    // Reset chip styling
+    chip.style.position = '';
+    chip.style.left = '';
+    chip.style.top = '';
+    chip.style.zIndex = '';
+    chip.style.pointerEvents = '';
+
+    gameState.draggedVerseInstanceId = null;
+    dragState = null;
   });
 }
 
 /**
- * Setup drag-and-drop for the verse area
+ * Handle dropping a verse word (reordering within verse)
+ * @param {number} clientX - Mouse X position
+ * @param {number} clientY - Mouse Y position
+ * @param {string} instanceId - Instance ID of the word being dropped
+ * @param {Function} onUpdate - Callback when verse is updated
+ */
+export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
+  const verseArea = document.getElementById('grammarHebrewLine');
+  if (!verseArea) return;
+
+  // Calculate insertion index based on pointer position
+  const chips = Array.from(verseArea.querySelectorAll('.line-word-chip'));
+  let insertIndex = chips.length;
+
+  for (let i = 0; i < chips.length; i++) {
+    const chip = chips[i];
+    // Skip the chip being dragged
+    if (chip.dataset.instanceId === instanceId) continue;
+
+    const rect = chip.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+
+    if (clientX < midX) {
+      insertIndex = i;
+      break;
+    }
+  }
+
+  // Reorder the word
+  reorderWord(instanceId, insertIndex);
+
+  if (onUpdate) onUpdate();
+}
+
+/**
+ * Setup drag-and-drop for the verse area (for inventory words)
  * @param {HTMLElement} verseArea - Verse area element
  * @param {Function} onUpdate - Callback when verse is updated
  */
@@ -145,15 +244,7 @@ export function setupVerseAreaDrop(verseArea, onUpdate) {
       }
     }
 
-    // Reordering existing verse chips
-    if (gameState.draggedVerseInstanceId) {
-      reorderWord(gameState.draggedVerseInstanceId, insertIndex);
-      gameState.draggedVerseInstanceId = null;
-      if (onUpdate) onUpdate();
-      return;
-    }
-
-    // Dropping a word from inventory
+    // Dropping a word from inventory (still uses HTML5 drag-and-drop)
     if (gameState.draggedWordId !== null) {
       placeWordInVerse(gameState.draggedWordId, insertIndex);
       gameState.draggedWordId = null;
