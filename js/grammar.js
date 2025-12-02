@@ -247,11 +247,8 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
     const rect = chip.getBoundingClientRect();
     const midX = rect.left + rect.width / 2;
 
-    // In LTR: insert before chip if mouse is left of midpoint
-    // In RTL: insert before chip if mouse is right of midpoint (earlier in reading order)
-    const isBeforeChip = isRTL ? (clientX > midX) : (clientX < midX);
-
-    if (isBeforeChip) {
+    // Since chips are sorted by screen position, always use screen-space comparison
+    if (clientX < midX) {
       insertBeforeChip = chip;
       break;
     }
@@ -291,11 +288,8 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
     const rect = chip.getBoundingClientRect();
     const midX = rect.left + rect.width / 2;
 
-    // In LTR: insert before chip if mouse is left of midpoint
-    // In RTL: insert before chip if mouse is right of midpoint
-    const isBeforeChip = isRTL ? (clientX > midX) : (clientX < midX);
-
-    if (isBeforeChip) {
+    // Since chips are sorted by screen position, always use screen-space comparison
+    if (clientX < midX) {
       break;  // Insert at current index
     }
 
@@ -373,9 +367,8 @@ export function setupVerseAreaDrop(verseArea, onUpdate) {
       const rect = chip.getBoundingClientRect();
       const midX = rect.left + rect.width / 2;
 
-      const isBeforeChip = isRTL ? (e.clientX > midX) : (e.clientX < midX);
-
-      if (isBeforeChip) {
+      // Since chips are sorted by screen position, always use screen-space comparison
+      if (e.clientX < midX) {
         break;
       }
 
@@ -425,9 +418,8 @@ function updateInventoryPlaceholderPosition(clientX, verseArea, placeholder) {
     const rect = chip.getBoundingClientRect();
     const midX = rect.left + rect.width / 2;
 
-    const isBeforeChip = isRTL ? (clientX > midX) : (clientX < midX);
-
-    if (isBeforeChip) {
+    // Since chips are sorted by screen position, always use screen-space comparison
+    if (clientX < midX) {
       insertBeforeChip = chip;
       break;
     }
