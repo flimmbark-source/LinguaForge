@@ -148,7 +148,9 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     chip.releasePointerCapture(e.pointerId);
 
     // Check if we moved significantly (to distinguish from clicks)
-    const moved = Math.abs(e.clientX - dragState.startX) > 5 || Math.abs(e.clientY - dragState.startY) > 5;
+    const moved =
+      Math.abs(e.clientX - dragState.startX) > 5 ||
+      Math.abs(e.clientY - dragState.startY) > 5;
 
     // Reset chip styling before reordering (so it doesn't flash)
     chip.style.position = '';
@@ -186,6 +188,38 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
 }
 
 /**
+ * Compute the insertion index based on pointer X and layout direction.
+ */
+function getInsertIndex(verseArea, chips, clientX, skipInstanceId = null) {
+  const styles = window.getComputedStyle(verseArea);
+  const isReversed =
+    styles.direction === 'rtl' ||
+    styles.flexDirection === 'row-reverse';
+
+  let insertIndex = chips.length;
+
+  for (let i = 0; i < chips.length; i++) {
+    const chip = chips[i];
+    if (skipInstanceId && chip.dataset.instanceId === skipInstanceId) continue;
+
+    const rect = chip.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+
+    // In a reversed layout, “before” is to the RIGHT.
+    const shouldInsertBefore = isReversed
+      ? clientX > midX
+      : clientX < midX;
+
+    if (shouldInsertBefore) {
+      insertIndex = i;
+      break;
+    }
+  }
+
+  return insertIndex;
+}
+
+/**
  * Handle dropping a verse word (reordering within verse)
  * @param {number} clientX - Mouse X position
  * @param {number} clientY - Mouse Y position
@@ -196,25 +230,16 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
   const verseArea = document.getElementById('grammarHebrewLine');
   if (!verseArea) return;
 
-  // Calculate insertion index based on pointer position
-  const chips = Array.from(verseArea.querySelectorAll('.line-word-chip'));
-  let insertIndex = chips.length;
+  const chips = Array.from(
+    verseArea.querySelectorAll('.line-word-chip')
+  );
+  const insertIndex = getInsertIndex(
+    verseArea,
+    chips,
+    clientX,
+    instanceId
+  );
 
-  for (let i = 0; i < chips.length; i++) {
-    const chip = chips[i];
-    // Skip the chip being dragged
-    if (chip.dataset.instanceId === instanceId) continue;
-
-    const rect = chip.getBoundingClientRect();
-    const midX = rect.left + rect.width / 2;
-
-    if (clientX < midX) {
-      insertIndex = i;
-      break;
-    }
-  }
-
-  // Reorder the word
   reorderWord(instanceId, insertIndex);
 
   if (onUpdate) onUpdate();
@@ -233,17 +258,10 @@ export function setupVerseAreaDrop(verseArea, onUpdate) {
   verseArea.addEventListener('drop', e => {
     e.preventDefault();
 
-    // Calculate insertion index based on pointer position
-    const chips = Array.from(verseArea.querySelectorAll('.line-word-chip'));
-    let insertIndex = chips.length;
-    for (let i = 0; i < chips.length; i++) {
-      const rect = chips[i].getBoundingClientRect();
-      const midX = rect.left + rect.width / 2;
-      if (e.clientX < midX) {
-        insertIndex = i;
-        break;
-      }
-    }
+    const chips = Array.from(
+      verseArea.querySelectorAll('.line-word-chip')
+    );
+    const insertIndex = getInsertIndex(verseArea, chips, e.clientX);
 
     // Dropping a word from inventory (still uses HTML5 drag-and-drop)
     if (gameState.draggedWordId !== null) {
