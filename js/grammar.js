@@ -109,9 +109,11 @@ export function completeVerse() {
  * @param {Function} onUpdate - Callback when verse is updated
  */
 export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
+  console.log('setupVerseWordChipDrag called for instanceId:', instanceId, 'chip:', chip);
   let dragState = null;
 
   chip.addEventListener('pointerdown', e => {
+    console.log('POINTERDOWN EVENT FIRED for instanceId:', instanceId);
     e.preventDefault();
     const rect = chip.getBoundingClientRect();
 
