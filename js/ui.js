@@ -3,7 +3,7 @@
  * Handles all UI updates and rendering logic
  */
 
-import { getScribeCost, SCRIBE_GHOST_LIFETIME } from './config.js';
+import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON } from './config.js';
 import { gameState } from './state.js';
 import { setupWordChipDrag, sellWord } from './molds.js';
 import { toggleScribePaused } from './scribes.js';
@@ -11,6 +11,12 @@ import { evaluateVerse, setupVerseWordChipDrag, isVerseSolved } from './grammar.
 
 // DOM element cache
 const elements = {};
+
+// Track last rendered verse state to avoid unnecessary recreations
+let lastRenderedVerseWords = [];
+
+// Track last rendered scribe state to avoid unnecessary recreations
+let lastRenderedScribes = [];
 
 /**
  * Initialize DOM element references
@@ -165,7 +171,9 @@ export function renderWordList() {
     const gloss = document.createElement('span');
     gloss.style.fontSize = '11px';
     gloss.style.opacity = '0.8';
-    gloss.textContent = word.english;
+    // Show transliteration from lexicon, or fall back to Hebrew text
+    const lexiconEntry = GRAMMAR_LEXICON[word.text];
+    gloss.textContent = lexiconEntry ? lexiconEntry.translit : word.text;
     left.appendChild(gloss);
 
     // Right side: sell button
@@ -188,10 +196,51 @@ export function renderWordList() {
 }
 
 /**
- * Render scribe blocks with progress bars
+ * Check if scribe list has changed since last render
+ * @returns {boolean} True if scribes changed
  */
-export function renderScribeBlocks() {
+function scribesChanged() {
+  if (gameState.scribeList.length !== lastRenderedScribes.length) return true;
+
+  for (let i = 0; i < gameState.scribeList.length; i++) {
+    const current = gameState.scribeList[i];
+    const last = lastRenderedScribes[i];
+    if (current.id !== last.id || current.paused !== last.paused) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Render scribe blocks with progress bars
+ * @param {boolean} force - Force re-render even if scribes haven't changed
+ */
+export function renderScribeBlocks(force = false) {
   if (!elements.scribeBlocksContainer) return;
+
+  // Only recreate blocks if scribes actually changed (unless forced)
+  if (!force && !scribesChanged()) {
+    // Update progress bars and paused state without recreating blocks
+    gameState.scribeList.forEach((scribe, index) => {
+      const block = elements.scribeBlocksContainer.children[index];
+      if (block) {
+        // Update progress bar
+        const progress = block.querySelector('.scribe-progress');
+        if (progress) {
+          const clamped = Math.max(0, Math.min(1, scribe.progress));
+          progress.style.height = (clamped * 100).toFixed(1) + '%';
+        }
+        // Update paused class
+        if (scribe.paused) {
+          block.classList.add('paused');
+        } else {
+          block.classList.remove('paused');
+        }
+      }
+    });
+    return;
+  }
+
   elements.scribeBlocksContainer.innerHTML = '';
 
   gameState.scribeList.forEach(scribe => {
@@ -229,20 +278,44 @@ export function renderScribeBlocks() {
     }
 
     // Click to toggle pause
-    block.addEventListener('click', () => {
+    block.addEventListener('click', (e) => {
+      console.log('Scribe block clicked! ID:', scribe.id, 'Paused:', scribe.paused);
       toggleScribePaused(scribe.id);
-      renderScribeBlocks();
+      console.log('After toggle, paused:', gameState.scribeList.find(s => s.id === scribe.id)?.paused);
+      renderScribeBlocks(true); // Force re-render after pause toggle
     });
 
     elements.scribeBlocksContainer.appendChild(block);
   });
+
+  // Update our tracking state
+  lastRenderedScribes = gameState.scribeList.map(s => ({ id: s.id, paused: s.paused }));
 }
 
 /**
- * Update grammar/verse UI
+ * Check if verse words have changed since last render
+ * @returns {boolean} True if verse words changed
  */
-export function updateGrammarUI() {
+function verseWordsChanged() {
+  if (gameState.verseWords.length !== lastRenderedVerseWords.length) return true;
+
+  for (let i = 0; i < gameState.verseWords.length; i++) {
+    if (gameState.verseWords[i].instanceId !== lastRenderedVerseWords[i].instanceId) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Render verse word chips (only when verse changes)
+ * @param {boolean} force - Force re-render even if verse hasn't changed
+ */
+function renderVerseChips(force = false) {
   if (!elements.grammarHebrewLineDiv) return;
+
+  // Only recreate chips if verse actually changed (unless forced)
+  if (!force && !verseWordsChanged()) return;
+
   elements.grammarHebrewLineDiv.innerHTML = '';
 
   // Render verse word chips
@@ -252,11 +325,25 @@ export function updateGrammarUI() {
     chip.style.direction = 'rtl';
     chip.textContent = wordInstance.hebrew;
     chip.dataset.instanceId = wordInstance.instanceId;
-    setupVerseWordChipDrag(chip, wordInstance.instanceId, updateUI);
+    setupVerseWordChipDrag(chip, wordInstance.instanceId, () => updateGrammarUI(true));
     elements.grammarHebrewLineDiv.appendChild(chip);
   });
 
-  // Evaluate verse
+  // Update our tracking state
+  lastRenderedVerseWords = gameState.verseWords.map(w => ({ instanceId: w.instanceId }));
+}
+
+/**
+ * Update grammar/verse UI
+ * @param {boolean} force - Force chip re-render (used after drag operations)
+ */
+export function updateGrammarUI(force = false) {
+  if (!elements.grammarHebrewLineDiv) return;
+
+  // Only recreate chips when needed (or forced after drag)
+  renderVerseChips(force);
+
+  // Always evaluate and update text (this is cheap)
   const { translit, literal, score } = evaluateVerse(gameState.verseWords);
 
   if (elements.grammarTranslitDiv) {

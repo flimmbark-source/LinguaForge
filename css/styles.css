@@ -332,6 +332,7 @@ button.secondary {
   justify-content: center;
   cursor: pointer;
   overflow: hidden;
+  user-select: none;
 }
 
 .scribe-block.paused {
@@ -347,12 +348,14 @@ button.secondary {
   background: linear-gradient(to top, #4f46e5, #6366f1);
   opacity: 0.85;
   transition: height 0.1s linear;
+  pointer-events: none;
 }
 
 .scribe-icon {
   position: relative;
   z-index: 1;
   font-size: 18px;
+  pointer-events: none;
 }
 
 .scribe-ghost {

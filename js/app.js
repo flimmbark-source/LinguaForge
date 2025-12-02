@@ -3,6 +3,8 @@
  * Entry point that initializes the game and manages the game loop
  */
 
+console.log('Lingua Forge app.js loading...');
+
 import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD } from './config.js';
 import { spawnLetter } from './letters.js';
 import { setMoldViewportWidth, navigatePreviousMold, navigateNextMold, forgeWords } from './molds.js';
@@ -15,6 +17,7 @@ import { gameState } from './state.js';
  * Initialize the game
  */
 function initializeGame() {
+  console.log('Initializing Lingua Forge...');
   // Initialize DOM element references
   initializeElements();
 
