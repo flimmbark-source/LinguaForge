@@ -220,14 +220,21 @@ export function renderScribeBlocks(force = false) {
 
   // Only recreate blocks if scribes actually changed (unless forced)
   if (!force && !scribesChanged()) {
-    // Update progress bars without recreating blocks
+    // Update progress bars and paused state without recreating blocks
     gameState.scribeList.forEach((scribe, index) => {
       const block = elements.scribeBlocksContainer.children[index];
       if (block) {
+        // Update progress bar
         const progress = block.querySelector('.scribe-progress');
         if (progress) {
           const clamped = Math.max(0, Math.min(1, scribe.progress));
           progress.style.height = (clamped * 100).toFixed(1) + '%';
+        }
+        // Update paused class
+        if (scribe.paused) {
+          block.classList.add('paused');
+        } else {
+          block.classList.remove('paused');
         }
       }
     });
