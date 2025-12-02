@@ -243,16 +243,15 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
 
   let insertBeforeChip = null;
 
-  // In RTL, iterate right to left (reverse visual order)
-  const chipsToCheck = isRTL ? [...chips].reverse() : chips;
-
-  for (const chip of chipsToCheck) {
+  for (const chip of chips) {
     const rect = chip.getBoundingClientRect();
-    const chipStart = rect.left;
-    const chipEnd = rect.left + rect.width;
+    const midX = rect.left + rect.width / 2;
 
-    // Check if mouse is before this chip's start edge
-    if ((isRTL && clientX > chipEnd) || (!isRTL && clientX < chipStart)) {
+    // In LTR: insert before chip if mouse is left of midpoint
+    // In RTL: insert before chip if mouse is right of midpoint (earlier in reading order)
+    const isBeforeChip = isRTL ? (clientX > midX) : (clientX < midX);
+
+    if (isBeforeChip) {
       insertBeforeChip = chip;
       break;
     }
@@ -288,20 +287,25 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
 
   let insertIndex = 0;
 
-  // In RTL, iterate right to left (reverse visual order)
-  const chipsToCheck = isRTL ? [...chips].reverse() : chips;
-
-  for (const chip of chipsToCheck) {
+  for (const chip of chips) {
     const rect = chip.getBoundingClientRect();
-    const chipStart = rect.left;
-    const chipEnd = rect.left + rect.width;
+    const midX = rect.left + rect.width / 2;
 
-    // Check if mouse is before this chip's start edge
-    if ((isRTL && clientX > chipEnd) || (!isRTL && clientX < chipStart)) {
+    // In LTR: insert before chip if mouse is left of midpoint
+    // In RTL: insert before chip if mouse is right of midpoint
+    const isBeforeChip = isRTL ? (clientX > midX) : (clientX < midX);
+
+    if (isBeforeChip) {
       break;  // Insert at current index
     }
 
     insertIndex++;  // Move past this chip
+  }
+
+  // In RTL, state array order is right-to-left but we calculated index left-to-right
+  // Convert: screen-left-to-right index -> state-right-to-left index
+  if (isRTL) {
+    insertIndex = chips.length - insertIndex;
   }
 
   reorderWord(instanceId, insertIndex);
@@ -365,20 +369,22 @@ export function setupVerseAreaDrop(verseArea, onUpdate) {
 
     let insertIndex = 0;
 
-    // In RTL, iterate right to left (reverse visual order)
-    const chipsToCheck = isRTL ? [...chips].reverse() : chips;
-
-    for (const chip of chipsToCheck) {
+    for (const chip of chips) {
       const rect = chip.getBoundingClientRect();
-      const chipStart = rect.left;
-      const chipEnd = rect.left + rect.width;
+      const midX = rect.left + rect.width / 2;
 
-      // Check if mouse is before this chip's start edge
-      if ((isRTL && e.clientX > chipEnd) || (!isRTL && e.clientX < chipStart)) {
+      const isBeforeChip = isRTL ? (e.clientX > midX) : (e.clientX < midX);
+
+      if (isBeforeChip) {
         break;
       }
 
       insertIndex++;
+    }
+
+    // In RTL, state array order is right-to-left but we calculated index left-to-right
+    if (isRTL) {
+      insertIndex = chips.length - insertIndex;
     }
 
     // Remove placeholder
@@ -415,16 +421,13 @@ function updateInventoryPlaceholderPosition(clientX, verseArea, placeholder) {
 
   let insertBeforeChip = null;
 
-  // In RTL, iterate right to left (reverse visual order)
-  const chipsToCheck = isRTL ? [...chips].reverse() : chips;
-
-  for (const chip of chipsToCheck) {
+  for (const chip of chips) {
     const rect = chip.getBoundingClientRect();
-    const chipStart = rect.left;
-    const chipEnd = rect.left + rect.width;
+    const midX = rect.left + rect.width / 2;
 
-    // Check if mouse is before this chip's start edge
-    if ((isRTL && clientX > chipEnd) || (!isRTL && clientX < chipStart)) {
+    const isBeforeChip = isRTL ? (clientX > midX) : (clientX < midX);
+
+    if (isBeforeChip) {
       insertBeforeChip = chip;
       break;
     }
