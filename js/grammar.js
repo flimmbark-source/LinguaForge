@@ -109,11 +109,9 @@ export function completeVerse() {
  * @param {Function} onUpdate - Callback when verse is updated
  */
 export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
-  console.log('setupVerseWordChipDrag called for instanceId:', instanceId, 'chip:', chip);
   let dragState = null;
 
   chip.addEventListener('pointerdown', e => {
-    console.log('POINTERDOWN EVENT FIRED for instanceId:', instanceId);
     e.preventDefault();
     const rect = chip.getBoundingClientRect();
 
@@ -126,7 +124,6 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     placeholder.style.border = '2px dashed #666';
     placeholder.style.background = 'transparent';
     placeholder.style.boxSizing = 'border-box';
-    console.log('Created placeholder:', placeholder, 'size:', rect.width, 'x', rect.height);
 
     dragState = {
       chip,
@@ -162,7 +159,6 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     chip.style.top = y + 'px';
 
     // Update placeholder position based on where drop would occur
-    console.log('pointermove: updating placeholder position, clientX=', e.clientX);
     updatePlaceholderPosition(e.clientX, e.clientY, instanceId, dragState.placeholder);
   });
 
@@ -233,17 +229,14 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
  */
 function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
   const verseArea = document.getElementById('grammarHebrewLine');
-  if (!verseArea || !placeholder) {
-    console.log('updatePlaceholderPosition: missing verseArea or placeholder', {verseArea, placeholder});
-    return;
-  }
+  if (!verseArea || !placeholder) return;
 
   const chips = Array.from(verseArea.querySelectorAll('.line-word-chip, .line-word-chip-placeholder'));
   let insertBeforeChip = null;
 
-  console.log('updatePlaceholderPosition: clientX=', clientX, 'chips count=', chips.length);
-
-  for (let i = 0; i < chips.length; i++) {
+  // RTL layout: iterate right to left (reverse order)
+  // In RTL, visually rightmost chip is first in DOM
+  for (let i = chips.length - 1; i >= 0; i--) {
     const chip = chips[i];
     // Skip the chip being dragged and the placeholder
     if (chip.dataset.instanceId === instanceId || chip.classList.contains('line-word-chip-placeholder')) continue;
@@ -251,22 +244,23 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
     const rect = chip.getBoundingClientRect();
     const midX = rect.left + rect.width / 2;
 
-    console.log(`  Chip ${i}: left=${rect.left}, midX=${midX}, checking if ${clientX} < ${midX}`);
-
-    if (clientX < midX) {
-      insertBeforeChip = chip;
-      console.log('  -> Will insert before this chip');
+    // RTL: if mouse is RIGHT of midpoint, insert AFTER this chip (before in DOM)
+    if (clientX > midX) {
+      // Insert after this chip means insert before the next chip in DOM
+      insertBeforeChip = chip.nextElementSibling;
+      while (insertBeforeChip && (insertBeforeChip.dataset.instanceId === instanceId || insertBeforeChip.classList.contains('line-word-chip-placeholder'))) {
+        insertBeforeChip = insertBeforeChip.nextElementSibling;
+      }
       break;
     }
   }
 
   // Move placeholder to the calculated position
   if (insertBeforeChip) {
-    console.log('Inserting placeholder before chip:', insertBeforeChip.textContent);
     verseArea.insertBefore(placeholder, insertBeforeChip);
   } else {
-    console.log('Appending placeholder to end');
-    verseArea.appendChild(placeholder);
+    // Insert at the beginning (rightmost visually in RTL)
+    verseArea.insertBefore(placeholder, verseArea.firstChild);
   }
 }
 
@@ -285,7 +279,8 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
   const chips = Array.from(verseArea.querySelectorAll('.line-word-chip, .line-word-chip-placeholder'));
   let insertIndex = 0;  // Start at position 0
 
-  for (let i = 0; i < chips.length; i++) {
+  // RTL layout: iterate right to left
+  for (let i = chips.length - 1; i >= 0; i--) {
     const chip = chips[i];
     // Skip the chip being dragged and any placeholders
     if (chip.dataset.instanceId === instanceId || chip.classList.contains('line-word-chip-placeholder')) continue;
@@ -293,13 +288,13 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
     const rect = chip.getBoundingClientRect();
     const midX = rect.left + rect.width / 2;
 
-    if (clientX < midX) {
-      // Drop before this chip
+    // RTL: if mouse is RIGHT of midpoint, insert AFTER this chip (higher index)
+    if (clientX > midX) {
+      insertIndex++;
+    } else {
+      // Mouse is LEFT of this chip, we've found the position
       break;
     }
-
-    // Drop after this chip, increment position
-    insertIndex++;
   }
 
   // Reorder the word
@@ -358,19 +353,23 @@ export function setupVerseAreaDrop(verseArea, onUpdate) {
     // Calculate insertion index based on pointer position (before removing placeholder)
     const chips = Array.from(verseArea.querySelectorAll('.line-word-chip, .line-word-chip-placeholder'));
     let insertIndex = 0;
-    for (let i = 0; i < chips.length; i++) {
+
+    // RTL layout: iterate right to left
+    for (let i = chips.length - 1; i >= 0; i--) {
       const chip = chips[i];
       // Skip any placeholders
       if (chip.classList.contains('line-word-chip-placeholder')) continue;
 
       const rect = chip.getBoundingClientRect();
       const midX = rect.left + rect.width / 2;
-      if (e.clientX < midX) {
-        // Insert before this chip
+
+      // RTL: if mouse is RIGHT of midpoint, insert AFTER this chip
+      if (e.clientX > midX) {
+        insertIndex++;
+      } else {
+        // Mouse is LEFT of this chip, we've found the position
         break;
       }
-      // Insert after this chip
-      insertIndex++;
     }
 
     // Remove placeholder
@@ -400,7 +399,8 @@ function updateInventoryPlaceholderPosition(clientX, verseArea, placeholder) {
   const chips = Array.from(verseArea.querySelectorAll('.line-word-chip, .line-word-chip-placeholder'));
   let insertBeforeChip = null;
 
-  for (let i = 0; i < chips.length; i++) {
+  // RTL layout: iterate right to left
+  for (let i = chips.length - 1; i >= 0; i--) {
     const chip = chips[i];
     // Skip the placeholder itself
     if (chip.classList.contains('line-word-chip-placeholder')) continue;
@@ -408,8 +408,13 @@ function updateInventoryPlaceholderPosition(clientX, verseArea, placeholder) {
     const rect = chip.getBoundingClientRect();
     const midX = rect.left + rect.width / 2;
 
-    if (clientX < midX) {
-      insertBeforeChip = chip;
+    // RTL: if mouse is RIGHT of midpoint, insert AFTER this chip (before in DOM)
+    if (clientX > midX) {
+      // Insert after this chip means insert before the next chip in DOM
+      insertBeforeChip = chip.nextElementSibling;
+      while (insertBeforeChip && insertBeforeChip.classList.contains('line-word-chip-placeholder')) {
+        insertBeforeChip = insertBeforeChip.nextElementSibling;
+      }
       break;
     }
   }
@@ -418,7 +423,7 @@ function updateInventoryPlaceholderPosition(clientX, verseArea, placeholder) {
   if (insertBeforeChip) {
     verseArea.insertBefore(placeholder, insertBeforeChip);
   } else {
-    // Insert at the end
-    verseArea.appendChild(placeholder);
+    // Insert at the beginning (rightmost visually in RTL)
+    verseArea.insertBefore(placeholder, verseArea.firstChild);
   }
 }

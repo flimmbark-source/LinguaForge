@@ -319,14 +319,12 @@ function renderVerseChips(force = false) {
   elements.grammarHebrewLineDiv.innerHTML = '';
 
   // Render verse word chips
-  console.log('renderVerseChips: rendering', gameState.verseWords.length, 'words');
   gameState.verseWords.forEach(wordInstance => {
     const chip = document.createElement('div');
     chip.className = 'line-word-chip';
     chip.style.direction = 'rtl';
     chip.textContent = wordInstance.hebrew;
     chip.dataset.instanceId = wordInstance.instanceId;
-    console.log('Creating chip for word:', wordInstance.hebrew, 'instanceId:', wordInstance.instanceId);
     setupVerseWordChipDrag(chip, wordInstance.instanceId, () => updateGrammarUI(true));
 
     // Allow dragover for inventory words to be dropped between existing chips
