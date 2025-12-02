@@ -129,7 +129,6 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     chip.style.left = rect.left + 'px';
     chip.style.top = rect.top + 'px';
     chip.style.zIndex = '1000';
-    chip.style.pointerEvents = 'none';
     chip.setPointerCapture(e.pointerId);
 
     gameState.draggedVerseInstanceId = instanceId;
@@ -151,21 +150,21 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     // Check if we moved significantly (to distinguish from clicks)
     const moved = Math.abs(e.clientX - dragState.startX) > 5 || Math.abs(e.clientY - dragState.startY) > 5;
 
-    if (moved) {
-      handleVerseWordDrop(e.clientX, e.clientY, instanceId, onUpdate);
-    }
-
-    // Reset chip styling
+    // Reset chip styling before reordering (so it doesn't flash)
     chip.style.position = '';
     chip.style.left = '';
     chip.style.top = '';
     chip.style.zIndex = '';
-    chip.style.pointerEvents = '';
+
+    if (moved) {
+      handleVerseWordDrop(e.clientX, e.clientY, instanceId, onUpdate);
+    } else {
+      // Just a click, not a drag - still update UI
+      if (onUpdate) onUpdate();
+    }
 
     gameState.draggedVerseInstanceId = null;
     dragState = null;
-
-    if (onUpdate) onUpdate();
   });
 
   chip.addEventListener('pointercancel', e => {
@@ -177,10 +176,12 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     chip.style.left = '';
     chip.style.top = '';
     chip.style.zIndex = '';
-    chip.style.pointerEvents = '';
 
     gameState.draggedVerseInstanceId = null;
     dragState = null;
+
+    // Update UI to refresh the chips
+    if (onUpdate) onUpdate();
   });
 }
 
