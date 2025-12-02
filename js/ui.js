@@ -196,12 +196,15 @@ export function renderWordList() {
  * Render scribe blocks with progress bars
  */
 export function renderScribeBlocks() {
+  console.log('renderScribeBlocks called, scribeList length:', gameState.scribeList.length);
+  console.log('scribeBlocksContainer exists?', !!elements.scribeBlocksContainer);
   if (!elements.scribeBlocksContainer) return;
   elements.scribeBlocksContainer.innerHTML = '';
 
   gameState.scribeList.forEach(scribe => {
     const block = document.createElement('div');
     block.className = 'scribe-block';
+    console.log('Creating scribe block, adding event listener...');
     if (scribe.paused) {
       block.classList.add('paused');
     }
@@ -240,8 +243,10 @@ export function renderScribeBlocks() {
       console.log('After toggle, paused state:', gameState.scribeList.find(s => s.id === scribe.id)?.paused);
       renderScribeBlocks();
     });
+    console.log('Event listener attached to block for scribe', scribe.id);
 
     elements.scribeBlocksContainer.appendChild(block);
+    console.log('Block appended to container');
   });
 }
 

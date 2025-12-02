@@ -332,6 +332,7 @@ button.secondary {
   justify-content: center;
   cursor: pointer;
   overflow: hidden;
+  user-select: none;
 }
 
 .scribe-block.paused {
