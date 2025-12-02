@@ -3,7 +3,7 @@
  * Handles all UI updates and rendering logic
  */
 
-import { getScribeCost, SCRIBE_GHOST_LIFETIME } from './config.js';
+import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON } from './config.js';
 import { gameState } from './state.js';
 import { setupWordChipDrag, sellWord } from './molds.js';
 import { toggleScribePaused } from './scribes.js';
@@ -168,7 +168,9 @@ export function renderWordList() {
     const gloss = document.createElement('span');
     gloss.style.fontSize = '11px';
     gloss.style.opacity = '0.8';
-    gloss.textContent = word.english;
+    // Show transliteration from lexicon, or fall back to Hebrew text
+    const lexiconEntry = GRAMMAR_LEXICON[word.text];
+    gloss.textContent = lexiconEntry ? lexiconEntry.translit : word.text;
     left.appendChild(gloss);
 
     // Right side: sell button
