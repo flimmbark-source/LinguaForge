@@ -124,6 +124,7 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     placeholder.style.border = '2px dashed #666';
     placeholder.style.background = 'transparent';
     placeholder.style.boxSizing = 'border-box';
+    console.log('Created placeholder:', placeholder, 'size:', rect.width, 'x', rect.height);
 
     dragState = {
       chip,
@@ -159,6 +160,7 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     chip.style.top = y + 'px';
 
     // Update placeholder position based on where drop would occur
+    console.log('pointermove: updating placeholder position, clientX=', e.clientX);
     updatePlaceholderPosition(e.clientX, e.clientY, instanceId, dragState.placeholder);
   });
 
@@ -229,10 +231,15 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
  */
 function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
   const verseArea = document.getElementById('grammarHebrewLine');
-  if (!verseArea || !placeholder) return;
+  if (!verseArea || !placeholder) {
+    console.log('updatePlaceholderPosition: missing verseArea or placeholder', {verseArea, placeholder});
+    return;
+  }
 
   const chips = Array.from(verseArea.querySelectorAll('.line-word-chip, .line-word-chip-placeholder'));
   let insertBeforeChip = null;
+
+  console.log('updatePlaceholderPosition: clientX=', clientX, 'chips count=', chips.length);
 
   for (let i = 0; i < chips.length; i++) {
     const chip = chips[i];
@@ -242,17 +249,21 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
     const rect = chip.getBoundingClientRect();
     const midX = rect.left + rect.width / 2;
 
+    console.log(`  Chip ${i}: left=${rect.left}, midX=${midX}, checking if ${clientX} < ${midX}`);
+
     if (clientX < midX) {
       insertBeforeChip = chip;
+      console.log('  -> Will insert before this chip');
       break;
     }
   }
 
   // Move placeholder to the calculated position
   if (insertBeforeChip) {
+    console.log('Inserting placeholder before chip:', insertBeforeChip.textContent);
     verseArea.insertBefore(placeholder, insertBeforeChip);
   } else {
-    // Insert at the end
+    console.log('Appending placeholder to end');
     verseArea.appendChild(placeholder);
   }
 }
