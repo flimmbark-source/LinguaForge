@@ -15,6 +15,9 @@ const elements = {};
 // Track last rendered verse state to avoid unnecessary recreations
 let lastRenderedVerseWords = [];
 
+// Track last rendered scribe state to avoid unnecessary recreations
+let lastRenderedScribes = [];
+
 /**
  * Initialize DOM element references
  */
@@ -193,18 +196,49 @@ export function renderWordList() {
 }
 
 /**
- * Render scribe blocks with progress bars
+ * Check if scribe list has changed since last render
+ * @returns {boolean} True if scribes changed
  */
-export function renderScribeBlocks() {
-  console.log('renderScribeBlocks called, scribeList length:', gameState.scribeList.length);
-  console.log('scribeBlocksContainer exists?', !!elements.scribeBlocksContainer);
+function scribesChanged() {
+  if (gameState.scribeList.length !== lastRenderedScribes.length) return true;
+
+  for (let i = 0; i < gameState.scribeList.length; i++) {
+    const current = gameState.scribeList[i];
+    const last = lastRenderedScribes[i];
+    if (current.id !== last.id || current.paused !== last.paused) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Render scribe blocks with progress bars
+ * @param {boolean} force - Force re-render even if scribes haven't changed
+ */
+export function renderScribeBlocks(force = false) {
   if (!elements.scribeBlocksContainer) return;
+
+  // Only recreate blocks if scribes actually changed (unless forced)
+  if (!force && !scribesChanged()) {
+    // Update progress bars without recreating blocks
+    gameState.scribeList.forEach((scribe, index) => {
+      const block = elements.scribeBlocksContainer.children[index];
+      if (block) {
+        const progress = block.querySelector('.scribe-progress');
+        if (progress) {
+          const clamped = Math.max(0, Math.min(1, scribe.progress));
+          progress.style.height = (clamped * 100).toFixed(1) + '%';
+        }
+      }
+    });
+    return;
+  }
+
   elements.scribeBlocksContainer.innerHTML = '';
 
   gameState.scribeList.forEach(scribe => {
     const block = document.createElement('div');
     block.className = 'scribe-block';
-    console.log('Creating scribe block, adding event listener...');
     if (scribe.paused) {
       block.classList.add('paused');
     }
@@ -238,16 +272,15 @@ export function renderScribeBlocks() {
 
     // Click to toggle pause
     block.addEventListener('click', (e) => {
-      console.log('Scribe block clicked! Scribe ID:', scribe.id, 'Current paused state:', scribe.paused);
       toggleScribePaused(scribe.id);
-      console.log('After toggle, paused state:', gameState.scribeList.find(s => s.id === scribe.id)?.paused);
-      renderScribeBlocks();
+      renderScribeBlocks(true); // Force re-render after pause toggle
     });
-    console.log('Event listener attached to block for scribe', scribe.id);
 
     elements.scribeBlocksContainer.appendChild(block);
-    console.log('Block appended to container');
   });
+
+  // Update our tracking state
+  lastRenderedScribes = gameState.scribeList.map(s => ({ id: s.id, paused: s.paused }));
 }
 
 /**
