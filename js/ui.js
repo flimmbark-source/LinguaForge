@@ -279,7 +279,9 @@ export function renderScribeBlocks(force = false) {
 
     // Click to toggle pause
     block.addEventListener('click', (e) => {
+      console.log('Scribe block clicked! ID:', scribe.id, 'Paused:', scribe.paused);
       toggleScribePaused(scribe.id);
+      console.log('After toggle, paused:', gameState.scribeList.find(s => s.id === scribe.id)?.paused);
       renderScribeBlocks(true); // Force re-render after pause toggle
     });
 
