@@ -24,12 +24,14 @@ export class PestleSystem {
       prevHeadX: 0,
       prevHeadY: 0,
       length: 140,
+      constantLength: 140, // Fixed length - doesn't change
       width: 30,
       handleThickness: 12,
       angle: 0,
       headVx: 0,
       headVy: 0,
       isHeld: false,
+      isInserted: false, // Whether pestle is inserted into mortar
       attachedLetters: [], // Letters picked up by pestle
       churnCooldown: 0,
     };
@@ -43,11 +45,12 @@ export class PestleSystem {
       innerRadius: 70,
     };
 
-    // Rotation tracking for churning
-    this.rotationTracker = {
-      prevAngle: 0,
-      totalRotation: 0,
-      rotationsCompleted: 0,
+    // Side-to-side motion tracking for churning
+    this.churnTracker = {
+      prevX: 0,
+      direction: 0, // -1 for left, 1 for right, 0 for stationary
+      totalDistance: 0, // Total horizontal distance traveled
+      churnThreshold: 60, // Pixels of side-to-side motion needed for 1 ink
     };
 
     // Visual effects
@@ -103,15 +106,17 @@ export class PestleSystem {
     this.pestle.pivotX = pivotX;
     this.pestle.pivotY = pivotY;
     this.pestle.length = 140;
+    this.pestle.constantLength = 140;
 
     // Start with pestle hanging down
     this.pestle.headX = pivotX;
-    this.pestle.headY = pivotY + this.pestle.length;
+    this.pestle.headY = pivotY + this.pestle.constantLength;
     this.pestle.prevHeadX = this.pestle.headX;
     this.pestle.prevHeadY = this.pestle.headY;
     this.pestle.angle = Math.PI / 2;
     this.pestle.headVx = 0;
     this.pestle.headVy = 0;
+    this.pestle.isInserted = false;
   }
 
   /**
@@ -132,6 +137,14 @@ export class PestleSystem {
    */
   isPointNearPestle(px, py) {
     const p = this.pestle;
+
+    // If pestle is inserted, only allow grabbing the top handle
+    if (p.isInserted) {
+      const dist = Math.hypot(px - p.pivotX, py - p.pivotY);
+      return dist < 40;
+    }
+
+    // Otherwise, can grab anywhere along pestle
     const x1 = p.pivotX;
     const y1 = p.pivotY;
     const x2 = p.headX;
@@ -163,19 +176,18 @@ export class PestleSystem {
 
       this.input.isDown = true;
       const pestle = this.pestle;
-      const hx = pestle.headX;
-      const hy = pestle.headY;
-      const dx = hx - this.input.mouseX;
-      const dy = hy - this.input.mouseY;
-      const newLength = Math.hypot(dx, dy);
-
-      if (newLength > 10) {
-        pestle.length = newLength;
-      }
 
       pestle.isHeld = true;
-      pestle.pivotX = this.input.mouseX;
-      pestle.pivotY = this.input.mouseY;
+
+      // If pestle is inserted, we're grabbing the handle for churning
+      if (!pestle.isInserted) {
+        // Free movement - move the pivot point
+        pestle.pivotX = this.input.mouseX;
+        pestle.pivotY = this.input.mouseY;
+      } else {
+        // Inserted - churning mode, track starting position
+        this.churnTracker.prevX = this.input.mouseX;
+      }
     }
   }
 
@@ -191,8 +203,18 @@ export class PestleSystem {
     if (this.pestle.isHeld && this.input.isDown) {
       e.preventDefault();
       e.stopPropagation();
-      this.pestle.pivotX = this.input.mouseX;
-      this.pestle.pivotY = this.input.mouseY;
+
+      const pestle = this.pestle;
+
+      if (pestle.isInserted) {
+        // Churning mode - only allow horizontal movement
+        pestle.pivotX = this.input.mouseX;
+        // Keep pivot Y fixed at mortar level
+      } else {
+        // Free movement
+        pestle.pivotX = this.input.mouseX;
+        pestle.pivotY = this.input.mouseY;
+      }
     }
   }
 
@@ -223,6 +245,19 @@ export class PestleSystem {
     const dist = Math.hypot(headX - centerX, headY - centerY);
 
     return dist < mortar.innerRadius && headY > mortar.y && headY < mortar.y + mortar.height;
+  }
+
+  /**
+   * Check if pestle is in churn zone (deep enough in mortar)
+   */
+  isPestleInChurnZone() {
+    const pestle = this.pestle;
+    const mortar = this.mortar;
+    const pivotY = pestle.pivotY;
+    const churnZoneTop = mortar.y + mortar.height * 0.3;
+
+    // Pestle must be inserted and pivot must be below churn zone top
+    return pestle.isInserted && pivotY >= churnZoneTop;
   }
 
   /**
@@ -271,53 +306,50 @@ export class PestleSystem {
   }
 
   /**
-   * Update rotation tracking for churning
+   * Update side-to-side motion tracking for churning
    */
-  updateRotationTracking(dt) {
-    if (!this.isPestleInMortar()) {
-      this.rotationTracker.totalRotation = 0;
-      this.rotationTracker.rotationsCompleted = 0;
+  updateChurnTracking(dt) {
+    if (!this.isPestleInChurnZone()) {
+      this.churnTracker.totalDistance = 0;
+      this.churnTracker.direction = 0;
       return;
     }
 
     const pestle = this.pestle;
-    const mortar = this.mortar;
-    const centerX = mortar.x + mortar.width / 2;
-    const centerY = mortar.y + mortar.height / 2;
+    const currentX = pestle.pivotX;
+    const prevX = this.churnTracker.prevX;
+    const deltaX = currentX - prevX;
 
-    // Calculate angle from mortar center to pestle head
-    const dx = pestle.headX - centerX;
-    const dy = pestle.headY - centerY;
-    const currentAngle = Math.atan2(dy, dx);
+    // Only track significant movement (> 1px)
+    if (Math.abs(deltaX) > 1) {
+      const newDirection = deltaX > 0 ? 1 : -1;
 
-    // Calculate rotation delta
-    let angleDelta = currentAngle - this.rotationTracker.prevAngle;
+      // Check for direction change (side-to-side motion)
+      if (this.churnTracker.direction !== 0 && newDirection !== this.churnTracker.direction) {
+        // Direction changed - add to total distance
+        this.churnTracker.totalDistance += Math.abs(deltaX);
+      }
 
-    // Normalize angle delta to [-π, π]
-    while (angleDelta > Math.PI) angleDelta -= Math.PI * 2;
-    while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
+      this.churnTracker.direction = newDirection;
+      this.churnTracker.prevX = currentX;
 
-    // Accumulate rotation
-    this.rotationTracker.totalRotation += angleDelta;
-    this.rotationTracker.prevAngle = currentAngle;
+      // Check if we've churned enough for ink
+      if (this.churnTracker.totalDistance >= this.churnTracker.churnThreshold) {
+        // Produce ink if we have letters attached
+        if (pestle.attachedLetters.length > 0 && pestle.churnCooldown <= 0) {
+          pestle.churnCooldown = 0.3;
+          const letter = pestle.attachedLetters.pop();
+          this.churnTracker.totalDistance = 0;
 
-    // Check for complete rotation (2π radians)
-    const fullRotation = Math.PI * 2;
-    if (Math.abs(this.rotationTracker.totalRotation) >= fullRotation) {
-      this.rotationTracker.rotationsCompleted++;
-      this.rotationTracker.totalRotation = 0;
+          // Spawn ink drop effect
+          this.spawnInkDrop(pestle.headX, pestle.headY);
 
-      // Produce ink if we have letters attached
-      if (this.pestle.attachedLetters.length > 0 && pestle.churnCooldown <= 0) {
-        pestle.churnCooldown = 0.3;
-        const letter = this.pestle.attachedLetters.pop();
-
-        // Spawn ink drop effect
-        this.spawnInkDrop(pestle.headX, pestle.headY);
-
-        // Callback for ink production
-        if (this.onInkProduced) {
-          this.onInkProduced(letter);
+          // Callback for ink production
+          if (this.onInkProduced) {
+            this.onInkProduced(letter);
+          }
+        } else {
+          this.churnTracker.totalDistance = 0;
         }
       }
     }
@@ -346,44 +378,91 @@ export class PestleSystem {
    */
   updatePestle(dt) {
     const pestle = this.pestle;
-    const g = this.gravity;
-    const friction = this.airFriction;
+    const mortar = this.mortar;
 
     pestle.churnCooldown = Math.max(0, pestle.churnCooldown - dt);
 
-    const x = pestle.headX;
-    const y = pestle.headY;
-    const prevX = pestle.prevHeadX;
-    const prevY = pestle.prevHeadY;
-    const safeDt = Math.max(dt, 0.0001);
+    // Check if pestle should be inserted or removed
+    if (!pestle.isInserted && this.isPestleInMortar()) {
+      // Insert pestle into mortar
+      pestle.isInserted = true;
+      const centerX = mortar.x + mortar.width / 2;
+      const mortarTop = mortar.y + 10;
+      pestle.pivotX = centerX;
+      pestle.pivotY = mortarTop;
+      pestle.headX = centerX;
+      pestle.headY = mortarTop + pestle.constantLength;
+      pestle.prevHeadX = pestle.headX;
+      pestle.prevHeadY = pestle.headY;
+      this.churnTracker.prevX = centerX;
+      console.log('Pestle inserted into mortar');
+    } else if (pestle.isInserted && pestle.isHeld && pestle.pivotY < mortar.y) {
+      // Lift pestle out of mortar
+      pestle.isInserted = false;
+      console.log('Pestle removed from mortar');
+    }
 
-    let vx = (x - prevX) / safeDt;
-    let vy = (y - prevY) / safeDt;
+    if (pestle.isInserted) {
+      // Pestle is inserted - constrain to mortar
+      const centerX = mortar.x + mortar.width / 2;
+      const mortarTop = mortar.y + 10;
 
-    vx *= friction;
-    vy *= friction;
+      // Constrain horizontal movement
+      const maxOffset = 40;
+      pestle.pivotX = Math.max(centerX - maxOffset, Math.min(centerX + maxOffset, pestle.pivotX));
 
-    pestle.prevHeadX = x;
-    pestle.prevHeadY = y;
+      // Keep vertical position at mortar top unless being lifted
+      if (pestle.isHeld) {
+        pestle.pivotY = pestle.pivotY; // Can be moved up/down when held
+      } else {
+        pestle.pivotY = mortarTop;
+      }
 
-    vy += g * safeDt;
+      // Head position is directly below pivot at constant length
+      pestle.headX = pestle.pivotX;
+      pestle.headY = pestle.pivotY + pestle.constantLength;
+      pestle.prevHeadX = pestle.headX;
+      pestle.prevHeadY = pestle.headY;
+    } else {
+      // Free movement with physics
+      if (!pestle.isHeld) {
+        const g = this.gravity;
+        const friction = this.airFriction;
+        const x = pestle.headX;
+        const y = pestle.headY;
+        const prevX = pestle.prevHeadX;
+        const prevY = pestle.prevHeadY;
+        const safeDt = Math.max(dt, 0.0001);
 
-    pestle.headX += vx * safeDt;
-    pestle.headY += vy * safeDt;
+        let vx = (x - prevX) / safeDt;
+        let vy = (y - prevY) / safeDt;
 
-    const px = pestle.pivotX;
-    const py = pestle.pivotY;
-    let dx = pestle.headX - px;
-    let dy = pestle.headY - py;
-    let dist = Math.hypot(dx, dy) || 1;
-    const desired = pestle.length;
-    const diff = (desired - dist) / dist;
+        vx *= friction;
+        vy *= friction;
 
-    pestle.headX += dx * diff;
-    pestle.headY += dy * diff;
+        pestle.prevHeadX = x;
+        pestle.prevHeadY = y;
 
-    pestle.headVx = (pestle.headX - pestle.prevHeadX) / safeDt;
-    pestle.headVy = (pestle.headY - pestle.prevHeadY) / safeDt;
+        vy += g * safeDt;
+
+        pestle.headX += vx * safeDt;
+        pestle.headY += vy * safeDt;
+      }
+
+      // Maintain constant length constraint
+      const px = pestle.pivotX;
+      const py = pestle.pivotY;
+      const dx = pestle.headX - px;
+      const dy = pestle.headY - py;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > 0) {
+        const scale = pestle.constantLength / dist;
+        pestle.headX = px + dx * scale;
+        pestle.headY = py + dy * scale;
+      }
+    }
+
     pestle.angle = Math.atan2(pestle.headY - pestle.pivotY, pestle.headX - pestle.pivotX) + Math.PI / 2;
   }
 
@@ -393,13 +472,13 @@ export class PestleSystem {
   update(dt) {
     this.updatePestle(dt);
 
-    // Check for letter pickup
-    if (this.pestle.attachedLetters.length < 10) {
+    // Check for letter pickup (only when not inserted)
+    if (!this.pestle.isInserted && this.pestle.attachedLetters.length < 10) {
       this.checkLetterPickup();
     }
 
-    // Update rotation tracking for churning
-    this.updateRotationTracking(dt);
+    // Update side-to-side motion tracking for churning
+    this.updateChurnTracking(dt);
 
     // Update ink drops
     this.inkDrops = this.inkDrops.filter(d => d.age < d.life);
@@ -415,13 +494,16 @@ export class PestleSystem {
    * Draw pestle
    */
   drawPestle(ctx, pestle) {
+    // Don't draw pestle separately if it's inserted (will be drawn with mortar)
+    if (pestle.isInserted) return;
+
     ctx.save();
     const pivotX = pestle.pivotX;
     const pivotY = pestle.pivotY;
     const dx = pestle.headX - pivotX;
     const dy = pestle.headY - pivotY;
     const angle = Math.atan2(dy, dx) + Math.PI / 2;
-    const length = Math.hypot(dx, dy) || pestle.length;
+    const length = pestle.constantLength;
 
     ctx.translate(pivotX, pivotY);
     ctx.rotate(angle);
@@ -477,9 +559,11 @@ export class PestleSystem {
   }
 
   /**
-   * Draw mortar
+   * Draw mortar (and pestle if inserted)
    */
   drawMortar(ctx, mortar) {
+    const pestle = this.pestle;
+
     ctx.save();
     ctx.translate(mortar.x + mortar.width / 2, mortar.y + mortar.height);
 
@@ -509,6 +593,26 @@ export class PestleSystem {
     ctx.quadraticCurveTo(mortar.width, mortar.height * 0.3, mortar.width * 0.8, 0);
     ctx.closePath();
     ctx.fill();
+
+    // If pestle is inserted, draw it inside the mortar
+    if (pestle.isInserted) {
+      const centerX = mortar.width / 2;
+      const pestleOffsetX = pestle.pivotX - (mortar.x + centerX);
+      const pestleTop = pestle.pivotY - mortar.y;
+
+      // Draw pestle handle sticking out
+      const handleWidth = pestle.handleThickness;
+      const visibleHandleLength = pestleTop;
+
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(centerX + pestleOffsetX - handleWidth / 2, 0, handleWidth, visibleHandleLength);
+
+      // Draw handle top (grab point)
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(centerX + pestleOffsetX, 0, handleWidth * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // Inner shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';

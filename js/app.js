@@ -213,7 +213,7 @@ function setupToolSelection() {
 
     // Update hint text
     if (craftingHint) {
-      craftingHint.textContent = 'Drag pestle through letters to pick them up, then churn in mortar to produce ink';
+      craftingHint.textContent = 'Drag pestle through letters to pick them up, insert into mortar, then move side-to-side to churn ink';
       craftingHint.classList.remove('hidden');
     }
 
