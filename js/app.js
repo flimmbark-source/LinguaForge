@@ -6,12 +6,16 @@
 console.log('Lingua Forge app.js loading...');
 
 import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD } from './config.js';
-import { spawnLetter } from './letters.js';
+import { spawnLetter, spawnLetterAnimated } from './letters.js';
 import { setMoldViewportWidth, navigatePreviousMold, navigateNextMold, forgeWords } from './molds.js';
 import { hireScribe, updateScribes } from './scribes.js';
 import { setupVerseAreaDrop, completeVerse } from './grammar.js';
 import { initializeElements, updateUI } from './ui.js';
 import { gameState } from './state.js';
+import { HammerSystem } from './hammer.js';
+
+// Global hammer system reference
+let hammerSystem = null;
 
 /**
  * Initialize the game
@@ -33,6 +37,9 @@ function initializeGame() {
     setupVerseAreaDrop(grammarHebrewLineDiv, updateUI);
   }
 
+  // Initialize hammer system
+  initializeHammerSystem();
+
   // Spawn starting letters
   for (let i = 0; i < STARTING_LETTERS; i++) {
     spawnLetter(updateUI);
@@ -46,19 +53,43 @@ function initializeGame() {
 }
 
 /**
+ * Initialize hammer and anvil system
+ */
+function initializeHammerSystem() {
+  const hammerCanvas = document.getElementById('hammerCanvas');
+  const hammerHint = document.getElementById('hammerHint');
+
+  if (!hammerCanvas) {
+    console.warn('Hammer canvas not found');
+    return;
+  }
+
+  // Create hammer system with callback for letter forging
+  hammerSystem = new HammerSystem(hammerCanvas, (worldX, worldY, power) => {
+    // Spawn letters based on lettersPerClick
+    for (let i = 0; i < gameState.lettersPerClick; i++) {
+      // Slight delay between multiple letters for visual effect
+      setTimeout(() => {
+        spawnLetterAnimated(worldX, worldY, power, updateUI);
+      }, i * 50);
+    }
+
+    // Hide hint after first strike
+    if (hammerHint && !hammerHint.classList.contains('hidden')) {
+      hammerHint.classList.add('hidden');
+    }
+  });
+
+  // Start the hammer system
+  hammerSystem.start();
+  console.log('Hammer system initialized');
+}
+
+/**
  * Setup all event handlers for buttons and interactions
  */
 function setupEventHandlers() {
-  // Strike button - generate letters
-  const strikeBtn = document.getElementById('strikeBtn');
-  if (strikeBtn) {
-    strikeBtn.addEventListener('click', () => {
-      for (let i = 0; i < gameState.lettersPerClick; i++) {
-        spawnLetter(updateUI);
-      }
-      updateUI();
-    });
-  }
+  // Hammer system replaces the strike button (initialized separately)
 
   // Buy scribe button
   const buyScribeBtn = document.getElementById('buyScribeBtn');
