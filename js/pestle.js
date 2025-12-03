@@ -141,10 +141,23 @@ export class PestleSystem {
   isPointNearPestle(px, py) {
     const p = this.pestle;
 
-    // If pestle is inserted, only allow grabbing the top handle
+    // If pestle is inserted, check the extended handle area
     if (p.isInserted) {
-      const dist = Math.hypot(px - p.pivotX, py - p.pivotY);
-      return dist < 40;
+      const mortar = this.mortar;
+      const centerX = mortar.x + mortar.width / 2;
+      const pestleOffsetX = p.pivotX - centerX;
+      const handleCenterX = centerX + pestleOffsetX;
+      const handleTop = mortar.y;
+      const handleBottom = mortar.y + Math.max(50, p.pivotY - mortar.y);
+      const handleWidth = p.handleThickness;
+
+      // Check if point is within the visible handle rectangle
+      return (
+        px > handleCenterX - handleWidth * 2 &&
+        px < handleCenterX + handleWidth * 2 &&
+        py > handleTop &&
+        py < handleBottom
+      );
     }
 
     // Otherwise, can grab anywhere along pestle
@@ -193,7 +206,7 @@ export class PestleSystem {
       e.preventDefault();
       e.stopPropagation();
 
-      // Insert pestle into mortar
+      // Insert pestle into mortar (keep attached letters)
       pestle.isFollowingMouse = false;
       pestle.isInserted = true;
       const centerX = this.mortar.x + this.mortar.width / 2;
@@ -205,7 +218,7 @@ export class PestleSystem {
       pestle.prevHeadX = pestle.headX;
       pestle.prevHeadY = pestle.headY;
       this.churnTracker.prevX = centerX;
-      console.log('Pestle inserted into mortar via click');
+      console.log('Pestle inserted into mortar via click - letters preserved:', pestle.attachedLetters.length);
       return;
     }
 
@@ -286,7 +299,7 @@ export class PestleSystem {
         pestle.isFollowingMouse = true;
         pestle.pivotX = this.input.mouseX;
         pestle.pivotY = this.input.mouseY;
-        console.log('Pestle separated from mortar - now following mouse');
+        console.log('Pestle separated from mortar - now following mouse with', pestle.attachedLetters.length, 'letters');
       }
     }
 
@@ -448,7 +461,7 @@ export class PestleSystem {
 
     // Check if pestle should be inserted (only if not following mouse)
     if (!pestle.isInserted && !pestle.isFollowingMouse && this.isPestleInMortar()) {
-      // Insert pestle into mortar
+      // Insert pestle into mortar (keep attached letters)
       pestle.isInserted = true;
       const centerX = mortar.x + mortar.width / 2;
       const mortarTop = mortar.y - 40; // Start higher up
@@ -459,12 +472,12 @@ export class PestleSystem {
       pestle.prevHeadX = pestle.headX;
       pestle.prevHeadY = pestle.headY;
       this.churnTracker.prevX = centerX;
-      console.log('Pestle inserted into mortar');
+      console.log('Pestle inserted into mortar - letters preserved:', pestle.attachedLetters.length);
     } else if (pestle.isInserted && pestle.isHeld && pestle.pivotY < mortar.y - 50) {
       // Lift pestle out of mortar (needs to go higher now)
       pestle.isInserted = false;
       pestle.isFollowingMouse = true;
-      console.log('Pestle removed from mortar via lifting');
+      console.log('Pestle removed from mortar via lifting - letters stay attached');
     }
 
     if (pestle.isInserted) {
@@ -489,11 +502,45 @@ export class PestleSystem {
       pestle.prevHeadX = pestle.headX;
       pestle.prevHeadY = pestle.headY;
     } else if (pestle.isFollowingMouse) {
-      // Following mouse - maintain constant length vertically
-      pestle.headX = pestle.pivotX;
-      pestle.headY = pestle.pivotY + pestle.constantLength;
+      // Following mouse - add swinging physics with constant length
+      const targetX = pestle.pivotX;
+      const targetY = pestle.pivotY + pestle.constantLength;
+
+      // Calculate velocity based on position change
+      const prevX = pestle.prevHeadX;
+      const prevY = pestle.prevHeadY;
+      const safeDt = Math.max(dt, 0.0001);
+
+      let vx = (pestle.headX - prevX) / safeDt;
+      let vy = (pestle.headY - prevY) / safeDt;
+
+      // Apply damping
+      const damping = 0.85;
+      vx *= damping;
+      vy *= damping;
+
+      // Apply gravity
+      const g = this.gravity * 0.5; // Less gravity when following mouse
+      vy += g * safeDt;
+
+      // Store previous position
       pestle.prevHeadX = pestle.headX;
       pestle.prevHeadY = pestle.headY;
+
+      // Update position with physics
+      pestle.headX += vx * safeDt;
+      pestle.headY += vy * safeDt;
+
+      // Constraint: maintain constant length from pivot
+      const dx = pestle.headX - pestle.pivotX;
+      const dy = pestle.headY - pestle.pivotY;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > 0) {
+        const scale = pestle.constantLength / dist;
+        pestle.headX = pestle.pivotX + dx * scale;
+        pestle.headY = pestle.pivotY + dy * scale;
+      }
     } else {
       // Free movement with physics
       if (!pestle.isHeld) {
@@ -543,7 +590,7 @@ export class PestleSystem {
   update(dt) {
     this.updatePestle(dt);
 
-    // Check for letter pickup (only when not inserted)
+    // Check for letter pickup (only when not inserted and not following mouse with too many letters)
     if (!this.pestle.isInserted && this.pestle.attachedLetters.length < 10) {
       this.checkLetterPickup();
     }
@@ -683,6 +730,15 @@ export class PestleSystem {
       ctx.beginPath();
       ctx.arc(centerX + pestleOffsetX, 0, handleWidth * 0.8, 0, Math.PI * 2);
       ctx.fill();
+
+      // Draw attached letters indicator on handle if present
+      if (pestle.attachedLetters.length > 0) {
+        ctx.fillStyle = '#22c55e';
+        ctx.font = 'bold 10px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${pestle.attachedLetters.length}`, centerX + pestleOffsetX, visibleHandleLength / 2);
+      }
     }
 
     // Inner shadow
