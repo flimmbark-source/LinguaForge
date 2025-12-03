@@ -23,6 +23,8 @@ export class PestleSystem {
       headY: 0,
       prevHeadX: 0,
       prevHeadY: 0,
+      prevPivotX: 0,
+      prevPivotY: 0,
       length: 140,
       constantLength: 140, // Fixed length - doesn't change
       width: 30,
@@ -115,6 +117,8 @@ export class PestleSystem {
     this.pestle.headY = pivotY + this.pestle.constantLength;
     this.pestle.prevHeadX = this.pestle.headX;
     this.pestle.prevHeadY = this.pestle.headY;
+    this.pestle.prevPivotX = this.pestle.pivotX;
+    this.pestle.prevPivotY = this.pestle.pivotY;
     this.pestle.angle = Math.PI / 2;
     this.pestle.headVx = 0;
     this.pestle.headVy = 0;
@@ -255,10 +259,10 @@ export class PestleSystem {
 
     const pestle = this.pestle;
 
-    // If pestle is following mouse, update pivot position
+    // If pestle is following mouse, update head position (player holds pestle end)
     if (pestle.isFollowingMouse) {
-      pestle.pivotX = this.input.mouseX;
-      pestle.pivotY = this.input.mouseY;
+      pestle.headX = this.input.mouseX;
+      pestle.headY = this.input.mouseY;
     }
 
     if (pestle.isHeld && this.input.isDown) {
@@ -298,8 +302,16 @@ export class PestleSystem {
       if (pestle.isInserted && clickDuration < 200) {
         pestle.isInserted = false;
         pestle.isFollowingMouse = true;
-        pestle.pivotX = this.input.mouseX;
-        pestle.pivotY = this.input.mouseY;
+        // Player now holds the pestle head (grinding end)
+        pestle.headX = this.input.mouseX;
+        pestle.headY = this.input.mouseY;
+        // Pivot (handle end) starts above the head
+        pestle.pivotX = pestle.headX;
+        pestle.pivotY = pestle.headY - pestle.constantLength;
+        pestle.prevHeadX = pestle.headX;
+        pestle.prevHeadY = pestle.headY;
+        pestle.prevPivotX = pestle.pivotX;
+        pestle.prevPivotY = pestle.pivotY;
         console.log('Pestle separated from mortar - now following mouse with', pestle.attachedLetters.length, 'letters');
       } else if (pestle.isInserted) {
         // Long hold finished - reset side for next churning session
@@ -484,6 +496,11 @@ export class PestleSystem {
       // Lift pestle out of mortar (needs to go higher now)
       pestle.isInserted = false;
       pestle.isFollowingMouse = true;
+      // Initialize prev positions for physics
+      pestle.prevPivotX = pestle.pivotX;
+      pestle.prevPivotY = pestle.pivotY;
+      pestle.prevHeadX = pestle.headX;
+      pestle.prevHeadY = pestle.headY;
       console.log('Pestle removed from mortar via lifting - letters stay attached');
     }
 
@@ -509,17 +526,17 @@ export class PestleSystem {
       pestle.prevHeadX = pestle.headX;
       pestle.prevHeadY = pestle.headY;
     } else if (pestle.isFollowingMouse) {
-      // Following mouse - add swinging physics with constant length
-      const targetX = pestle.pivotX;
-      const targetY = pestle.pivotY + pestle.constantLength;
+      // Following mouse - player holds head (pestle end), handle swings
+      // Head follows mouse (updated in onPointerMove)
+      // Apply swinging physics to pivot (handle end)
 
-      // Calculate velocity based on position change
-      const prevX = pestle.prevHeadX;
-      const prevY = pestle.prevHeadY;
       const safeDt = Math.max(dt, 0.0001);
 
-      let vx = (pestle.headX - prevX) / safeDt;
-      let vy = (pestle.headY - prevY) / safeDt;
+      // Calculate pivot velocity based on position change
+      const prevX = pestle.prevPivotX;
+      const prevY = pestle.prevPivotY;
+      let vx = (pestle.pivotX - prevX) / safeDt;
+      let vy = (pestle.pivotY - prevY) / safeDt;
 
       // Apply damping
       const damping = 0.85;
@@ -531,22 +548,22 @@ export class PestleSystem {
       vy += g * safeDt;
 
       // Store previous position
-      pestle.prevHeadX = pestle.headX;
-      pestle.prevHeadY = pestle.headY;
+      pestle.prevPivotX = pestle.pivotX;
+      pestle.prevPivotY = pestle.pivotY;
 
-      // Update position with physics
-      pestle.headX += vx * safeDt;
-      pestle.headY += vy * safeDt;
+      // Update pivot position with physics
+      pestle.pivotX += vx * safeDt;
+      pestle.pivotY += vy * safeDt;
 
-      // Constraint: maintain constant length from pivot
-      const dx = pestle.headX - pestle.pivotX;
-      const dy = pestle.headY - pestle.pivotY;
+      // Constraint: maintain constant length from head
+      const dx = pestle.pivotX - pestle.headX;
+      const dy = pestle.pivotY - pestle.headY;
       const dist = Math.hypot(dx, dy);
 
       if (dist > 0) {
         const scale = pestle.constantLength / dist;
-        pestle.headX = pestle.pivotX + dx * scale;
-        pestle.headY = pestle.pivotY + dy * scale;
+        pestle.pivotX = pestle.headX + dx * scale;
+        pestle.pivotY = pestle.headY + dy * scale;
       }
     } else {
       // Free movement with physics
