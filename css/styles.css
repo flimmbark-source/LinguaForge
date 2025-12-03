@@ -462,8 +462,68 @@ button.secondary {
    FIXED UI ELEMENTS
    =============================================== */
 
-/* Hammer Forge */
-.hammer-forge {
+/* Tool Rack */
+.tool-rack {
+  position: fixed;
+  left: 16px;
+  top: 16px;
+  background: #020617;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.15);
+  z-index: 90;
+  min-width: 120px;
+}
+
+.tool-rack h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  text-align: center;
+}
+
+.tool-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: #1f2937;
+  border: 2px solid #374151;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tool-button:hover {
+  background: #374151;
+  border-color: #4b5563;
+  transform: translateY(-2px);
+}
+
+.tool-button.active {
+  background: #4f46e5;
+  border-color: #6366f1;
+  box-shadow: 0 0 12px rgba(79, 70, 229, 0.4);
+}
+
+.tool-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.tool-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Crafting Forge */
+.crafting-forge {
   position: fixed;
   left: 0;
   right: 0;
@@ -473,7 +533,7 @@ button.secondary {
   z-index: 150; /* Render over all other containers */
 }
 
-#hammerCanvas {
+#craftingCanvas {
   display: block;
   width: 100%;
   height: 100%;
@@ -481,11 +541,11 @@ button.secondary {
   pointer-events: none; /* Let events pass through, handle manually in JS */
 }
 
-#hammerCanvas:active {
+#craftingCanvas:active {
   cursor: grabbing;
 }
 
-#hammerHint {
+.crafting-hint {
   position: fixed;
   left: 50%;
   bottom: 172px; /* Just above letter pool bar */
@@ -503,9 +563,11 @@ button.secondary {
   backdrop-filter: blur(6px);
   transition: opacity 0.3s ease;
   z-index: 160; /* Above canvas */
+  max-width: 400px;
+  text-align: center;
 }
 
-#hammerHint.hidden {
+.crafting-hint.hidden {
   opacity: 0;
 }
 

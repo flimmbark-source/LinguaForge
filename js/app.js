@@ -14,10 +14,13 @@ import { initializeElements, updateUI } from './ui.js';
 import { gameState } from './state.js';
 import { addLetters } from './state.js';
 import { HammerSystem } from './hammer.js';
+import { PestleSystem } from './pestle.js';
 import { initializeHearth, updateHearth } from './hearth.js';
 
-// Global hammer system reference
+// Global crafting system references
 let hammerSystem = null;
+let pestleSystem = null;
+let activeTool = 'hammer'; // 'hammer' or 'pestle'
 
 /**
  * Initialize the game
@@ -39,11 +42,14 @@ function initializeGame() {
     setupVerseAreaDrop(grammarHebrewLineDiv, updateUI);
   }
 
-  // Initialize hammer system
-  initializeHammerSystem();
+  // Initialize crafting systems
+  initializeCraftingSystems();
 
   // Initialize hearth system
   initializeHearth();
+
+  // Setup tool selection
+  setupToolSelection();
 
   // Spawn starting letters
   for (let i = 0; i < STARTING_LETTERS; i++) {
@@ -58,19 +64,18 @@ function initializeGame() {
 }
 
 /**
- * Initialize hammer and anvil system
+ * Initialize crafting systems (hammer and pestle)
  */
-function initializeHammerSystem() {
-  const hammerCanvas = document.getElementById('hammerCanvas');
-  const hammerHint = document.getElementById('hammerHint');
+function initializeCraftingSystems() {
+  const craftingCanvas = document.getElementById('craftingCanvas');
 
-  if (!hammerCanvas) {
-    console.warn('Hammer canvas not found');
+  if (!craftingCanvas) {
+    console.warn('Crafting canvas not found');
     return;
   }
 
   // Create hammer system with callbacks
-  hammerSystem = new HammerSystem(hammerCanvas);
+  hammerSystem = new HammerSystem(craftingCanvas);
 
   // Callback when hammer strikes anvil - spawn flying physics letters
   hammerSystem.onLetterForged = (impactX, impactY, power, strikeVx, multiplier = 1) => {
@@ -87,8 +92,9 @@ function initializeHammerSystem() {
     }
 
     // Hide hint after first strike
-    if (hammerHint && !hammerHint.classList.contains('hidden')) {
-      hammerHint.classList.add('hidden');
+    const hint = document.getElementById('craftingHint');
+    if (hint && !hint.classList.contains('hidden')) {
+      hint.classList.add('hidden');
     }
   };
 
@@ -149,9 +155,70 @@ function initializeHammerSystem() {
     updateUI();
   };
 
-  // Start the hammer system
+  // Create pestle system with callbacks
+  pestleSystem = new PestleSystem(craftingCanvas);
+
+  // Callback when ink is produced
+  pestleSystem.onInkProduced = (letter) => {
+    addInk(1);
+    updateUI();
+    console.log('Produced 1 ink from letter:', letter);
+  };
+
+  // Start with hammer active
   hammerSystem.start();
-  console.log('Hammer system initialized');
+  console.log('Crafting systems initialized');
+}
+
+/**
+ * Setup tool selection handlers
+ */
+function setupToolSelection() {
+  const hammerBtn = document.getElementById('selectHammer');
+  const pestleBtn = document.getElementById('selectPestle');
+  const craftingHint = document.getElementById('craftingHint');
+
+  if (!hammerBtn || !pestleBtn) return;
+
+  hammerBtn.addEventListener('click', () => {
+    if (activeTool === 'hammer') return;
+
+    activeTool = 'hammer';
+    hammerBtn.classList.add('active');
+    pestleBtn.classList.remove('active');
+
+    // Switch systems
+    if (pestleSystem) pestleSystem.stop();
+    if (hammerSystem) hammerSystem.start();
+
+    // Update hint text
+    if (craftingHint) {
+      craftingHint.textContent = 'Click and drag the hammer, swing down onto the anvil to forge letters';
+      craftingHint.classList.remove('hidden');
+    }
+
+    console.log('Switched to Hammer');
+  });
+
+  pestleBtn.addEventListener('click', () => {
+    if (activeTool === 'pestle') return;
+
+    activeTool = 'pestle';
+    pestleBtn.classList.add('active');
+    hammerBtn.classList.remove('active');
+
+    // Switch systems
+    if (hammerSystem) hammerSystem.stop();
+    if (pestleSystem) pestleSystem.start();
+
+    // Update hint text
+    if (craftingHint) {
+      craftingHint.textContent = 'Drag pestle through letters to pick them up, then churn in mortar to produce ink';
+      craftingHint.classList.remove('hidden');
+    }
+
+    console.log('Switched to Pestle & Mortar');
+  });
 }
 
 /**
