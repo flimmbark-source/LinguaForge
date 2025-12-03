@@ -319,7 +319,26 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
     insertIndex = chips.length - insertIndex;
   }
 
-  reorderWord(instanceId, insertIndex);
+  // Get fresh DOM-order filtered array to find the actual element at this position
+  const allChildren = Array.from(verseArea.children).filter(el =>
+    el.classList.contains('line-word-chip') &&
+    !el.classList.contains('line-word-chip-placeholder') &&
+    el.dataset.instanceId !== instanceId
+  );
+
+  const insertBeforeChip = allChildren[insertIndex] || null;
+
+  // Convert to state array index by finding the element in the full state
+  let stateIndex;
+  if (insertBeforeChip) {
+    const targetInstanceId = insertBeforeChip.dataset.instanceId;
+    stateIndex = gameState.verseWords.findIndex(w => w.instanceId === targetInstanceId);
+  } else {
+    // Insert at end
+    stateIndex = gameState.verseWords.length;
+  }
+
+  reorderWord(instanceId, stateIndex);
   if (onUpdate) onUpdate();
 }
 
