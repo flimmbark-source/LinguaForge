@@ -232,14 +232,16 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
   if (!verseArea || !placeholder) return;
 
   const isRTL = getComputedStyle(verseArea).direction === 'rtl';
-  const allChips = Array.from(verseArea.children).filter(el =>
+
+  // Get chips in DOM order for later lookup
+  const domOrderChips = Array.from(verseArea.children).filter(el =>
     el.classList.contains('line-word-chip') &&
     !el.classList.contains('line-word-chip-placeholder') &&
     el.dataset.instanceId !== instanceId
   );
 
-  // Sort chips by visual position (left to right on screen)
-  const sortedChips = [...allChips].sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+  // Sort chips by visual position for screen-space calculation
+  const sortedChips = [...domOrderChips].sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
 
   let insertIndex = 0;
 
@@ -254,13 +256,13 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
     insertIndex++;
   }
 
-  // Convert screen-space index to DOM-space index for RTL
+  // Convert screen-space index to state-space index for RTL
   if (isRTL) {
     insertIndex = sortedChips.length - insertIndex;
   }
 
-  // Find the DOM chip at the calculated index
-  const insertBeforeChip = allChips[insertIndex] || null;
+  // Find the chip at the state-space index in DOM order
+  const insertBeforeChip = domOrderChips[insertIndex] || null;
 
   // Insert placeholder at calculated position
   if (insertBeforeChip) {
@@ -413,12 +415,14 @@ function updateInventoryPlaceholderPosition(clientX, verseArea, placeholder) {
   if (!verseArea || !placeholder) return;
 
   const isRTL = getComputedStyle(verseArea).direction === 'rtl';
-  const allChips = Array.from(verseArea.children).filter(el =>
+
+  // Get chips in DOM order for later lookup
+  const domOrderChips = Array.from(verseArea.children).filter(el =>
     !el.classList.contains('line-word-chip-placeholder')
   );
 
-  // Sort chips by visual position (left to right on screen)
-  const sortedChips = [...allChips].sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+  // Sort chips by visual position for screen-space calculation
+  const sortedChips = [...domOrderChips].sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
 
   let insertIndex = 0;
 
@@ -433,13 +437,13 @@ function updateInventoryPlaceholderPosition(clientX, verseArea, placeholder) {
     insertIndex++;
   }
 
-  // Convert screen-space index to DOM-space index for RTL
+  // Convert screen-space index to state-space index for RTL
   if (isRTL) {
     insertIndex = sortedChips.length - insertIndex;
   }
 
-  // Find the DOM chip at the calculated index
-  const insertBeforeChip = allChips[insertIndex] || null;
+  // Find the chip at the state-space index in DOM order
+  const insertBeforeChip = domOrderChips[insertIndex] || null;
 
   // Insert placeholder at calculated position
   if (insertBeforeChip) {
