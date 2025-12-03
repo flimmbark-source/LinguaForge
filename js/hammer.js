@@ -24,7 +24,7 @@ export class HammerSystem {
       headY: 0,
       prevHeadX: 0,
       prevHeadY: 0,
-      length: 160,
+      length: 180,
       width: 90,
       handleThickness: 20,
       angle: 0,
@@ -83,18 +83,20 @@ export class HammerSystem {
     this.width = rect.width;
     this.height = rect.height;
 
-    // Position anvil at bottom of canvas (sitting on top of letter pool bar)
+    // Position anvil just above the letter pool bar (160px from bottom)
+    // Canvas now covers full viewport, so position relative to bottom
+    const letterPoolBarHeight = 160;
     this.anvil.width = Math.min(260, this.width * 0.35);
     this.anvil.height = 70;
     this.anvil.x = this.width * 0.5 - this.anvil.width / 2;
-    this.anvil.y = this.height - this.anvil.height - 10; // 10px padding from bottom
+    this.anvil.y = this.height - letterPoolBarHeight - this.anvil.height - 10;
 
     // Position hammer pivot above anvil with enough clearance to swing
     const pivotX = this.width * 0.5;
-    const pivotY = this.anvil.y - 120;
+    const pivotY = this.anvil.y - 140; // More space for swinging
     this.hammer.pivotX = pivotX;
     this.hammer.pivotY = pivotY;
-    this.hammer.length = 160;
+    this.hammer.length = 180; // Slightly longer hammer for better reach
 
     // Start with hammer hanging down
     this.hammer.headX = pivotX;
