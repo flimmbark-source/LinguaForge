@@ -83,13 +83,13 @@ export class HammerSystem {
     this.width = rect.width;
     this.height = rect.height;
 
-    // Position anvil in center of canvas
+    // Position anvil at bottom of canvas (sitting on top of letter pool bar)
     this.anvil.width = Math.min(260, this.width * 0.35);
     this.anvil.height = 70;
     this.anvil.x = this.width * 0.5 - this.anvil.width / 2;
-    this.anvil.y = this.height * 0.5 - this.anvil.height / 2 + 10;
+    this.anvil.y = this.height - this.anvil.height - 10; // 10px padding from bottom
 
-    // Position hammer pivot above anvil
+    // Position hammer pivot above anvil with enough clearance to swing
     const pivotX = this.width * 0.5;
     const pivotY = this.anvil.y - 120;
     this.hammer.pivotX = pivotX;
