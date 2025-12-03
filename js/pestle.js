@@ -251,40 +251,60 @@ export class PestleSystem {
   /**
    * Handle pointer move event
    */
-  onPointerMove(e) {
-    const rect = this.canvas.getBoundingClientRect();
-    const client = e.touches ? e.touches[0] : e;
-    this.input.mouseX = client.clientX - rect.left;
-    this.input.mouseY = client.clientY - rect.top;
+  /**
+ * Handle pointer move event
+ */
+onPointerMove(e) {
+  const rect = this.canvas.getBoundingClientRect();
+  const client = e.touches ? e.touches[0] : e;
+  this.input.mouseX = client.clientX - rect.left;
+  this.input.mouseY = client.clientY - rect.top;
 
-    const pestle = this.pestle;
+  const pestle = this.pestle;
 
-    // If pestle is following mouse, update head position (player holds pestle end)
-    if (pestle.isFollowingMouse) {
-      pestle.headX = this.input.mouseX;
-      pestle.headY = this.input.mouseY;
-    }
+  // If pestle is following mouse, update head position (player holds pestle end)
+  if (pestle.isFollowingMouse) {
+    pestle.headX = this.input.mouseX;
+    pestle.headY = this.input.mouseY;
+  }
 
-    if (pestle.isHeld && this.input.isDown) {
-      e.preventDefault();
-      e.stopPropagation();
+  if (pestle.isHeld && this.input.isDown) {
+    e.preventDefault();
+    e.stopPropagation();
 
-      const clickDuration = Date.now() - pestle.clickStartTime;
+    const clickDuration = Date.now() - pestle.clickStartTime;
 
-      if (pestle.isInserted) {
-        // If held for > 200ms, enable churning mode
-        if (clickDuration > 200) {
-          // Churning mode - only allow horizontal movement
-          pestle.pivotX = this.input.mouseX;
-          // Keep pivot Y fixed at mortar level
-        }
-      } else if (!pestle.isFollowingMouse) {
-        // Free movement
-        pestle.pivotX = this.input.mouseX;
-        pestle.pivotY = this.input.mouseY;
+    if (pestle.isInserted) {
+      // If held for > 200ms, enable churning mode
+      if (clickDuration > 200) {
+        const mortar = this.mortar;
+        const centerX = mortar.x + mortar.width / 2;
+        const maxOffset = 40;
+
+        // Same top as in updatePestle, but allow pushing deeper into the bowl
+        const mortarTop = mortar.y - 40;
+        const mortarBottom = mortar.y + mortar.height;
+
+        let targetX = this.input.mouseX;
+        let targetY = this.input.mouseY;
+
+        // Clamp horizontally around the mortar center
+        targetX = Math.max(centerX - maxOffset, Math.min(centerX + maxOffset, targetX));
+
+        // Clamp vertically so the handle stays around the mortar
+        targetY = Math.max(mortarTop, Math.min(mortarBottom, targetY));
+
+        pestle.pivotX = targetX;
+        pestle.pivotY = targetY;
       }
+    } else if (!pestle.isFollowingMouse) {
+      // Free movement (not inserted): pivot follows the mouse directly
+      pestle.pivotX = this.input.mouseX;
+      pestle.pivotY = this.input.mouseY;
     }
   }
+}
+
 
   /**
    * Handle pointer up event
@@ -398,6 +418,30 @@ export class PestleSystem {
     }
   }
 
+/**
+ * World-space position of the visible bottom of the pestle head
+ */
+getPestleTipPosition() {
+  const p = this.pestle;
+
+  // Direction from head back toward pivot (up the shaft)
+  const vx = p.pivotX - p.headX;
+  const vy = p.pivotY - p.headY;
+  const len = Math.hypot(vx, vy) || 1;
+
+  // How far to move along the shaft – tweak this to taste
+  // Roughly “a bit up from the physics head point”.
+  const offset = p.constantLength * 1.00; // try 0.15–0.22 if you want to tune
+
+  return {
+    x: p.headX + (vx / len) * offset,
+    y: p.headY + (vy / len) * offset,
+  };
+}
+
+
+
+  
   /**
    * Update side-to-side motion tracking for churning
    */
@@ -427,46 +471,48 @@ export class PestleSystem {
         this.churnTracker.currentSide = side;
       }
       // Check if we've crossed to the opposite side
-      else if (side !== this.churnTracker.currentSide) {
-        // Produce ink if we have letters attached
-        if (pestle.attachedLetters.length > 0 && pestle.churnCooldown <= 0) {
-          pestle.churnCooldown = 0.3;
-          const letter = pestle.attachedLetters.pop();
+else if (side !== this.churnTracker.currentSide) {
+  if (pestle.attachedLetters.length > 0 && pestle.churnCooldown <= 0) {
+    pestle.churnCooldown = 0.3;
+    const letter = pestle.attachedLetters.pop();
 
-          // Spawn ink drop effect
-          this.spawnInkDrop(pestle.headX, pestle.headY);
+    // Use pestle tip position instead of raw headX/headY
+    const tip = this.getPestleTipPosition();
+    this.spawnInkDrop(tip.x, tip.y);
 
-          // Callback for ink production
-          if (this.onInkProduced) {
-            this.onInkProduced(letter);
-          }
+    if (this.onInkProduced) {
+      this.onInkProduced(letter);
+    }
 
-          console.log('Churned to', side, 'side - produced ink from letter:', letter);
-        }
+    console.log('Churned to', side, 'side - produced ink from letter:', letter);
+  }
 
-        // Update to new side
-        this.churnTracker.currentSide = side;
-      }
+  this.churnTracker.currentSide = side;
+}
     }
   }
 
   /**
-   * Spawn ink drop visual effect
-   */
-  spawnInkDrop(x, y) {
-    for (let i = 0; i < 3; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 2 + 1;
-      this.inkDrops.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 2,
-        life: 0.6,
-        age: 0,
-      });
-    }
+ * Spawn ink drop / splatter visual effect
+ */
+spawnInkDrop(x, y) {
+  const burstCount = 10 + Math.floor(Math.random() * 6); // 10–15 drops
+
+  for (let i = 0; i < burstCount; i++) {
+    // Spread mostly outward, slightly upward
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 120 + Math.random() * 80; // px/s
+
+    this.inkDrops.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed * 0.015, // convert to px/frame-ish
+      vy: Math.sin(angle) * speed * 0.015 - 0.4,
+      life: 0.5 + Math.random() * 0.3,     // seconds
+      age: 0,
+    });
   }
+}
 
   /**
    * Update pestle physics
@@ -782,22 +828,20 @@ export class PestleSystem {
     ctx.restore();
   }
 
-  /**
-   * Draw ink drops
-   */
   drawInkDrops(ctx, inkDrops) {
-    ctx.save();
-    for (const d of inkDrops) {
-      const t = d.age / d.life;
-      const alpha = Math.max(0, 1 - t);
-      const size = 2 + (1 - t) * 1.5;
-      ctx.fillStyle = `rgba(139, 92, 246, ${alpha})`;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, size, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
+  ctx.save();
+  for (const d of inkDrops) {
+    const t = d.age / d.life;
+    const alpha = Math.max(0, 1 - t);
+    const size = 2 + (1 - t) * 1.5;
+    ctx.fillStyle = `rgba(139, 92, 246, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, size, 0, Math.PI * 2);
+    ctx.fill();
   }
+  ctx.restore();
+}
+
 
   /**
    * Render frame

@@ -16,6 +16,7 @@ import { addLetters } from './state.js';
 import { HammerSystem } from './hammer.js';
 import { PestleSystem } from './pestle.js';
 import { initializeHearth, updateHearth } from './hearth.js';
+import { addInk /*, whatever else you need */ } from './state.js';
 
 // Global crafting system references
 let hammerSystem = null;
@@ -193,7 +194,7 @@ function setupToolSelection() {
 
     // Update hint text
     if (craftingHint) {
-      craftingHint.textContent = 'Click and drag the hammer, swing down onto the anvil to forge letters';
+      craftingHint.textContent = '';
       craftingHint.classList.remove('hidden');
     }
 
@@ -213,7 +214,7 @@ function setupToolSelection() {
 
     // Update hint text
     if (craftingHint) {
-      craftingHint.textContent = 'Drag pestle through letters to pick them up, insert into mortar, then move side-to-side to churn ink';
+      craftingHint.textContent = '';
       craftingHint.classList.remove('hidden');
     }
 
@@ -310,3 +311,4 @@ if (document.readyState === 'loading') {
 } else {
   start();
 }
+
