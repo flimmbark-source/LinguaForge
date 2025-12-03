@@ -49,10 +49,9 @@ export class PestleSystem {
 
     // Side-to-side motion tracking for churning
     this.churnTracker = {
-      prevX: 0,
-      direction: 0, // -1 for left, 1 for right, 0 for stationary
-      totalDistance: 0, // Total horizontal distance traveled
-      churnThreshold: 60, // Pixels of side-to-side motion needed for 1 ink
+      centerX: 0, // Center position of mortar
+      currentSide: null, // 'left', 'right', or null (first drag can go either way)
+      sideThreshold: 15, // Pixels from center to be considered on a side
     };
 
     // Visual effects
@@ -217,7 +216,8 @@ export class PestleSystem {
       pestle.headY = mortarTop + pestle.constantLength;
       pestle.prevHeadX = pestle.headX;
       pestle.prevHeadY = pestle.headY;
-      this.churnTracker.prevX = centerX;
+      this.churnTracker.centerX = centerX;
+      this.churnTracker.currentSide = null; // Reset for first drag
       console.log('Pestle inserted into mortar via click - letters preserved:', pestle.attachedLetters.length);
       return;
     }
@@ -234,7 +234,8 @@ export class PestleSystem {
       // If pestle is inserted, track for click vs hold detection
       if (pestle.isInserted) {
         // Will determine if click or hold in onPointerUp
-        this.churnTracker.prevX = this.input.mouseX;
+        // Reset side tracking for new churning session
+        this.churnTracker.currentSide = null;
       } else if (!pestle.isFollowingMouse) {
         // Free movement - move the pivot point
         pestle.pivotX = this.input.mouseX;
@@ -300,6 +301,9 @@ export class PestleSystem {
         pestle.pivotX = this.input.mouseX;
         pestle.pivotY = this.input.mouseY;
         console.log('Pestle separated from mortar - now following mouse with', pestle.attachedLetters.length, 'letters');
+      } else if (pestle.isInserted) {
+        // Long hold finished - reset side for next churning session
+        this.churnTracker.currentSide = null;
       }
     }
 
@@ -387,36 +391,35 @@ export class PestleSystem {
    */
   updateChurnTracking(dt) {
     if (!this.isPestleInChurnZone()) {
-      this.churnTracker.totalDistance = 0;
-      this.churnTracker.direction = 0;
+      this.churnTracker.currentSide = null;
       return;
     }
 
     const pestle = this.pestle;
     const currentX = pestle.pivotX;
-    const prevX = this.churnTracker.prevX;
-    const deltaX = currentX - prevX;
+    const centerX = this.churnTracker.centerX;
+    const threshold = this.churnTracker.sideThreshold;
 
-    // Only track significant movement (> 1px)
-    if (Math.abs(deltaX) > 1) {
-      const newDirection = deltaX > 0 ? 1 : -1;
+    // Determine which side the pestle is on
+    let side = null;
+    if (currentX < centerX - threshold) {
+      side = 'left';
+    } else if (currentX > centerX + threshold) {
+      side = 'right';
+    }
 
-      // Check for direction change (side-to-side motion)
-      if (this.churnTracker.direction !== 0 && newDirection !== this.churnTracker.direction) {
-        // Direction changed - add to total distance
-        this.churnTracker.totalDistance += Math.abs(deltaX);
+    // If we're on a definite side
+    if (side !== null) {
+      // First drag - set the initial side
+      if (this.churnTracker.currentSide === null) {
+        this.churnTracker.currentSide = side;
       }
-
-      this.churnTracker.direction = newDirection;
-      this.churnTracker.prevX = currentX;
-
-      // Check if we've churned enough for ink
-      if (this.churnTracker.totalDistance >= this.churnTracker.churnThreshold) {
+      // Check if we've crossed to the opposite side
+      else if (side !== this.churnTracker.currentSide) {
         // Produce ink if we have letters attached
         if (pestle.attachedLetters.length > 0 && pestle.churnCooldown <= 0) {
           pestle.churnCooldown = 0.3;
           const letter = pestle.attachedLetters.pop();
-          this.churnTracker.totalDistance = 0;
 
           // Spawn ink drop effect
           this.spawnInkDrop(pestle.headX, pestle.headY);
@@ -425,9 +428,12 @@ export class PestleSystem {
           if (this.onInkProduced) {
             this.onInkProduced(letter);
           }
-        } else {
-          this.churnTracker.totalDistance = 0;
+
+          console.log('Churned to', side, 'side - produced ink from letter:', letter);
         }
+
+        // Update to new side
+        this.churnTracker.currentSide = side;
       }
     }
   }
@@ -471,7 +477,8 @@ export class PestleSystem {
       pestle.headY = mortarTop + pestle.constantLength;
       pestle.prevHeadX = pestle.headX;
       pestle.prevHeadY = pestle.headY;
-      this.churnTracker.prevX = centerX;
+      this.churnTracker.centerX = centerX;
+      this.churnTracker.currentSide = null; // Reset for first drag
       console.log('Pestle inserted into mortar - letters preserved:', pestle.attachedLetters.length);
     } else if (pestle.isInserted && pestle.isHeld && pestle.pivotY < mortar.y - 50) {
       // Lift pestle out of mortar (needs to go higher now)
