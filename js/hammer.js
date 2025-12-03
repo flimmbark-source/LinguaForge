@@ -112,12 +112,13 @@ export class HammerSystem {
    * Setup event listeners for hammer interaction
    */
   setupEventListeners() {
-    this.canvas.addEventListener('mousedown', this.onPointerDown);
-    this.canvas.addEventListener('mousemove', this.onPointerMove);
-    window.addEventListener('mouseup', this.onPointerUp);
-    this.canvas.addEventListener('touchstart', this.onPointerDown);
-    this.canvas.addEventListener('touchmove', this.onPointerMove);
-    window.addEventListener('touchend', this.onPointerUp);
+    // Listen on document to capture events even when canvas has pointer-events: none
+    document.addEventListener('mousedown', this.onPointerDown);
+    document.addEventListener('mousemove', this.onPointerMove);
+    document.addEventListener('mouseup', this.onPointerUp);
+    document.addEventListener('touchstart', this.onPointerDown, { passive: false });
+    document.addEventListener('touchmove', this.onPointerMove, { passive: false });
+    document.addEventListener('touchend', this.onPointerUp);
     window.addEventListener('resize', this.resize);
   }
 
@@ -145,14 +146,17 @@ export class HammerSystem {
    * Handle pointer down event
    */
   onPointerDown(e) {
-    e.preventDefault();
     const rect = this.canvas.getBoundingClientRect();
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
-    this.input.isDown = true;
 
+    // Only handle if near hammer, otherwise let event pass through
     if (this.isPointNearHammer(this.input.mouseX, this.input.mouseY)) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      this.input.isDown = true;
       const hammer = this.hammer;
       const hx = hammer.headX;
       const hy = hammer.headY;
@@ -174,13 +178,14 @@ export class HammerSystem {
    * Handle pointer move event
    */
   onPointerMove(e) {
-    e.preventDefault();
     const rect = this.canvas.getBoundingClientRect();
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
 
     if (this.hammer.isHeld && this.input.isDown) {
+      e.preventDefault();
+      e.stopPropagation();
       this.hammer.pivotX = this.input.mouseX;
       this.hammer.pivotY = this.input.mouseY;
     }
@@ -189,7 +194,11 @@ export class HammerSystem {
   /**
    * Handle pointer up event
    */
-  onPointerUp() {
+  onPointerUp(e) {
+    if (this.hammer.isHeld) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     this.input.isDown = false;
     this.hammer.isHeld = false;
   }
@@ -635,12 +644,12 @@ export class HammerSystem {
    */
   destroy() {
     this.stop();
-    this.canvas.removeEventListener('mousedown', this.onPointerDown);
-    this.canvas.removeEventListener('mousemove', this.onPointerMove);
-    window.removeEventListener('mouseup', this.onPointerUp);
-    this.canvas.removeEventListener('touchstart', this.onPointerDown);
-    this.canvas.removeEventListener('touchmove', this.onPointerMove);
-    window.removeEventListener('touchend', this.onPointerUp);
+    document.removeEventListener('mousedown', this.onPointerDown);
+    document.removeEventListener('mousemove', this.onPointerMove);
+    document.removeEventListener('mouseup', this.onPointerUp);
+    document.removeEventListener('touchstart', this.onPointerDown);
+    document.removeEventListener('touchmove', this.onPointerMove);
+    document.removeEventListener('touchend', this.onPointerUp);
     window.removeEventListener('resize', this.resize);
   }
 }
