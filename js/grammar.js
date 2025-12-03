@@ -232,16 +232,18 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
   if (!verseArea || !placeholder) return;
 
   const isRTL = getComputedStyle(verseArea).direction === 'rtl';
+
+  // Get chips excluding placeholder and dragged chip
   const chips = Array.from(verseArea.children).filter(el =>
     el.classList.contains('line-word-chip') &&
     !el.classList.contains('line-word-chip-placeholder') &&
     el.dataset.instanceId !== instanceId
   );
 
-  // Sort chips by visual position (left to right on screen)
+  // Sort chips by visual position for screen-space calculation
   chips.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
 
-  let insertBeforeChip = null;
+  let insertIndex = 0;
 
   for (const chip of chips) {
     const rect = chip.getBoundingClientRect();
@@ -249,10 +251,24 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
 
     // Since chips are sorted by screen position, always use screen-space comparison
     if (clientX < midX) {
-      insertBeforeChip = chip;
       break;
     }
+    insertIndex++;
   }
+
+  // Convert screen-space index to state-space index for RTL
+  if (isRTL) {
+    insertIndex = chips.length - insertIndex;
+  }
+
+  // Get all children again (without sorting) to find the element at state index
+  const allChildren = Array.from(verseArea.children).filter(el =>
+    el.classList.contains('line-word-chip') &&
+    !el.classList.contains('line-word-chip-placeholder') &&
+    el.dataset.instanceId !== instanceId
+  );
+
+  const insertBeforeChip = allChildren[insertIndex] || null;
 
   // Insert placeholder at calculated position
   if (insertBeforeChip) {
@@ -275,6 +291,7 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
 
   const isRTL = getComputedStyle(verseArea).direction === 'rtl';
   const chips = Array.from(verseArea.children).filter(el =>
+    el.classList.contains('line-word-chip') &&
     !el.classList.contains('line-word-chip-placeholder') &&
     el.dataset.instanceId !== instanceId
   );
@@ -302,7 +319,26 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
     insertIndex = chips.length - insertIndex;
   }
 
-  reorderWord(instanceId, insertIndex);
+  // Get fresh DOM-order filtered array to find the actual element at this position
+  const allChildren = Array.from(verseArea.children).filter(el =>
+    el.classList.contains('line-word-chip') &&
+    !el.classList.contains('line-word-chip-placeholder') &&
+    el.dataset.instanceId !== instanceId
+  );
+
+  const insertBeforeChip = allChildren[insertIndex] || null;
+
+  // Convert to state array index by finding the element in the full state
+  let stateIndex;
+  if (insertBeforeChip) {
+    const targetInstanceId = insertBeforeChip.dataset.instanceId;
+    stateIndex = gameState.verseWords.findIndex(w => w.instanceId === targetInstanceId);
+  } else {
+    // Insert at end
+    stateIndex = gameState.verseWords.length;
+  }
+
+  reorderWord(instanceId, stateIndex);
   if (onUpdate) onUpdate();
 }
 
@@ -405,14 +441,16 @@ function updateInventoryPlaceholderPosition(clientX, verseArea, placeholder) {
   if (!verseArea || !placeholder) return;
 
   const isRTL = getComputedStyle(verseArea).direction === 'rtl';
+
+  // Get chips excluding placeholder (matches drop handler exactly)
   const chips = Array.from(verseArea.children).filter(el =>
     !el.classList.contains('line-word-chip-placeholder')
   );
 
-  // Sort chips by visual position (left to right on screen)
+  // Sort chips by visual position for screen-space calculation
   chips.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
 
-  let insertBeforeChip = null;
+  let insertIndex = 0;
 
   for (const chip of chips) {
     const rect = chip.getBoundingClientRect();
@@ -420,10 +458,22 @@ function updateInventoryPlaceholderPosition(clientX, verseArea, placeholder) {
 
     // Since chips are sorted by screen position, always use screen-space comparison
     if (clientX < midX) {
-      insertBeforeChip = chip;
       break;
     }
+    insertIndex++;
   }
+
+  // Convert screen-space index to state-space index for RTL
+  if (isRTL) {
+    insertIndex = chips.length - insertIndex;
+  }
+
+  // Get all children again (without sorting) to find the element at state index
+  const allChildren = Array.from(verseArea.children).filter(el =>
+    !el.classList.contains('line-word-chip-placeholder')
+  );
+
+  const insertBeforeChip = allChildren[insertIndex] || null;
 
   // Insert placeholder at calculated position
   if (insertBeforeChip) {

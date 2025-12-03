@@ -97,7 +97,8 @@ python3 -m http.server 8000
 # Or using Node.js
 npx http-server
 
-# Then open http://localhost:8000 in your browser
+# Then open http://localh
+ost:8000 in your browser
 ```
 
 ## Gameplay
