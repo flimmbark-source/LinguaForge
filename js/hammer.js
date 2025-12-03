@@ -548,7 +548,7 @@ export class HammerSystem {
     ctx.translate(pivotX, pivotY);
     ctx.rotate(angle);
 
-    // Handle
+    // Dynamic handle (physics-based)
     const handleWidth = hammer.handleThickness;
     const handleLength = length;
     const handleGradient = ctx.createLinearGradient(0, -handleLength, 0, 0);
@@ -556,6 +556,14 @@ export class HammerSystem {
     handleGradient.addColorStop(1, '#92400e');
     ctx.fillStyle = handleGradient;
     ctx.fillRect(-handleWidth / 2, -handleLength, handleWidth, handleLength);
+
+    // Static handle overlay (constant length)
+    const staticHandleLength = hammer.length; // Use original length, not stretched length
+    const staticGradient = ctx.createLinearGradient(0, -staticHandleLength, 0, 0);
+    staticGradient.addColorStop(0, '#fbbf24');
+    staticGradient.addColorStop(1, '#92400e');
+    ctx.fillStyle = staticGradient;
+    ctx.fillRect(-handleWidth / 2, -staticHandleLength, handleWidth, staticHandleLength);
 
     // Head
     const headWidth = hammer.width;

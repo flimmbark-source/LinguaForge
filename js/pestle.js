@@ -32,8 +32,10 @@ export class PestleSystem {
       headVy: 0,
       isHeld: false,
       isInserted: false, // Whether pestle is inserted into mortar
+      isFollowingMouse: false, // Whether pestle follows mouse cursor
       attachedLetters: [], // Letters picked up by pestle
       churnCooldown: 0,
+      clickStartTime: 0, // Track when click started
     };
 
     // Mortar state
@@ -61,6 +63,7 @@ export class PestleSystem {
       mouseX: 0,
       mouseY: 0,
       isDown: false,
+      downTime: 0, // Time when mouse was pressed
     };
 
     // Animation state
@@ -161,6 +164,19 @@ export class PestleSystem {
   }
 
   /**
+   * Check if point is over mortar
+   */
+  isPointOverMortar(px, py) {
+    const mortar = this.mortar;
+    return (
+      px > mortar.x &&
+      px < mortar.x + mortar.width &&
+      py > mortar.y &&
+      py < mortar.y + mortar.height
+    );
+  }
+
+  /**
    * Handle pointer down event
    */
   onPointerDown(e) {
@@ -168,6 +184,30 @@ export class PestleSystem {
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
+    this.input.downTime = Date.now();
+
+    const pestle = this.pestle;
+
+    // Check if clicking on mortar while pestle is following mouse
+    if (pestle.isFollowingMouse && this.isPointOverMortar(this.input.mouseX, this.input.mouseY)) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Insert pestle into mortar
+      pestle.isFollowingMouse = false;
+      pestle.isInserted = true;
+      const centerX = this.mortar.x + this.mortar.width / 2;
+      const mortarTop = this.mortar.y - 40; // Start higher up
+      pestle.pivotX = centerX;
+      pestle.pivotY = mortarTop;
+      pestle.headX = centerX;
+      pestle.headY = mortarTop + pestle.constantLength;
+      pestle.prevHeadX = pestle.headX;
+      pestle.prevHeadY = pestle.headY;
+      this.churnTracker.prevX = centerX;
+      console.log('Pestle inserted into mortar via click');
+      return;
+    }
 
     // Only handle if near pestle
     if (this.isPointNearPestle(this.input.mouseX, this.input.mouseY)) {
@@ -175,18 +215,17 @@ export class PestleSystem {
       e.stopPropagation();
 
       this.input.isDown = true;
-      const pestle = this.pestle;
-
       pestle.isHeld = true;
+      pestle.clickStartTime = Date.now();
 
-      // If pestle is inserted, we're grabbing the handle for churning
-      if (!pestle.isInserted) {
+      // If pestle is inserted, track for click vs hold detection
+      if (pestle.isInserted) {
+        // Will determine if click or hold in onPointerUp
+        this.churnTracker.prevX = this.input.mouseX;
+      } else if (!pestle.isFollowingMouse) {
         // Free movement - move the pivot point
         pestle.pivotX = this.input.mouseX;
         pestle.pivotY = this.input.mouseY;
-      } else {
-        // Inserted - churning mode, track starting position
-        this.churnTracker.prevX = this.input.mouseX;
       }
     }
   }
@@ -200,17 +239,28 @@ export class PestleSystem {
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
 
-    if (this.pestle.isHeld && this.input.isDown) {
+    const pestle = this.pestle;
+
+    // If pestle is following mouse, update pivot position
+    if (pestle.isFollowingMouse) {
+      pestle.pivotX = this.input.mouseX;
+      pestle.pivotY = this.input.mouseY;
+    }
+
+    if (pestle.isHeld && this.input.isDown) {
       e.preventDefault();
       e.stopPropagation();
 
-      const pestle = this.pestle;
+      const clickDuration = Date.now() - pestle.clickStartTime;
 
       if (pestle.isInserted) {
-        // Churning mode - only allow horizontal movement
-        pestle.pivotX = this.input.mouseX;
-        // Keep pivot Y fixed at mortar level
-      } else {
+        // If held for > 200ms, enable churning mode
+        if (clickDuration > 200) {
+          // Churning mode - only allow horizontal movement
+          pestle.pivotX = this.input.mouseX;
+          // Keep pivot Y fixed at mortar level
+        }
+      } else if (!pestle.isFollowingMouse) {
         // Free movement
         pestle.pivotX = this.input.mouseX;
         pestle.pivotY = this.input.mouseY;
@@ -222,12 +272,26 @@ export class PestleSystem {
    * Handle pointer up event
    */
   onPointerUp(e) {
-    if (this.pestle.isHeld) {
+    const pestle = this.pestle;
+
+    if (pestle.isHeld) {
       e.preventDefault();
       e.stopPropagation();
+
+      const clickDuration = Date.now() - pestle.clickStartTime;
+
+      // If inserted and it was a quick click (< 200ms), separate pestle
+      if (pestle.isInserted && clickDuration < 200) {
+        pestle.isInserted = false;
+        pestle.isFollowingMouse = true;
+        pestle.pivotX = this.input.mouseX;
+        pestle.pivotY = this.input.mouseY;
+        console.log('Pestle separated from mortar - now following mouse');
+      }
     }
+
     this.input.isDown = false;
-    this.pestle.isHeld = false;
+    pestle.isHeld = false;
   }
 
   /**
@@ -382,12 +446,12 @@ export class PestleSystem {
 
     pestle.churnCooldown = Math.max(0, pestle.churnCooldown - dt);
 
-    // Check if pestle should be inserted or removed
-    if (!pestle.isInserted && this.isPestleInMortar()) {
+    // Check if pestle should be inserted (only if not following mouse)
+    if (!pestle.isInserted && !pestle.isFollowingMouse && this.isPestleInMortar()) {
       // Insert pestle into mortar
       pestle.isInserted = true;
       const centerX = mortar.x + mortar.width / 2;
-      const mortarTop = mortar.y + 10;
+      const mortarTop = mortar.y - 40; // Start higher up
       pestle.pivotX = centerX;
       pestle.pivotY = mortarTop;
       pestle.headX = centerX;
@@ -396,16 +460,17 @@ export class PestleSystem {
       pestle.prevHeadY = pestle.headY;
       this.churnTracker.prevX = centerX;
       console.log('Pestle inserted into mortar');
-    } else if (pestle.isInserted && pestle.isHeld && pestle.pivotY < mortar.y) {
-      // Lift pestle out of mortar
+    } else if (pestle.isInserted && pestle.isHeld && pestle.pivotY < mortar.y - 50) {
+      // Lift pestle out of mortar (needs to go higher now)
       pestle.isInserted = false;
-      console.log('Pestle removed from mortar');
+      pestle.isFollowingMouse = true;
+      console.log('Pestle removed from mortar via lifting');
     }
 
     if (pestle.isInserted) {
       // Pestle is inserted - constrain to mortar
       const centerX = mortar.x + mortar.width / 2;
-      const mortarTop = mortar.y + 10;
+      const mortarTop = mortar.y - 40; // Higher up for extended handle
 
       // Constrain horizontal movement
       const maxOffset = 40;
@@ -419,6 +484,12 @@ export class PestleSystem {
       }
 
       // Head position is directly below pivot at constant length
+      pestle.headX = pestle.pivotX;
+      pestle.headY = pestle.pivotY + pestle.constantLength;
+      pestle.prevHeadX = pestle.headX;
+      pestle.prevHeadY = pestle.headY;
+    } else if (pestle.isFollowingMouse) {
+      // Following mouse - maintain constant length vertically
       pestle.headX = pestle.pivotX;
       pestle.headY = pestle.pivotY + pestle.constantLength;
       pestle.prevHeadX = pestle.headX;
@@ -600,9 +671,9 @@ export class PestleSystem {
       const pestleOffsetX = pestle.pivotX - (mortar.x + centerX);
       const pestleTop = pestle.pivotY - mortar.y;
 
-      // Draw pestle handle sticking out
+      // Draw pestle handle sticking out (extended more)
       const handleWidth = pestle.handleThickness;
-      const visibleHandleLength = pestleTop;
+      const visibleHandleLength = Math.max(50, pestleTop); // Minimum 50px visible
 
       ctx.fillStyle = '#92400e';
       ctx.fillRect(centerX + pestleOffsetX - handleWidth / 2, 0, handleWidth, visibleHandleLength);
