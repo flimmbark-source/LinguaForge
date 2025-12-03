@@ -291,6 +291,7 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
 
   const isRTL = getComputedStyle(verseArea).direction === 'rtl';
   const chips = Array.from(verseArea.children).filter(el =>
+    el.classList.contains('line-word-chip') &&
     !el.classList.contains('line-word-chip-placeholder') &&
     el.dataset.instanceId !== instanceId
   );
