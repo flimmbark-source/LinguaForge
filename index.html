@@ -45,7 +45,6 @@
 
   <!-- MOLD VIEWPORT BAR -->
   <div class="mold-viewport-bar">
-    <button id="forgeWordsBtn">Forge</button>
     <div class="mold-viewport">
       <button id="prevMoldBtn" class="secondary">&lt;</button>
       <span id="moldIndexLabel" style="font-size:12px; opacity:0.8;"></span>
@@ -79,11 +78,13 @@
           Drag letters from the pool onto molds. Only letters that fit a mold will be consumed.
         </div>
       </div>
-            <div class="bottom-dock-column"">
-        <h3>Sell Letters</h3>
-        <div id="letterSell" class="letter-board"></div>
+            <div class="bottom-dock-column">
+        <h3>Hearth</h3>
+        <div id="hearth" class="hearth-container">
+          <div id="hearthFire" class="hearth-fire"></div>
+        </div>
         <div style="margin-top:6px; font-size:12px; opacity:0.75;">
-        Drop a letter tile here to dissolve it into <strong>Ink</strong> (1 Ink per letter for now).
+          Drop letters here to <strong>heat the hearth</strong>. Place the hammer head over the heated hearth for 5 seconds to make it red-hot!
         </div>
       </div>
       <div class="bottom-dock-column">

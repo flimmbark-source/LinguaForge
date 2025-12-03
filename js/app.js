@@ -14,6 +14,7 @@ import { initializeElements, updateUI } from './ui.js';
 import { gameState } from './state.js';
 import { addLetters } from './state.js';
 import { HammerSystem } from './hammer.js';
+import { initializeHearth, updateHearth } from './hearth.js';
 
 // Global hammer system reference
 let hammerSystem = null;
@@ -40,6 +41,9 @@ function initializeGame() {
 
   // Initialize hammer system
   initializeHammerSystem();
+
+  // Initialize hearth system
+  initializeHearth();
 
   // Spawn starting letters
   for (let i = 0; i < STARTING_LETTERS; i++) {
@@ -69,9 +73,10 @@ function initializeHammerSystem() {
   hammerSystem = new HammerSystem(hammerCanvas);
 
   // Callback when hammer strikes anvil - spawn flying physics letters
-  hammerSystem.onLetterForged = (impactX, impactY, power, strikeVx) => {
-    // Spawn letters based on lettersPerClick
-    for (let i = 0; i < gameState.lettersPerClick; i++) {
+  hammerSystem.onLetterForged = (impactX, impactY, power, strikeVx, multiplier = 1) => {
+    // Spawn letters based on lettersPerClick and multiplier
+    const totalLetters = gameState.lettersPerClick * multiplier;
+    for (let i = 0; i < totalLetters; i++) {
       // Get random Hebrew letter
       const letterChar = randomAllowedLetter();
 
@@ -138,6 +143,12 @@ function initializeHammerSystem() {
     updateUI();
   };
 
+  // Callback when red-hot hammer strikes mold viewport - forge words
+  hammerSystem.onForgeTriggered = () => {
+    forgeWords();
+    updateUI();
+  };
+
   // Start the hammer system
   hammerSystem.start();
   console.log('Hammer system initialized');
@@ -173,14 +184,7 @@ function setupEventHandlers() {
     });
   }
 
-  // Forge words button
-  const forgeWordsBtn = document.getElementById('forgeWordsBtn');
-  if (forgeWordsBtn) {
-    forgeWordsBtn.addEventListener('click', () => {
-      forgeWords();
-      updateUI();
-    });
-  }
+  // Forge words button removed - now triggered by red-hot hammer hitting mold viewport
 
   // Enscribe button - complete verse
   const enscribeBtn = document.getElementById('enscribeBtn');
@@ -209,6 +213,9 @@ let lastTime = performance.now();
 function gameLoop(timestamp) {
   const dt = (timestamp - lastTime) / 1000;
   lastTime = timestamp;
+
+  // Update hearth
+  updateHearth(dt);
 
   // Update scribes
   if (gameState.scribeList.length > 0) {
