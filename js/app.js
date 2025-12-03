@@ -6,12 +6,13 @@
 console.log('Lingua Forge app.js loading...');
 
 import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD } from './config.js';
-import { spawnLetter, spawnLetterAnimated } from './letters.js';
+import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js';
 import { setMoldViewportWidth, navigatePreviousMold, navigateNextMold, forgeWords } from './molds.js';
 import { hireScribe, updateScribes } from './scribes.js';
 import { setupVerseAreaDrop, completeVerse } from './grammar.js';
 import { initializeElements, updateUI } from './ui.js';
 import { gameState } from './state.js';
+import { addLetters } from './state.js';
 import { HammerSystem } from './hammer.js';
 
 // Global hammer system reference
@@ -64,13 +65,19 @@ function initializeHammerSystem() {
     return;
   }
 
-  // Create hammer system with callback for letter forging
-  hammerSystem = new HammerSystem(hammerCanvas, (worldX, worldY, power) => {
+  // Create hammer system with callbacks
+  hammerSystem = new HammerSystem(hammerCanvas);
+
+  // Callback when hammer strikes anvil - spawn flying physics letters
+  hammerSystem.onLetterForged = (impactX, impactY, power, strikeVx) => {
     // Spawn letters based on lettersPerClick
     for (let i = 0; i < gameState.lettersPerClick; i++) {
+      // Get random Hebrew letter
+      const letterChar = randomAllowedLetter();
+
       // Slight delay between multiple letters for visual effect
       setTimeout(() => {
-        spawnLetterAnimated(worldX, worldY, power, updateUI);
+        hammerSystem.spawnFlyingLetter(impactX, impactY, power, strikeVx, letterChar);
       }, i * 50);
     }
 
@@ -78,7 +85,58 @@ function initializeHammerSystem() {
     if (hammerHint && !hammerHint.classList.contains('hidden')) {
       hammerHint.classList.add('hidden');
     }
-  });
+  };
+
+  // Callback when letter lands in pool - create DOM tile
+  hammerSystem.onLetterLanded = (letterChar) => {
+    addLetters(1);
+    const letterPoolDiv = document.getElementById('letterPool');
+    if (!letterPoolDiv) return;
+
+    // Check if we already have a tile with this character (stack them)
+    const existing = Array.from(letterPoolDiv.children).find(
+      el => el.classList && el.classList.contains('letter-tile') && el.dataset.letterChar === letterChar
+    );
+
+    if (existing) {
+      const current = parseInt(existing.dataset.count || '1', 10);
+      existing.dataset.count = String(current + 1);
+      // Update the label to show new count
+      const char = existing.dataset.letterChar || '';
+      existing.innerHTML = '<span>' + char + '</span>';
+      if (current + 1 > 1) {
+        const badge = document.createElement('span');
+        badge.className = 'letter-count';
+        badge.textContent = 'x' + (current + 1);
+        existing.appendChild(badge);
+      }
+
+      // Briefly highlight the existing tile
+      existing.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
+      existing.style.transform = 'scale(1.3)';
+      existing.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.6)';
+      setTimeout(() => {
+        existing.style.transform = '';
+        existing.style.boxShadow = '';
+      }, 200);
+    } else {
+      // Create new tile
+      const tile = createLetterTile(letterChar, updateUI);
+      letterPoolDiv.appendChild(tile);
+
+      // Brief entrance animation
+      tile.style.transition = 'transform 0.2s ease';
+      tile.style.transform = 'scale(0)';
+      setTimeout(() => {
+        tile.style.transform = 'scale(1)';
+      }, 10);
+      setTimeout(() => {
+        tile.style.transition = '';
+      }, 210);
+    }
+
+    updateUI();
+  };
 
   // Start the hammer system
   hammerSystem.start();

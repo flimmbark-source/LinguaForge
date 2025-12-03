@@ -3,14 +3,14 @@
  * Physics-based hammer striking mechanic for letter generation
  */
 
-import { randomAllowedLetter } from './letters.js';
-import { addLetters } from './state.js';
-
 export class HammerSystem {
-  constructor(canvas, onLetterForged) {
+  constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.onLetterForged = onLetterForged;
+
+    // Callbacks set by app
+    this.onLetterForged = null;
+    this.onLetterLanded = null;
 
     // World physics constants
     this.gravity = 2600; // px/s^2
@@ -44,6 +44,7 @@ export class HammerSystem {
 
     // Visual effects
     this.sparks = [];
+    this.flyingLetters = [];
 
     // Input state
     this.input = {
@@ -203,6 +204,57 @@ export class HammerSystem {
   }
 
   /**
+   * Get letter pool world position
+   */
+  getLetterPoolWorldPosition() {
+    const letterPoolDiv = document.getElementById('letterPool');
+    if (!letterPoolDiv) return { x: 100, y: window.innerHeight - 100 };
+
+    const rect = letterPoolDiv.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    };
+  }
+
+  /**
+   * Spawn a flying letter with physics
+   */
+  spawnFlyingLetter(impactX, impactY, power, strikeVx, letterChar) {
+    const poolPos = this.getLetterPoolWorldPosition();
+    const canvasRect = this.canvas.getBoundingClientRect();
+
+    // Convert world positions to canvas positions
+    const targetX = poolPos.x - canvasRect.left;
+    const targetY = poolPos.y - canvasRect.top;
+
+    // Launch the letter from the anvil impact point with an upward arc
+    const launchSpeed = 900 + power * 500; // px/s upward
+    const baseVx = (strikeVx || 0) * 0.25;
+    const biasVx = (targetX - impactX) * 0.8 / Math.max(1, this.width);
+    const vx = baseVx + biasVx * launchSpeed * 0.2;
+    const vy = -launchSpeed;
+
+    // Spin based on strike power and direction
+    const spinBase = 6; // rad/s
+    const spinFromStrike = Math.abs(strikeVx || 0) * 0.01 * power;
+    const angularVel = (strikeVx >= 0 ? 1 : -1) * (spinBase + spinFromStrike);
+
+    this.flyingLetters.push({
+      x: impactX,
+      y: impactY - 24,
+      letter: letterChar,
+      targetX,
+      targetY,
+      vx,
+      vy,
+      angle: 0,
+      angularVel,
+      isFlying: true
+    });
+  }
+
+  /**
    * Spawn sparks at impact point
    */
   spawnSparks(x, y, power) {
@@ -308,10 +360,9 @@ export class HammerSystem {
         const impactY = anvil.y;
         this.spawnSparks(impactX, impactY, power);
 
-        // Trigger letter forging
+        // Trigger letter forging with canvas position and velocity
         if (this.onLetterForged) {
-          const worldPos = this.getAnvilWorldPosition();
-          this.onLetterForged(worldPos.x, worldPos.y, power);
+          this.onLetterForged(impactX, impactY, power, hammer.headVx);
         }
       }
     }
@@ -323,6 +374,42 @@ export class HammerSystem {
       s.x += s.vx;
       s.y += s.vy;
       s.vy += 18 * dt;
+    }
+
+    // Update flying letters with physics
+    const blockGravity = this.gravity * 0.8;
+    const landedLetters = [];
+
+    for (const letter of this.flyingLetters) {
+      if (!letter.isFlying) continue;
+
+      // Apply gravity
+      letter.vy += blockGravity * dt;
+
+      // Update position
+      letter.x += letter.vx * dt;
+      letter.y += letter.vy * dt;
+
+      // Update rotation
+      letter.angle += letter.angularVel * dt;
+
+      // Check if letter has fallen to target Y (letter pool level)
+      if (letter.vy > 0 && letter.y >= letter.targetY) {
+        letter.isFlying = false;
+        landedLetters.push(letter);
+      }
+    }
+
+    // Remove landed letters and trigger DOM spawning
+    if (landedLetters.length > 0) {
+      this.flyingLetters = this.flyingLetters.filter(l => l.isFlying);
+
+      // Callback to spawn DOM letter tiles for landed letters
+      if (this.onLetterLanded) {
+        for (const letter of landedLetters) {
+          this.onLetterLanded(letter.letter);
+        }
+      }
     }
   }
 
@@ -450,6 +537,44 @@ export class HammerSystem {
   }
 
   /**
+   * Draw flying letters
+   */
+  drawFlyingLetters(ctx, letters) {
+    ctx.save();
+    for (const letter of letters) {
+      ctx.save();
+      ctx.translate(letter.x, letter.y);
+      ctx.rotate(letter.angle);
+
+      const size = 28;
+
+      // Letter tile background
+      const grad = ctx.createLinearGradient(-size / 2, -size / 2, size / 2, size / 2);
+      grad.addColorStop(0, '#22c55e');
+      grad.addColorStop(1, '#15803d');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(-size / 2, -size / 2, size, size, 6);
+      ctx.fill();
+
+      // Border
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.75)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Hebrew letter
+      ctx.fillStyle = '#ecfdf5';
+      ctx.font = 'bold 20px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(letter.letter, 0, 0);
+
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  /**
    * Render frame
    */
   render() {
@@ -458,6 +583,9 @@ export class HammerSystem {
 
     // Draw anvil
     this.drawAnvil(this.ctx, this.anvil);
+
+    // Draw flying letters (behind hammer)
+    this.drawFlyingLetters(this.ctx, this.flyingLetters);
 
     // Draw hammer
     this.drawHammer(this.ctx, this.hammer);
