@@ -290,7 +290,19 @@ button.secondary {
   cursor: grab;
   user-select: none;
   touch-action: none;
-  transition: transform 0.1s, box-shadow 0.1s;
+  transition: transform 0.2s ease, box-shadow 0.1s;
+}
+
+/* Placeholder shown during drag */
+.line-word-chip-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  transition: all 0.2s ease;
 }
 
 .line-word-chip:hover {

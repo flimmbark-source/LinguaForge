@@ -326,6 +326,13 @@ function renderVerseChips(force = false) {
     chip.textContent = wordInstance.hebrew;
     chip.dataset.instanceId = wordInstance.instanceId;
     setupVerseWordChipDrag(chip, wordInstance.instanceId, () => updateGrammarUI(true));
+
+    // Allow dragover for inventory words to be dropped between existing chips
+    // This makes chips valid drop targets so position detection works correctly
+    chip.addEventListener('dragover', e => {
+      e.preventDefault();
+    });
+
     elements.grammarHebrewLineDiv.appendChild(chip);
   });
 
