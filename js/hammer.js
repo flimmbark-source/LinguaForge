@@ -38,6 +38,7 @@ export class HammerSystem {
       isHeated: false,
       heatingTimer: 0, // Time spent over heated hearth
       heatingRequired: 5, // Seconds needed to heat up hammer
+      baseLength: 180, // visual “original” handle length that never changes
     };
 
     // Anvil state
@@ -88,6 +89,9 @@ export class HammerSystem {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.width = rect.width;
     this.height = rect.height;
+    this.hammer.length = 180;
+    this.hammer.baseLength = 180; // keep original handle length for the static overlay
+
 
     // Position anvil just above the letter pool bar (160px from bottom)
     // Canvas now covers full viewport, so position relative to bottom
@@ -536,39 +540,57 @@ export class HammerSystem {
   /**
    * Draw hammer
    */
-  drawHammer(ctx, hammer) {
-    ctx.save();
-    const pivotX = hammer.pivotX;
-    const pivotY = hammer.pivotY;
-    const dx = hammer.headX - pivotX;
-    const dy = hammer.headY - pivotY;
-    const angle = Math.atan2(dy, dx) + Math.PI / 2;
-    const length = Math.hypot(dx, dy) || hammer.length;
+  /**
+ * Draw hammer
+ */
+drawHammer(ctx, hammer) {
+  ctx.save();
+  const pivotX = hammer.pivotX;
+  const pivotY = hammer.pivotY;
+  const dx = hammer.headX - pivotX;
+  const dy = hammer.headY - pivotY;
+  const angle = Math.atan2(dy, dx) + Math.PI / 2;
+  const length = Math.hypot(dx, dy) || hammer.length;
 
-    ctx.translate(pivotX, pivotY);
-    ctx.rotate(angle);
+  ctx.translate(pivotX, pivotY);
+  ctx.rotate(angle);
 
-    // Dynamic handle (physics-based)
-    const handleWidth = hammer.handleThickness;
-    const handleLength = length;
-    const handleGradient = ctx.createLinearGradient(0, -handleLength, 0, 0);
-    handleGradient.addColorStop(0, '#fbbf24');
-    handleGradient.addColorStop(1, '#92400e');
-    ctx.fillStyle = handleGradient;
-    ctx.fillRect(-handleWidth / 2, -handleLength, handleWidth, handleLength);
+  const handleWidth = hammer.handleThickness;
+  const handleLength = length;
 
-    // Static handle overlay (constant length)
-    const staticHandleLength = hammer.length; // Use original length, not stretched length
-    const staticGradient = ctx.createLinearGradient(0, -staticHandleLength, 0, 0);
-    staticGradient.addColorStop(0, '#fbbf24');
-    staticGradient.addColorStop(1, '#92400e');
-    ctx.fillStyle = staticGradient;
-    ctx.fillRect(-handleWidth / 2, -staticHandleLength, handleWidth, staticHandleLength);
+  // 1) Dynamic handle (physics-based) from PIVOT → HEAD
+  const handleGradient = ctx.createLinearGradient(0, -handleLength, 0, 0);
+  handleGradient.addColorStop(0, '#fbbf24');
+  handleGradient.addColorStop(1, '#92400e');
+  ctx.fillStyle = handleGradient;
+  ctx.fillRect(-handleWidth / 2, -handleLength, handleWidth, handleLength);
 
-    // Head
-    const headWidth = hammer.width;
-    const headHeight = 42;
-    ctx.translate(0, -handleLength);
+  // 2) Move origin to the HEAD position
+  ctx.translate(0, -handleLength);
+
+  // 3) Static handle UNDER the head (anchored at the head, not the click)
+  //    If you stored an original length, use that; otherwise fall back to 160.
+  const staticHandleLength = hammer.baseLength || 160;
+  const staticGradient = ctx.createLinearGradient(0, 0, 0, staticHandleLength);
+  staticGradient.addColorStop(0, '#fbbf24');
+  staticGradient.addColorStop(1, '#92400e');
+  ctx.fillStyle = staticGradient;
+  // This now starts AT THE HEAD (y = 0) and goes *downward*
+  ctx.fillRect(-handleWidth / 2, 0, handleWidth, staticHandleLength);
+
+  // 4) Head (still drawn above the head origin, in negative Y)
+  const headWidth = hammer.width;
+  const headHeight = 42;
+
+  const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
+  headGradient.addColorStop(0, '#e5e7eb');
+  headGradient.addColorStop(1, '#475569');
+  ctx.fillStyle = headGradient;
+
+  ctx.beginPath();
+  ctx.roundRect(-headWidth / 2, -headHeight, headWidth, headHeight, 10);
+  ctx.fill();
+
 
     // If hammer is heated, draw red-hot effect
     if (hammer.isHeated) {
