@@ -401,7 +401,7 @@ spawnSparks(x, y, power, options = {}) {
       // Hammer is over heated hearth, start heating
       hammer.heatingTimer += dt;
       if (hammer.heatingTimer >= hammer.heatingRequired && !hammer.isHeated) {
-        hammer.isHeated = true;
+        hammer.isHeated = true
         console.log('Hammer is now red-hot!');
       }
     } else {
@@ -808,7 +808,12 @@ drawHammer(ctx, hammer) {
       // Red-hot glow
       ctx.shadowColor = '#dc2626';
       ctx.shadowBlur = 20;
-
+      
+    if (!hammer.isHeated && hammer.heatingTimer > 0) {
+      const progress = Math.min(1, hammer.heatingTimer / hammer.heatingRequired);
+      ctx.fillStyle = `rgba(249, 115, 22, ${progress * 0.5})`;
+      ctx.fillRect(-headWidth / 2, -headHeight, headWidth * progress, headHeight);
+}
       const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
       headGradient.addColorStop(0, '#fef3c7'); // Hot yellow-white
       headGradient.addColorStop(0.3, '#f97316'); // Orange

@@ -162,7 +162,7 @@ gripStrength: {
     nodeShape: NODE_SHAPES.SQUARE,
     nodeColor: NODE_COLORS.PINK,
     onPurchase: (level) => {
-      gameState.heatLevels = level;
+      gameState.heatLevels = level + 1;
     }
   },
 
