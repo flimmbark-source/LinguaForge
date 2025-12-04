@@ -40,6 +40,23 @@ export const gameState = {
 
   // Completed lines counter
   linesCompleted: 0,
+
+  // Upgrades
+  upgrades: {},
+
+  // Unlockable features (disabled by default)
+  hearthUnlocked: false,
+  scribesUnlocked: false,
+
+  // Upgrade-affected properties
+  pestleCapacity: 10,
+  redHotHits: 3,
+  heatLevels: 1,
+  secondsPerLetter: 5,
+  lettersPerRedHot: 1,
+  scribeLettersPerInk: 5,
+  inkPerChurn: 1,
+  ripSpeedThreshold: 3400, // Base threshold for hammer rip
 };
 
 /**

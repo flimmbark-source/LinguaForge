@@ -4,6 +4,7 @@
  */
 
 import { isHearthHeated, getHearthBounds } from './hearth.js';
+import { gameState } from './state.js';
 
 export class HammerSystem {
   constructor(canvas) {
@@ -39,10 +40,9 @@ export class HammerSystem {
       isHeated: false,
       heatingTimer: 0, // Time spent over heated hearth
       heatingRequired: 5, // Seconds needed to heat up hammer
-      baseLength: 180, // visual “original” handle length that never changes
-      ripSpeedThreshold: 3400,   // how hard you must hit before it rips free
-      isFree: false, 
-      regrabCooldown: 0 
+      baseLength: 180, // visual "original" handle length that never changes
+      isFree: false,
+      regrabCooldown: 0
     };
 
     // Anvil state
@@ -572,7 +572,7 @@ updateFreeHammer(dt) {
 
   if (isOverAnvil && downwardSpeed > impactThreshold) {
   const power = Math.min(1.5, downwardSpeed / (impactThreshold * 1.3));
-  const ripThreshold = hammer.ripSpeedThreshold || impactThreshold * 1.6;
+  const ripThreshold = gameState.ripSpeedThreshold;
 
   // --- Was this a huge hit that rips the hammer free? ---
   if (hammer.isHeld && downwardSpeed > ripThreshold) {
