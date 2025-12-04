@@ -53,6 +53,23 @@ export function updateStatsDisplay() {
   if (elements.clickGainSpan) {
     elements.clickGainSpan.textContent = gameState.lettersPerClick;
   }
+
+  // Update hearth visibility based on unlock state
+  updateHearthVisibility();
+}
+
+/**
+ * Update hearth visibility based on unlock state
+ */
+function updateHearthVisibility() {
+  const hearthColumn = document.querySelector('.bottom-dock-column:has(#hearth)');
+  if (hearthColumn) {
+    if (gameState.hearthUnlocked) {
+      hearthColumn.style.display = 'block';
+    } else {
+      hearthColumn.style.display = 'none';
+    }
+  }
 }
 
 /**
@@ -64,7 +81,8 @@ export function updateScribePurchaseButton() {
     elements.scribeCostSpan.textContent = cost;
   }
   if (elements.buyScribeBtn) {
-    elements.buyScribeBtn.disabled = gameState.letters < cost;
+    // Disable if not unlocked or can't afford
+    elements.buyScribeBtn.disabled = !gameState.scribesUnlocked || gameState.letters < cost;
   }
 }
 

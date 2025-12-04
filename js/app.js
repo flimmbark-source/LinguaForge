@@ -17,6 +17,7 @@ import { HammerSystem } from './hammer.js';
 import { PestleSystem } from './pestle.js';
 import { initializeHearth, updateHearth } from './hearth.js';
 import { addInk /*, whatever else you need */ } from './state.js';
+import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
 
 // Global crafting system references
 let hammerSystem = null;
@@ -265,11 +266,29 @@ function setupEventHandlers() {
     });
   }
 
-  // Upgrades button (placeholder for future implementation)
+  // Upgrades button
   const upgradesBtn = document.getElementById('upgradesBtn');
   if (upgradesBtn) {
     upgradesBtn.addEventListener('click', () => {
-      alert('Upgrades system coming soon!');
+      showUpgradeScreen();
+    });
+  }
+
+  // Close upgrade modal button
+  const closeUpgradeBtn = document.getElementById('closeUpgradeBtn');
+  if (closeUpgradeBtn) {
+    closeUpgradeBtn.addEventListener('click', () => {
+      hideUpgradeScreen();
+    });
+  }
+
+  // Close modal when clicking outside
+  const upgradeModal = document.getElementById('upgradeModal');
+  if (upgradeModal) {
+    upgradeModal.addEventListener('click', (e) => {
+      if (e.target === upgradeModal) {
+        hideUpgradeScreen();
+      }
     });
   }
 }
@@ -304,6 +323,9 @@ function start() {
   initializeGame();
   requestAnimationFrame(gameLoop);
 }
+
+// Expose updateUI globally for upgrade system
+window.updateUI = updateUI;
 
 // Start the game when DOM is ready
 if (document.readyState === 'loading') {
