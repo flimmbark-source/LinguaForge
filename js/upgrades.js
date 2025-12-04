@@ -1,9 +1,35 @@
 /**
  * LINGUA FORGE - UPGRADE SYSTEM
- * Manages the skill tree upgrade system with progressive unlocking
+ * Node-based skill tree with progressive unlock and reveal
  */
 
 import { gameState, spendLetters, spendInk } from './state.js';
+
+/**
+ * Node type definitions for visual styling
+ * - circle: round nodes (primary path upgrades)
+ * - square: square nodes with rounded corners (secondary upgrades)
+ */
+const NODE_SHAPES = {
+  CIRCLE: 'circle',
+  SQUARE: 'square'
+};
+
+/**
+ * Node color types
+ * - teal: primary/core upgrades
+ * - pink: combat/offensive upgrades  
+ * - yellow: special/utility upgrades
+ */
+const NODE_COLORS = {
+  TEAL: 'teal',
+  PINK: 'pink',
+  YELLOW: 'yellow'
+};
+
+// Big virtual canvas so we can scroll in all directions
+const VIRTUAL_TREE_SIZE = 3000; // pixels, square canvas
+
 
 /**
  * Upgrade tree data structure
@@ -11,38 +37,21 @@ import { gameState, spendLetters, spendInk } from './state.js';
  * - id: unique identifier
  * - name: display name
  * - description: what the upgrade does
- * - icon: SVG or emoji icon
- * - maxLevel: maximum number of levels (1 for single-level upgrades)
- * - baseCost: { renown, ink } - base cost for first level
- * - costPerLevel: { renown, ink } - additional cost per level
- * - prerequisites: array of upgrade IDs that must be purchased first (with minimum level)
- * - position: { x, y } - position on the skill tree grid
- * - connections: array of upgrade IDs this connects to visually
- * - onPurchase: function called when purchased
+ * - icon: emoji icon
+ * - maxLevel: maximum levels
+ * - baseCost/costPerLevel: scaling costs
+ * - prerequisites: required upgrades
+ * - position: { x, y } grid position (center = 0,0)
+ * - connections: visual connections to other nodes
+ * - nodeShape: circle or square
+ * - nodeColor: teal, pink, or yellow
+ * - onPurchase: callback when purchased
  */
 export const UPGRADE_TREE = {
-  // INITIAL UPGRADE - Center of the tree
-  gripStrength: {
-    id: 'gripStrength',
-    name: 'Grip Strength',
-    description: 'Increase grip strength by 10% per level. Allows for harder hits.',
-    icon: '💪',
-    maxLevel: 5,
-    baseCost: { renown: 10, ink: 0 },
-    costPerLevel: { renown: 10, ink: 0 },
-    prerequisites: [],
-    position: { x: 0, y: 0 },
-    connections: ['activateHearth', 'hireScribes', 'increasePestleCap'],
-    onPurchase: (level) => {
-      // Each level increases ripSpeedThreshold by 10%
-      const baseThreshold = 3400;
-      gameState.ripSpeedThreshold = baseThreshold * Math.pow(1.1, level);
-      console.log(`Grip Strength upgraded to level ${level}, threshold: ${gameState.ripSpeedThreshold}`);
-    }
-  },
-
-  // TIER 1 UPGRADES - Branch from Grip Strength after level 1
-  activateHearth: {
+  // ===============================================
+  // CENTER - STARTING NODE
+  // ===============================================
+    activateHearth: {
     id: 'activateHearth',
     name: 'Activate Hearth',
     description: 'Unlock the Hearth system. Feed letters to the hearth to heat up your hammer!',
@@ -50,12 +59,35 @@ export const UPGRADE_TREE = {
     maxLevel: 1,
     baseCost: { renown: 15, ink: 0 },
     costPerLevel: { renown: 0, ink: 0 },
-    prerequisites: [{ id: 'gripStrength', minLevel: 1 }],
-    position: { x: -2, y: 1 },
-    connections: ['redHotDurability', 'heatLevel', 'heatPerLetter', 'lettersPerRedHot'],
+    prerequisites: [],
+    position: { x: 0, y: 0 },
+    connections: ['gripStrength','heatLevel', 'hireScribes', 'increasePestleCap'],
+    nodeShape: NODE_SHAPES.CIRCLE,
+    nodeColor: NODE_COLORS.PINK,
     onPurchase: () => {
       gameState.hearthUnlocked = true;
-      console.log('Hearth activated!');
+    }
+  },
+
+  // ===============================================
+  // TIER 1 - BRANCH FROM CENTER
+  // ===============================================
+gripStrength: {
+    id: 'gripStrength',
+    name: 'Grip Strength',
+    description: 'Increase grip strength by 10% per level. Allows for harder hits.',
+    icon: '💪',
+    maxLevel: 5,
+    baseCost: { renown: 10, ink: 0 },
+    costPerLevel: { renown: 10, ink: 0 },
+    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
+    position: { x: -2, y: 1 },
+    connections: [],
+    nodeShape: NODE_SHAPES.SQUARE,
+    nodeColor: NODE_COLORS.TEAL,
+    onPurchase: (level) => {
+      const baseThreshold = 3400;
+      gameState.ripSpeedThreshold = baseThreshold * Math.pow(1.1, level);
     }
   },
 
@@ -67,143 +99,271 @@ export const UPGRADE_TREE = {
     maxLevel: 1,
     baseCost: { renown: 25, ink: 0 },
     costPerLevel: { renown: 0, ink: 0 },
-    prerequisites: [{ id: 'gripStrength', minLevel: 1 }],
-    position: { x: 0, y: 1 },
-    connections: ['scribeUse'],
+    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
+    position: { x: 0, y: 1.5 },
+    connections: ['scribeUse', 'scribeSpeed', 'scribeCapacity'],
+    nodeShape: NODE_SHAPES.CIRCLE,
+    nodeColor: NODE_COLORS.TEAL,
     onPurchase: () => {
       gameState.scribesUnlocked = true;
-      console.log('Scribes unlocked!');
     }
   },
 
   increasePestleCap: {
     id: 'increasePestleCap',
-    name: 'Increase Pestle Cap',
-    description: 'Increase the amount of letters able to be gathered by the pestle by 5 per level.',
+    name: 'Pestle Capacity',
+    description: 'Increase letters gathered by pestle by 5 per level.',
     icon: '🥄',
     maxLevel: 5,
     baseCost: { renown: 15, ink: 10 },
     costPerLevel: { renown: 10, ink: 5 },
-    prerequisites: [{ id: 'gripStrength', minLevel: 1 }],
+    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
     position: { x: 2, y: 1 },
-    connections: ['lettersPerChurn'],
+    connections: ['lettersPerChurn', 'churnSpeed'],
+    nodeShape: NODE_SHAPES.SQUARE,
+    nodeColor: NODE_COLORS.YELLOW,
     onPurchase: (level) => {
-      // Increase pestle capacity
       gameState.pestleCapacity = 10 + (level * 5);
-      console.log(`Pestle capacity increased to ${gameState.pestleCapacity}`);
     }
   },
 
-  // TIER 2 UPGRADES - Branch from Activate Hearth
+  // ===============================================
+  // TIER 2 - HEARTH BRANCH
+  // ===============================================
   redHotDurability: {
     id: 'redHotDurability',
     name: 'Red Hot Durability',
-    description: 'Increase the amount of Red Hot hits the player can do by 1 per level.',
+    description: 'Increase Red Hot hits by 1 per level.',
     icon: '🔴',
     maxLevel: 5,
     baseCost: { renown: 12, ink: 10 },
     costPerLevel: { renown: 5, ink: 5 },
-    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
-    position: { x: -3, y: 2 },
-    connections: [],
+    prerequisites: [{ id: 'heatLevel', minLevel: 1 }],
+    position: { x: -3.5, y: 2 },
+    connections: ['emberRetention'],
+    nodeShape: NODE_SHAPES.CIRCLE,
+    nodeColor: NODE_COLORS.PINK,
     onPurchase: (level) => {
       gameState.redHotHits = 3 + level;
-      console.log(`Red Hot hits increased to ${gameState.redHotHits}`);
     }
   },
 
   heatLevel: {
     id: 'heatLevel',
     name: 'Heat Level',
-    description: 'Add another level of heat to the forge. Each level increases heat rate but also consumption.',
+    description: 'Add another level of heat. Each level increases heat rate but also consumption.',
     icon: '🌡️',
     maxLevel: 3,
     baseCost: { renown: 40, ink: 0 },
     costPerLevel: { renown: 40, ink: 0 },
     prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
-    position: { x: -2.5, y: 2 },
-    connections: [],
+    position: { x: -2.5, y: 2.2 },
+    connections: [ 'lettersPerRedHot', 'redHotDurability', 'heatPerLetter' ],
+    nodeShape: NODE_SHAPES.SQUARE,
+    nodeColor: NODE_COLORS.PINK,
     onPurchase: (level) => {
       gameState.heatLevels = level;
-      console.log(`Heat levels increased to ${level}`);
     }
   },
 
   heatPerLetter: {
     id: 'heatPerLetter',
-    name: 'Heat per Letter',
-    description: 'Increase the amount of time generated from a letter thrown in the hearth by 1 second per level.',
+    name: 'Heat Efficiency',
+    description: 'Increase heat duration per letter by 1 second per level.',
     icon: '⏱️',
     maxLevel: 5,
     baseCost: { renown: 14, ink: 5 },
     costPerLevel: { renown: 24, ink: 0 },
-    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
-    position: { x: -1.5, y: 2 },
+    prerequisites: [{ id: 'heatLevel', minLevel: 1 }],
+    position: { x: -1.5, y: 2.2 },
     connections: [],
+    nodeShape: NODE_SHAPES.CIRCLE,
+    nodeColor: NODE_COLORS.PINK,
     onPurchase: (level) => {
       gameState.secondsPerLetter = 5 + level;
-      console.log(`Seconds per letter increased to ${gameState.secondsPerLetter}`);
     }
   },
 
   lettersPerRedHot: {
     id: 'lettersPerRedHot',
-    name: 'Letters per Red Hot',
-    description: 'Increase the amount of letters produced by Red Hot hit by 1 per level.',
+    name: 'Red Hot Yield',
+    description: 'Increase letters from Red Hot hits by 1 per level.',
     icon: '📝',
     maxLevel: 3,
     baseCost: { renown: 18, ink: 0 },
     costPerLevel: { renown: 18, ink: 0 },
-    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
-    position: { x: -1, y: 2 },
+    prerequisites: [{ id: 'heatLevel', minLevel: 1 }],
+    position: { x: -2, y: 2.8 },
     connections: [],
+    nodeShape: NODE_SHAPES.SQUARE,
+    nodeColor: NODE_COLORS.YELLOW,
     onPurchase: (level) => {
       gameState.lettersPerRedHot = 1 + level;
-      console.log(`Letters per red hot increased to ${gameState.lettersPerRedHot}`);
     }
   },
 
-  // TIER 2 UPGRADES - Branch from Hire Scribes
+  // ===============================================
+  // TIER 3 - HEARTH DEEP
+  // ===============================================
+  emberRetention: {
+    id: 'emberRetention',
+    name: 'Ember Retention',
+    description: 'Heat decays 10% slower per level.',
+    icon: '✨',
+    maxLevel: 3,
+    baseCost: { renown: 30, ink: 15 },
+    costPerLevel: { renown: 20, ink: 10 },
+    prerequisites: [{ id: 'redHotDurability', minLevel: 2 }],
+    position: { x: -4, y: 3 },
+    connections: [],
+    nodeShape: NODE_SHAPES.CIRCLE,
+    nodeColor: NODE_COLORS.PINK,
+    onPurchase: (level) => {
+      gameState.heatDecayMultiplier = 1 - (level * 0.1);
+    }
+  },
+
+  // ===============================================
+  // TIER 2 - SCRIBE BRANCH
+  // ===============================================
   scribeUse: {
     id: 'scribeUse',
     name: 'Scribe Efficiency',
-    description: 'Increase the amount of uses per ink for each scribe by 1 per level.',
+    description: 'Increase uses per ink for each scribe by 1 per level.',
     icon: '⚡',
     maxLevel: 3,
     baseCost: { renown: 0, ink: 20 },
     costPerLevel: { renown: 0, ink: 10 },
     prerequisites: [{ id: 'hireScribes', minLevel: 1 }],
-    position: { x: 0, y: 2 },
+    position: { x: -0.8, y: 2.5 },
     connections: [],
+    nodeShape: NODE_SHAPES.SQUARE,
+    nodeColor: NODE_COLORS.TEAL,
     onPurchase: (level) => {
       gameState.scribeLettersPerInk = 5 + level;
-      console.log(`Scribe letters per ink increased to ${gameState.scribeLettersPerInk}`);
     }
   },
 
-  // TIER 2 UPGRADES - Branch from Increase Pestle Cap
+  scribeSpeed: {
+    id: 'scribeSpeed',
+    name: 'Swift Quills',
+    description: 'Scribes work 15% faster per level.',
+    icon: '💨',
+    maxLevel: 3,
+    baseCost: { renown: 20, ink: 15 },
+    costPerLevel: { renown: 15, ink: 10 },
+    prerequisites: [{ id: 'hireScribes', minLevel: 1 }],
+    position: { x: 0.8, y: 2.5 },
+    connections: ['masterScribe'],
+    nodeShape: NODE_SHAPES.CIRCLE,
+    nodeColor: NODE_COLORS.TEAL,
+    onPurchase: (level) => {
+      gameState.scribeSpeedMultiplier = 1 + (level * 0.15);
+    }
+  },
+
+  scribeCapacity: {
+    id: 'scribeCapacity',
+    name: 'Larger Desk',
+    description: 'Hire 1 additional scribe slot per level.',
+    icon: '📚',
+    maxLevel: 3,
+    baseCost: { renown: 50, ink: 0 },
+    costPerLevel: { renown: 50, ink: 0 },
+    prerequisites: [{ id: 'hireScribes', minLevel: 1 }],
+    position: { x: 0, y: 3 },
+    connections: [],
+    nodeShape: NODE_SHAPES.SQUARE,
+    nodeColor: NODE_COLORS.YELLOW,
+    onPurchase: (level) => {
+      gameState.maxScribes = 3 + level;
+    }
+  },
+
+  // ===============================================
+  // TIER 3 - SCRIBE DEEP
+  // ===============================================
+  masterScribe: {
+    id: 'masterScribe',
+    name: 'Master Scribe',
+    description: 'One scribe produces double letters.',
+    icon: '👨‍🏫',
+    maxLevel: 1,
+    baseCost: { renown: 80, ink: 40 },
+    costPerLevel: { renown: 0, ink: 0 },
+    prerequisites: [{ id: 'scribeSpeed', minLevel: 2 }],
+    position: { x: 1.5, y: 3.5 },
+    connections: [],
+    nodeShape: NODE_SHAPES.CIRCLE,
+    nodeColor: NODE_COLORS.YELLOW,
+    onPurchase: () => {
+      gameState.hasMasterScribe = true;
+    }
+  },
+
+  // ===============================================
+  // TIER 2 - PESTLE BRANCH
+  // ===============================================
   lettersPerChurn: {
     id: 'lettersPerChurn',
-    name: 'Letters per Churn',
-    description: 'Increase the amount of letters produced when the player completes 1 churn by 1 per level.',
+    name: 'Churn Yield',
+    description: 'Increase letters per churn by 1 per level.',
     icon: '🌀',
     maxLevel: 3,
     baseCost: { renown: 40, ink: 30 },
     costPerLevel: { renown: 10, ink: 10 },
     prerequisites: [{ id: 'increasePestleCap', minLevel: 1 }],
-    position: { x: 2, y: 2 },
-    connections: [],
+    position: { x: 2.5, y: 2.2 },
+    connections: ['multiChurn'],
+    nodeShape: NODE_SHAPES.CIRCLE,
+    nodeColor: NODE_COLORS.YELLOW,
     onPurchase: (level) => {
       gameState.inkPerChurn = 1 + level;
-      console.log(`Ink per churn increased to ${gameState.inkPerChurn}`);
+    }
+  },
+
+  churnSpeed: {
+    id: 'churnSpeed',
+    name: 'Quick Churn',
+    description: 'Churning is 20% faster per level.',
+    icon: '⚡',
+    maxLevel: 3,
+    baseCost: { renown: 25, ink: 20 },
+    costPerLevel: { renown: 15, ink: 15 },
+    prerequisites: [{ id: 'increasePestleCap', minLevel: 1 }],
+    position: { x: 3, y: 1.5 },
+    connections: [],
+    nodeShape: NODE_SHAPES.SQUARE,
+    nodeColor: NODE_COLORS.TEAL,
+    onPurchase: (level) => {
+      gameState.churnSpeedMultiplier = 1 + (level * 0.2);
+    }
+  },
+
+  // ===============================================
+  // TIER 3 - PESTLE DEEP
+  // ===============================================
+  multiChurn: {
+    id: 'multiChurn',
+    name: 'Multi-Churn',
+    description: 'Each churn has a 25% chance to trigger twice.',
+    icon: '🎲',
+    maxLevel: 1,
+    baseCost: { renown: 60, ink: 50 },
+    costPerLevel: { renown: 0, ink: 0 },
+    prerequisites: [{ id: 'lettersPerChurn', minLevel: 2 }],
+    position: { x: 3, y: 3 },
+    connections: [],
+    nodeShape: NODE_SHAPES.CIRCLE,
+    nodeColor: NODE_COLORS.PINK,
+    onPurchase: () => {
+      gameState.multiChurnChance = 0.25;
     }
   }
 };
 
 /**
  * Get the current level of an upgrade
- * @param {string} upgradeId - Upgrade ID
- * @returns {number} Current level (0 if not purchased)
  */
 export function getUpgradeLevel(upgradeId) {
   return gameState.upgrades[upgradeId] || 0;
@@ -211,8 +371,6 @@ export function getUpgradeLevel(upgradeId) {
 
 /**
  * Check if an upgrade can be purchased
- * @param {string} upgradeId - Upgrade ID
- * @returns {Object} { canPurchase: boolean, reason: string }
  */
 export function canPurchaseUpgrade(upgradeId) {
   const upgrade = UPGRADE_TREE[upgradeId];
@@ -222,27 +380,23 @@ export function canPurchaseUpgrade(upgradeId) {
 
   const currentLevel = getUpgradeLevel(upgradeId);
 
-  // Check if already at max level
   if (currentLevel >= upgrade.maxLevel) {
     return { canPurchase: false, reason: 'Max level reached' };
   }
 
-  // Check prerequisites
   for (const prereq of upgrade.prerequisites) {
     const prereqLevel = getUpgradeLevel(prereq.id);
     if (prereqLevel < prereq.minLevel) {
       const prereqUpgrade = UPGRADE_TREE[prereq.id];
       return {
         canPurchase: false,
-        reason: `Requires ${prereqUpgrade.name} (level ${prereq.minLevel})`
+        reason: `Requires ${prereqUpgrade.name} Lv.${prereq.minLevel}`
       };
     }
   }
 
-  // Calculate cost for next level
   const cost = getUpgradeCost(upgradeId, currentLevel + 1);
 
-  // Check if player can afford it
   if (gameState.letters < cost.renown) {
     return { canPurchase: false, reason: `Need ${cost.renown} Renown` };
   }
@@ -254,10 +408,7 @@ export function canPurchaseUpgrade(upgradeId) {
 }
 
 /**
- * Get the cost for a specific level of an upgrade
- * @param {string} upgradeId - Upgrade ID
- * @param {number} level - Target level
- * @returns {Object} { renown, ink }
+ * Get the cost for a specific level
  */
 export function getUpgradeCost(upgradeId, level) {
   const upgrade = UPGRADE_TREE[upgradeId];
@@ -271,13 +422,10 @@ export function getUpgradeCost(upgradeId, level) {
 
 /**
  * Purchase an upgrade
- * @param {string} upgradeId - Upgrade ID
- * @returns {boolean} True if successful
  */
 export function purchaseUpgrade(upgradeId) {
   const check = canPurchaseUpgrade(upgradeId);
   if (!check.canPurchase) {
-    console.log(`Cannot purchase ${upgradeId}: ${check.reason}`);
     return false;
   }
 
@@ -286,60 +434,87 @@ export function purchaseUpgrade(upgradeId) {
   const nextLevel = currentLevel + 1;
   const cost = getUpgradeCost(upgradeId, nextLevel);
 
-  // Spend resources
   if (!spendLetters(cost.renown)) return false;
   if (!spendInk(cost.ink)) {
-    // Refund renown if ink purchase fails
     gameState.letters += cost.renown;
     return false;
   }
 
-  // Update level
   gameState.upgrades[upgradeId] = nextLevel;
 
-  // Call onPurchase callback
   if (upgrade.onPurchase) {
     upgrade.onPurchase(nextLevel);
   }
 
-  console.log(`Purchased ${upgrade.name} level ${nextLevel}`);
   return true;
 }
 
 /**
- * Get all visible upgrades (unlocked or available to unlock)
- * @returns {Array} Array of upgrade IDs that should be visible
+ * Get visible upgrades with progressive reveal
+ * An upgrade is visible if:
+ * 1. It's the starting node (activateHearth)
+ * 2. It's been purchased
+ * 3. Any of its prerequisites have been purchased
  */
 export function getVisibleUpgrades() {
   const visible = new Set();
+  const locked = new Set();
 
-  // Always show the initial upgrade
-  visible.add('gripStrength');
+  // Always show starting node
+  visible.add('activateHearth');
 
-  // Check each upgrade to see if it should be visible
+  // First pass: find all purchased upgrades and their connections
   for (const [upgradeId, upgrade] of Object.entries(UPGRADE_TREE)) {
-    // If already purchased, it's visible
     if (getUpgradeLevel(upgradeId) > 0) {
       visible.add(upgradeId);
-
-      // Show all connected upgrades
+      
+      // Show connected nodes
       for (const connectedId of upgrade.connections) {
         visible.add(connectedId);
       }
     }
   }
 
-  return Array.from(visible);
+  // Second pass: add locked placeholders for nodes connected to visible nodes
+  for (const upgradeId of visible) {
+    const upgrade = UPGRADE_TREE[upgradeId];
+    if (!upgrade) continue;
+    
+    for (const connectedId of upgrade.connections) {
+      const connected = UPGRADE_TREE[connectedId];
+      if (!connected) continue;
+      
+      // Check connections of visible but unpurchased nodes
+      if (getUpgradeLevel(upgradeId) > 0) {
+        // Show actual nodes for connections of purchased nodes
+        visible.add(connectedId);
+        
+        // Show locked placeholders one step further
+        for (const deepConnectedId of connected.connections) {
+          if (!visible.has(deepConnectedId) && getUpgradeLevel(connectedId) === 0) {
+            locked.add(deepConnectedId);
+          }
+        }
+      }
+    }
+  }
+
+  return { visible: Array.from(visible), locked: Array.from(locked) };
 }
 
 /**
- * Check if upgrade is unlocked (visible but not necessarily purchasable)
- * @param {string} upgradeId - Upgrade ID
- * @returns {boolean} True if visible
+ * Check if prerequisites are met
  */
-export function isUpgradeVisible(upgradeId) {
-  const visibleUpgrades = getVisibleUpgrades();
-  return visibleUpgrades.includes(upgradeId);
+export function arePrerequisitesMet(upgradeId) {
+  const upgrade = UPGRADE_TREE[upgradeId];
+  if (!upgrade) return false;
+  
+  for (const prereq of upgrade.prerequisites) {
+    if (getUpgradeLevel(prereq.id) < prereq.minLevel) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /**
@@ -370,134 +545,158 @@ export function renderUpgradeTree() {
   const treeContainer = document.getElementById('upgradeTree');
   if (!treeContainer) return;
 
-  const visibleUpgrades = getVisibleUpgrades();
+  const { visible, locked } = getVisibleUpgrades();
 
-  // Clear existing content
+  // Clear and size the virtual canvas
   treeContainer.innerHTML = '';
+  treeContainer.style.width = `${VIRTUAL_TREE_SIZE}px`;
+  treeContainer.style.height = `${VIRTUAL_TREE_SIZE}px`;
 
-  // Create SVG for connection lines
+  // Layout parameters: center of the virtual canvas
+  const gridSize = 100;
+  const layout = {
+    gridSize,
+    centerX: VIRTUAL_TREE_SIZE / 2,
+    centerY: VIRTUAL_TREE_SIZE / 2
+  };
+
+  // SVG for lines
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'upgrade-connections');
   treeContainer.appendChild(svg);
 
-  // Create upgrade nodes
   const nodes = {};
-  for (const upgradeId of visibleUpgrades) {
+
+  // Visible (real) nodes
+  for (const upgradeId of visible) {
     const upgrade = UPGRADE_TREE[upgradeId];
-    const node = createUpgradeNode(upgrade);
+    if (!upgrade) continue;
+
+    const node = createUpgradeNode(upgrade, false, layout);
     nodes[upgradeId] = node;
     treeContainer.appendChild(node);
   }
 
-  // Draw connection lines
-  for (const upgradeId of visibleUpgrades) {
+  // Locked placeholder nodes
+  for (const upgradeId of locked) {
     const upgrade = UPGRADE_TREE[upgradeId];
-    const currentLevel = getUpgradeLevel(upgradeId);
+    if (!upgrade) continue;
 
-    // Only draw connections if this upgrade is purchased
-    if (currentLevel > 0) {
+    const node = createUpgradeNode(upgrade, true, layout);
+    nodes[upgradeId] = node;
+    treeContainer.appendChild(node);
+  }
+
+  // Draw connection lines AFTER layout
+  requestAnimationFrame(() => {
+    for (const upgradeId of visible) {
+      const upgrade = UPGRADE_TREE[upgradeId];
+      if (!upgrade) continue;
+
+      const isPurchased = getUpgradeLevel(upgradeId) > 0;
+
       for (const connectedId of upgrade.connections) {
-        if (visibleUpgrades.includes(connectedId)) {
-          drawConnection(svg, nodes[upgradeId], nodes[connectedId]);
+        if (nodes[upgradeId] && nodes[connectedId]) {
+          drawConnection(svg, nodes[upgradeId], nodes[connectedId], isPurchased);
         }
       }
     }
+
+    // Center scroll on the starting node (activateHearth at position {0,0})
+    const scrollContainer = treeContainer.parentElement; // .upgrade-tree-container
+    if (scrollContainer) {
+      const startX = layout.centerX;
+      const startY = layout.centerY;
+
+      scrollContainer.scrollLeft = startX - scrollContainer.clientWidth / 2;
+      scrollContainer.scrollTop  = startY - scrollContainer.clientHeight / 2;
+    }
+  });
+
+  updateHeaderStats();
+}
+
+
+/**
+ * Update resource display in header
+ */
+function updateHeaderStats() {
+  const renownDisplay = document.getElementById('upgradeRenown');
+  const inkDisplay = document.getElementById('upgradeInk');
+  
+  if (renownDisplay) {
+    renownDisplay.textContent = Math.floor(gameState.letters);
+  }
+  if (inkDisplay) {
+    inkDisplay.textContent = Math.floor(gameState.ink);
   }
 }
 
 /**
  * Create an upgrade node element
- * @param {Object} upgrade - Upgrade data
- * @returns {HTMLElement} Upgrade node element
  */
-function createUpgradeNode(upgrade) {
+function createUpgradeNode(upgrade, isLocked, layout) {
   const node = document.createElement('div');
   node.className = 'upgrade-node';
   node.dataset.upgradeId = upgrade.id;
 
   const currentLevel = getUpgradeLevel(upgrade.id);
   const maxLevel = upgrade.maxLevel;
+  const prereqsMet = arePrerequisitesMet(upgrade.id);
 
-  // Position the node
-  const gridSize = 120;
-  const centerX = 400;
-  const centerY = 150;
+  // Use virtual grid centered in VIRTUAL_TREE_SIZE
+  const { gridSize, centerX, centerY } = layout;
   node.style.left = `${centerX + upgrade.position.x * gridSize}px`;
-  node.style.top = `${centerY + upgrade.position.y * gridSize}px`;
+  node.style.top  = `${centerY + upgrade.position.y * gridSize}px`;
 
-  // Add purchased class if owned
-  if (currentLevel > 0) {
-    node.classList.add('purchased');
+  // Shape
+  node.classList.add(`node-${upgrade.nodeShape}`);
+
+  // Color/state
+  if (isLocked) {
+    node.classList.add('locked');
+  } else if (currentLevel >= maxLevel) {
+    node.classList.add('purchased', 'max-level', `node-${upgrade.nodeColor}`);
+  } else if (currentLevel > 0) {
+    node.classList.add('purchased', `node-${upgrade.nodeColor}`);
+  } else if (prereqsMet) {
+    node.classList.add('available', `node-${upgrade.nodeColor}`);
+  } else {
+    node.classList.add('locked');
   }
 
-  // Add max level class if at max
-  if (currentLevel >= maxLevel) {
-    node.classList.add('max-level');
-  }
+  // Inner content
+  const inner = document.createElement('div');
+  inner.className = 'upgrade-node-inner';
 
-  // Icon
   const icon = document.createElement('div');
   icon.className = 'upgrade-icon';
-  icon.textContent = upgrade.icon;
-  node.appendChild(icon);
+  icon.textContent = isLocked ? '?' : upgrade.icon;
+  inner.appendChild(icon);
 
-  // Level indicator
-  const levelIndicator = document.createElement('div');
-  levelIndicator.className = 'upgrade-level';
-  levelIndicator.textContent = `${currentLevel}/${maxLevel}`;
-  node.appendChild(levelIndicator);
+  node.appendChild(inner);
 
-  // Create tooltip
-  const tooltip = createUpgradeTooltip(upgrade);
-  node.appendChild(tooltip);
+  // Level badge
+  if (!isLocked && maxLevel > 1 && currentLevel > 0) {
+    const badge = document.createElement('div');
+    badge.className = 'upgrade-level-badge';
+    badge.textContent = `${currentLevel}`;
+    node.appendChild(badge);
+  }
 
-  // Keep tooltip inside the upgrade modal horizontally (and a bit vertically)
-  node.addEventListener('mouseenter', () => {
-    const container =
-      document.querySelector('.upgrade-modal-content') ||
-      document.querySelector('.upgrade-tree-container');
-    if (!container) return;
+  // Tooltip + click only for real nodes
+  if (!isLocked) {
+    const tooltip = createUpgradeTooltip(upgrade);
+    node.appendChild(tooltip);
 
-    // Let the browser lay it out first
-    requestAnimationFrame(() => {
-      const containerRect = container.getBoundingClientRect();
-      const tooltipRect = tooltip.getBoundingClientRect();
-
-      const padding = 12; // safe margin from edges
-      let offsetX = 0;
-      let offsetY = -10; // your original upward offset
-
-      // Clamp left/right
-      if (tooltipRect.left < containerRect.left + padding) {
-        offsetX = (containerRect.left + padding) - tooltipRect.left;
-      } else if (tooltipRect.right > containerRect.right - padding) {
-        offsetX = (containerRect.right - padding) - tooltipRect.right;
+    node.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (purchaseUpgrade(upgrade.id)) {
+        renderUpgradeTree();
+        if (window.updateUI) window.updateUI();
       }
-
-      // Optional: stop it from going above the header area
-      if (tooltipRect.top < containerRect.top + padding) {
-        offsetY += (containerRect.top + padding) - tooltipRect.top;
-      }
-
-      // Override the default transform
-      tooltip.style.transform = `translateX(calc(-50% + ${offsetX}px)) translateY(${offsetY}px)`;
     });
-  });
-
-  // Reset transform when leaving so transitions stay nice
-  node.addEventListener('mouseleave', () => {
-    tooltip.style.transform = 'translateX(-50%) translateY(-10px)';
-  });
-
-  // Add click handler
-  node.addEventListener('click', () => {
-    if (purchaseUpgrade(upgrade.id)) {
-      renderUpgradeTree();
-      if (window.updateUI) {
-        window.updateUI();
-      }
-    }
-  });
+  }
 
   return node;
 }
@@ -505,8 +704,6 @@ function createUpgradeNode(upgrade) {
 
 /**
  * Create tooltip for an upgrade
- * @param {Object} upgrade - Upgrade data
- * @returns {HTMLElement} Tooltip element
  */
 function createUpgradeTooltip(upgrade) {
   const tooltip = document.createElement('div');
@@ -514,12 +711,23 @@ function createUpgradeTooltip(upgrade) {
 
   const currentLevel = getUpgradeLevel(upgrade.id);
   const nextLevel = currentLevel + 1;
+  const isMaxed = currentLevel >= upgrade.maxLevel;
 
-  // Title
+  // Header with title and level pill
+  const header = document.createElement('div');
+  header.className = 'tooltip-header';
+
   const title = document.createElement('div');
   title.className = 'tooltip-title';
   title.textContent = upgrade.name;
-  tooltip.appendChild(title);
+  header.appendChild(title);
+
+  const levelPill = document.createElement('div');
+  levelPill.className = 'tooltip-level-pill' + (isMaxed ? ' maxed' : '');
+  levelPill.textContent = `${currentLevel}/${upgrade.maxLevel}`;
+  header.appendChild(levelPill);
+
+  tooltip.appendChild(header);
 
   // Description
   const desc = document.createElement('div');
@@ -527,38 +735,46 @@ function createUpgradeTooltip(upgrade) {
   desc.textContent = upgrade.description;
   tooltip.appendChild(desc);
 
-  // Level info
-  const levelInfo = document.createElement('div');
-  levelInfo.className = 'tooltip-level';
-  levelInfo.textContent = `Level: ${currentLevel}/${upgrade.maxLevel}`;
-  tooltip.appendChild(levelInfo);
-
-  // Cost (if not at max level)
-  if (currentLevel < upgrade.maxLevel) {
+  if (isMaxed) {
+    // Max level indicator
+    const maxText = document.createElement('div');
+    maxText.className = 'tooltip-max';
+    maxText.textContent = '✦ MAX LEVEL ✦';
+    tooltip.appendChild(maxText);
+  } else {
+    // Cost display
     const cost = getUpgradeCost(upgrade.id, nextLevel);
     const costDiv = document.createElement('div');
     costDiv.className = 'tooltip-cost';
 
-    const costParts = [];
-    if (cost.renown > 0) costParts.push(`${cost.renown} Renown`);
-    if (cost.ink > 0) costParts.push(`${cost.ink} Ink`);
+    if (cost.renown > 0) {
+      const renownCost = document.createElement('div');
+      renownCost.className = 'tooltip-cost-item renown';
+      renownCost.classList.add(gameState.letters >= cost.renown ? 'affordable' : 'unaffordable');
+      renownCost.innerHTML = `<span>⭐</span> ${cost.renown}`;
+      costDiv.appendChild(renownCost);
+    }
 
-    costDiv.textContent = `Cost: ${costParts.join(', ')}`;
-    tooltip.appendChild(costDiv);
+    if (cost.ink > 0) {
+      const inkCost = document.createElement('div');
+      inkCost.className = 'tooltip-cost-item ink';
+      inkCost.classList.add(gameState.ink >= cost.ink ? 'affordable' : 'unaffordable');
+      inkCost.innerHTML = `<span>💧</span> ${cost.ink}`;
+      costDiv.appendChild(inkCost);
+    }
 
-    // Check if can afford
+    if (cost.renown > 0 || cost.ink > 0) {
+      tooltip.appendChild(costDiv);
+    }
+
+    // Warning/requirement
     const check = canPurchaseUpgrade(upgrade.id);
-    if (!check.canPurchase) {
+    if (!check.canPurchase && check.reason !== 'Max level reached') {
       const warning = document.createElement('div');
       warning.className = 'tooltip-warning';
       warning.textContent = check.reason;
       tooltip.appendChild(warning);
     }
-  } else {
-    const maxText = document.createElement('div');
-    maxText.className = 'tooltip-max';
-    maxText.textContent = 'MAX LEVEL';
-    tooltip.appendChild(maxText);
   }
 
   return tooltip;
@@ -566,11 +782,8 @@ function createUpgradeTooltip(upgrade) {
 
 /**
  * Draw a connection line between two nodes
- * @param {SVGElement} svg - SVG container
- * @param {HTMLElement} fromNode - Starting node
- * @param {HTMLElement} toNode - Ending node
  */
-function drawConnection(svg, fromNode, toNode) {
+function drawConnection(svg, fromNode, toNode, isActive) {
   const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
 
   const fromRect = fromNode.getBoundingClientRect();
@@ -586,7 +799,13 @@ function drawConnection(svg, fromNode, toNode) {
   line.setAttribute('y1', y1);
   line.setAttribute('x2', x2);
   line.setAttribute('y2', y2);
-  line.setAttribute('class', 'upgrade-connection-line');
+  line.setAttribute('class', 'upgrade-connection-line' + (isActive ? ' active' : ''));
 
   svg.appendChild(line);
+}
+
+// Export for global access
+if (typeof window !== 'undefined') {
+  window.showUpgradeScreen = showUpgradeScreen;
+  window.hideUpgradeScreen = hideUpgradeScreen;
 }

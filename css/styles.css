@@ -1,3 +1,7 @@
+/* LINGUA FORGE - STYLES (Node-based upgrade tree version)
+   This file is a copy of styles.css with the Upgrade System section
+   updated to use compact circular nodes instead of large boxes. */
+
 /* ===============================================
    LINGUA FORGE - STYLES
    A magical workshop for forging Hebrew word crystals
@@ -529,8 +533,8 @@ button.secondary {
   right: 0;
   top: 0;
   bottom: 0;
-  pointer-events: none; /* Allow clicks to pass through to elements below */
-  z-index: 150; /* Render over all other containers */
+  pointer-events: none;
+  z-index: 150;
 }
 
 #craftingCanvas {
@@ -538,7 +542,7 @@ button.secondary {
   width: 100%;
   height: 100%;
   cursor: grab;
-  pointer-events: none; /* Let events pass through, handle manually in JS */
+  pointer-events: none;
 }
 
 #craftingCanvas:active {
@@ -548,7 +552,7 @@ button.secondary {
 .crafting-hint {
   position: fixed;
   left: 50%;
-  bottom: 172px; /* Just above letter pool bar */
+  bottom: 172px;
   transform: translateX(-50%);
   padding: 6px 12px;
   border-radius: 999px;
@@ -562,7 +566,7 @@ button.secondary {
   white-space: nowrap;
   backdrop-filter: blur(6px);
   transition: opacity 0.3s ease;
-  z-index: 160; /* Above canvas */
+  z-index: 160;
   max-width: 400px;
   text-align: center;
 }
@@ -588,7 +592,12 @@ button.secondary {
 }
 
 /* ===============================================
-   UPGRADE SYSTEM
+   UPGRADE SYSTEM (NODE-BASED)
+   =============================================== */
+
+/* ===============================================
+   UPGRADE TREE - NODE-BASED SKILL TREE
+   Inspired by roguelike skill trees with small nodes
    =============================================== */
 
 /* Upgrade Modal */
@@ -598,8 +607,8 @@ button.secondary {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 10, 30, 0.95);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -612,28 +621,58 @@ button.secondary {
 }
 
 .upgrade-modal-content {
-  background: #020617;
+  background: linear-gradient(135deg, #1a1625 0%, #0d0a14 100%);
   border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  max-width: 900px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  max-width: 1100px;
   width: 100%;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .upgrade-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 16px 24px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .upgrade-modal-header h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+/* Resource display in header */
+.upgrade-header-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+}
+
+.upgrade-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.upgrade-stat-icon {
+  font-size: 14px;
+}
+
+.upgrade-stat-value {
+  font-weight: 600;
+  color: #fbbf24;
 }
 
 .close-button {
@@ -645,10 +684,12 @@ button.secondary {
   padding: 4px 8px;
   line-height: 1;
   transition: color 0.2s ease;
+  border-radius: 6px;
 }
 
 .close-button:hover {
   color: #f9fafb;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Upgrade Tree Container */
@@ -656,13 +697,15 @@ button.secondary {
   flex: 1;
   overflow: auto;
   padding: 40px;
-  min-height: 500px;
+  min-height: 550px;
+  position: relative;
+  background: radial-gradient(ellipse at center, rgba(30, 20, 50, 0.5) 0%, transparent 70%);
 }
 
 .upgrade-tree {
   position: relative;
   width: 100%;
-  min-height: 600px;
+  min-height: 500px;
 }
 
 /* Upgrade Connections SVG */
@@ -677,137 +720,436 @@ button.secondary {
 }
 
 .upgrade-connection-line {
-  stroke: #4b5563;
+  stroke: #3b4252;
   stroke-width: 2;
   stroke-linecap: round;
+  transition: stroke 0.3s ease;
 }
 
-/* Upgrade Node */
+.upgrade-connection-line.active {
+  stroke: #64748b;
+}
+
+/* ===============================================
+   NODE STYLES
+   =============================================== */
+
+/* Base Node */
 .upgrade-node {
   position: absolute;
-  width: 80px;
-  height: 80px;
-  border-radius: 12px;
-  background: #111827;
-  border: 2px solid #374151;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+.upgrade-node:hover {
+  z-index: 20;
+}
+
+/* Node Inner (the actual visible node) */
+.upgrade-node-inner {
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  transform: translate(-50%, -50%);
-  z-index: 2;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-.upgrade-node:hover {
-  transform: translate(-50%, -50%) scale(1.1);
-  border-color: #4f46e5;
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
-  z-index: 10;
+.upgrade-node:hover .upgrade-node-inner {
+  transform: scale(1.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-.upgrade-node:hover .upgrade-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
+/* ===============================================
+   NODE TYPE VARIANTS
+   =============================================== */
+
+/* Locked/Hidden Node (question mark) */
+.upgrade-node.locked .upgrade-node-inner {
+  background: #1e1e2e;
+  border: 2px solid #3b3b4f;
+  border-radius: 10px;
 }
 
-.upgrade-node.purchased {
-  background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-  border-color: #60a5fa;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+.upgrade-node.locked .upgrade-icon {
+  color: #4a4a5f;
+  font-size: 18px;
 }
 
-.upgrade-node.purchased:hover {
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.6);
+.upgrade-node.locked:hover .upgrade-node-inner {
+  border-color: #5a5a7f;
+  transform: scale(1.05);
 }
 
-.upgrade-node.max-level {
-  background: linear-gradient(135deg, #854d0e, #eab308);
-  border-color: #fbbf24;
-  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.4);
+/* Available Node (can be purchased) */
+.upgrade-node.available .upgrade-node-inner {
+  background: linear-gradient(145deg, #2d4a4a, #1a3535);
+  border: 2px solid #3d6a6a;
+  box-shadow: 0 4px 16px rgba(45, 100, 100, 0.3);
 }
 
-.upgrade-node.max-level:hover {
-  box-shadow: 0 8px 24px rgba(251, 191, 36, 0.6);
+.upgrade-node.available:hover .upgrade-node-inner {
+  background: linear-gradient(145deg, #3d6a6a, #2d5555);
+  border-color: #5dabab;
+  box-shadow: 0 8px 24px rgba(45, 140, 140, 0.4);
 }
 
-/* Upgrade Icon */
+/* Circular Node Variant */
+.upgrade-node.node-circle .upgrade-node-inner {
+  border-radius: 50%;
+}
+
+/* Teal/Green Nodes (primary upgrades) */
+.upgrade-node.node-teal .upgrade-node-inner {
+  background: linear-gradient(145deg, #2dd4bf, #14b8a6);
+  border: 2px solid #5eead4;
+  box-shadow: 0 4px 16px rgba(45, 212, 191, 0.35);
+}
+
+.upgrade-node.node-teal .upgrade-icon {
+  color: #042f2e;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+.upgrade-node.node-teal:hover .upgrade-node-inner {
+  box-shadow: 0 8px 28px rgba(45, 212, 191, 0.5);
+  border-color: #99f6e4;
+}
+
+/* Pink/Red Nodes (combat/offensive upgrades) */
+.upgrade-node.node-pink .upgrade-node-inner {
+  background: linear-gradient(145deg, #f472b6, #db2777);
+  border: 2px solid #f9a8d4;
+  box-shadow: 0 4px 16px rgba(244, 114, 182, 0.35);
+}
+
+.upgrade-node.node-pink .upgrade-icon {
+  color: #500724;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+.upgrade-node.node-pink:hover .upgrade-node-inner {
+  box-shadow: 0 8px 28px rgba(244, 114, 182, 0.5);
+  border-color: #fbcfe8;
+}
+
+/* Yellow/Gold Nodes (special/maxed upgrades) */
+.upgrade-node.node-yellow .upgrade-node-inner {
+  background: linear-gradient(145deg, #fbbf24, #d97706);
+  border: 2px solid #fcd34d;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.35);
+}
+
+.upgrade-node.node-yellow .upgrade-icon {
+  color: #451a03;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+.upgrade-node.node-yellow:hover .upgrade-node-inner {
+  box-shadow: 0 8px 28px rgba(251, 191, 36, 0.5);
+  border-color: #fde68a;
+}
+
+/* ===============================================
+   NODE STATES
+   =============================================== */
+
+/* Purchased but not maxed */
+.upgrade-node.purchased:not(.max-level) .upgrade-node-inner {
+  /* Uses color variant classes above */
+}
+
+/* Max Level */
+.upgrade-node.max-level .upgrade-node-inner {
+  background: linear-gradient(145deg, #fbbf24, #b45309);
+  border: 2px solid #fcd34d;
+  box-shadow: 
+    0 4px 16px rgba(251, 191, 36, 0.4),
+    inset 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.upgrade-node.max-level .upgrade-icon {
+  color: #451a03;
+}
+
+.upgrade-node.max-level::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, transparent, rgba(251, 191, 36, 0.3), transparent);
+  animation: nodeGlow 3s linear infinite;
+  z-index: -1;
+}
+
+@keyframes nodeGlow {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ===============================================
+   NODE CONTENT
+   =============================================== */
+
+/* Node Icon */
 .upgrade-icon {
-  font-size: 32px;
+  font-size: 20px;
   line-height: 1;
-  margin-bottom: 4px;
   pointer-events: none;
+  z-index: 1;
 }
 
-/* Upgrade Level */
-.upgrade-level {
-  font-size: 11px;
-  font-weight: 600;
-  color: #cbd5e1;
+/* Level Badge */
+.upgrade-level-badge {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #1e293b;
+  border: 2px solid #334155;
+  font-size: 10px;
+  font-weight: 700;
+  color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
+  z-index: 3;
 }
 
-/* Upgrade Tooltip */
+.upgrade-node.max-level .upgrade-level-badge {
+  background: linear-gradient(145deg, #fbbf24, #d97706);
+  border-color: #fde68a;
+  color: #451a03;
+}
+
+/* ===============================================
+   TOOLTIP
+   =============================================== */
+
 .upgrade-tooltip {
   position: absolute;
-  bottom: 50%;
+  bottom: calc(100% + 12px);
   left: 50%;
-  transform: translateX(-50%) translateY(-10px);
-  background: #1e293b;
+  transform: translateX(-50%) translateY(8px);
+  background: linear-gradient(145deg, #1e293b, #0f172a);
   border: 1px solid #475569;
-  border-radius: 8px;
-  padding: 12px;
-  min-width: 220px;
-  max-width: 250px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  padding: 14px 16px;
+  min-width: 200px;
+  max-width: 260px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
   opacity: 0;
   visibility: hidden;
   transition: all 0.2s ease;
   pointer-events: none;
   z-index: 100;
+}
+
+.upgrade-node:hover .upgrade-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Tooltip Arrow */
+.upgrade-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: #475569;
+}
+
+.upgrade-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #0f172a;
+  z-index: 1;
+}
+
+/* Tooltip Header */
+.tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 8px;
+  gap: 8px;
 }
 
 .tooltip-title {
   font-size: 14px;
   font-weight: 700;
-  margin-bottom: 6px;
-  color: #f9fafb;
+  color: #f1f5f9;
+  line-height: 1.2;
 }
 
+.tooltip-level-pill {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.4);
+  color: #94a3b8;
+  border: 1px solid #334155;
+}
+
+.tooltip-level-pill.maxed {
+  background: linear-gradient(145deg, #fbbf24, #d97706);
+  color: #451a03;
+  border-color: #fde68a;
+}
+
+/* Tooltip Description */
 .tooltip-description {
   font-size: 12px;
   color: #cbd5e1;
-  margin-bottom: 8px;
-  line-height: 1.4;
+  line-height: 1.5;
+  margin-bottom: 10px;
 }
 
-.tooltip-level {
-  font-size: 11px;
-  color: #94a3b8;
+/* Tooltip Cost */
+.tooltip-cost {
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
   margin-bottom: 6px;
 }
 
-.tooltip-cost {
+.tooltip-cost-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   font-weight: 600;
-  color: #fbbf24;
-  margin-bottom: 4px;
 }
 
+.tooltip-cost-item.renown {
+  color: #fbbf24;
+}
+
+.tooltip-cost-item.ink {
+  color: #a78bfa;
+}
+
+.tooltip-cost-item.affordable {
+  opacity: 1;
+}
+
+.tooltip-cost-item.unaffordable {
+  opacity: 0.5;
+  color: #f87171;
+}
+
+/* Tooltip Warning */
 .tooltip-warning {
   font-size: 11px;
   color: #f87171;
-  margin-top: 4px;
-  font-weight: 500;
+  padding: 6px 8px;
+  background: rgba(248, 113, 113, 0.1);
+  border-radius: 4px;
+  border-left: 2px solid #f87171;
 }
 
+/* Tooltip Max */
 .tooltip-max {
-  font-size: 11px;
-  color: #22c55e;
+  font-size: 12px;
+  color: #fbbf24;
   font-weight: 700;
-  margin-top: 4px;
+  text-align: center;
+  padding: 8px;
+  background: rgba(251, 191, 36, 0.1);
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ===============================================
+   PURCHASE BUTTON (in tooltip)
+   =============================================== */
+
+.tooltip-purchase-btn {
+  width: 100%;
+  padding: 8px 12px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tooltip-purchase-btn.can-afford {
+  background: linear-gradient(145deg, #2dd4bf, #14b8a6);
+  color: #042f2e;
+  box-shadow: 0 2px 8px rgba(45, 212, 191, 0.3);
+}
+
+.tooltip-purchase-btn.can-afford:hover {
+  background: linear-gradient(145deg, #5eead4, #2dd4bf);
+  box-shadow: 0 4px 12px rgba(45, 212, 191, 0.4);
+  transform: translateY(-1px);
+}
+
+.tooltip-purchase-btn.cannot-afford {
+  background: #374151;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.tooltip-purchase-btn.maxed {
+  background: linear-gradient(145deg, #fbbf24, #d97706);
+  color: #451a03;
+  cursor: default;
+}
+
+/* ===============================================
+   RESPONSIVE ADJUSTMENTS
+   =============================================== */
+
+@media (max-width: 768px) {
+  .upgrade-tree-container {
+    padding: 20px;
+  }
+  
+  .upgrade-node {
+    width: 42px;
+    height: 42px;
+  }
+  
+  .upgrade-icon {
+    font-size: 18px;
+  }
+  
+  .upgrade-tooltip {
+    min-width: 180px;
+    max-width: 220px;
+    padding: 12px;
+  }
 }
