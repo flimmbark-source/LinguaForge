@@ -3,6 +3,8 @@
  * Manages the hearth state, heating mechanics, and fire animations
  */
 
+import { gameState } from './state.js';
+
 /**
  * Hearth state
  */
@@ -10,19 +12,39 @@ export const hearthState = {
   isHeated: false,
   heatTimer: 0, // Seconds remaining
   maxHeatTime: 0, // Maximum heat time based on letters
+  hearthLevel: 0, // Current hearth heat level (0-3)
+  totalLettersConsumed: 0, // Total letters fed to hearth since last cooldown
 };
 
 /**
  * Heat up the hearth when letters are placed
- * @param {number} letterCount - Number of letters placed (5 seconds per letter)
+ * @param {number} letterCount - Number of letters placed
  */
 export function heatHearth(letterCount = 1) {
-  const secondsPerLetter = 5;
+  const secondsPerLetter = gameState.secondsPerLetter || 5;
   const additionalHeat = letterCount * secondsPerLetter;
+
+  // Track total letters consumed
+  hearthState.totalLettersConsumed += letterCount;
+
+  // Calculate hearth level based on total letters consumed
+  // Level thresholds: 1-14 letters = level 1, 15-34 = level 2, 35+ = level 3
+  const maxHearthLevel = gameState.heatLevels || 1;
+  let newLevel = 1;
+  if (hearthState.totalLettersConsumed >= 35) {
+    newLevel = 3;
+  } else if (hearthState.totalLettersConsumed >= 15) {
+    newLevel = 2;
+  }
+
+  // Cap at player's unlocked max level
+  hearthState.hearthLevel = Math.min(newLevel, maxHearthLevel);
 
   hearthState.heatTimer += additionalHeat;
   hearthState.maxHeatTime = Math.max(hearthState.maxHeatTime, hearthState.heatTimer);
   hearthState.isHeated = true;
+
+  console.log(`Hearth heated! Level ${hearthState.hearthLevel} (${hearthState.totalLettersConsumed} letters consumed)`);
 
   updateHearthVisuals();
 }
@@ -33,11 +55,17 @@ export function heatHearth(letterCount = 1) {
  */
 export function updateHearth(dt) {
   if (hearthState.isHeated && hearthState.heatTimer > 0) {
-    hearthState.heatTimer = Math.max(0, hearthState.heatTimer - dt);
+    // Higher hearth levels consume heat faster
+    // Level 1: 1x, Level 2: 1.5x, Level 3: 2x consumption rate
+    const consumptionMultiplier = 1 + ((hearthState.hearthLevel - 1) * 0.5);
+    hearthState.heatTimer = Math.max(0, hearthState.heatTimer - (dt * consumptionMultiplier));
 
     if (hearthState.heatTimer <= 0) {
       hearthState.isHeated = false;
       hearthState.maxHeatTime = 0;
+      hearthState.hearthLevel = 0;
+      hearthState.totalLettersConsumed = 0;
+      console.log('Hearth has gone out and cooled down.');
     }
 
     updateHearthVisuals();
@@ -50,6 +78,14 @@ export function updateHearth(dt) {
  */
 export function isHearthHeated() {
   return hearthState.isHeated && hearthState.heatTimer > 0;
+}
+
+/**
+ * Get current hearth heat level
+ * @returns {number} Current hearth level (0-3)
+ */
+export function getHearthLevel() {
+  return hearthState.hearthLevel;
 }
 
 /**
@@ -72,14 +108,25 @@ export function updateHearthVisuals() {
 
   if (hearthState.isHeated) {
     const intensity = getHearthIntensity();
-    hearthDiv.classList.add('heated');
-    fireDiv.style.opacity = Math.max(0.3, intensity);
+    const level = hearthState.hearthLevel;
 
-    // Scale fire based on intensity
-    const scale = 0.5 + (intensity * 0.5);
+    hearthDiv.classList.add('heated');
+
+    // Base scale increases with hearth level
+    // Level 1: 0.5-1.0, Level 2: 0.7-1.2, Level 3: 0.9-1.4
+    const baseScale = 0.3 + (level * 0.2);
+    const scale = baseScale + (intensity * 0.5);
     fireDiv.style.transform = `scale(${scale})`;
+
+    // Opacity increases with level
+    const baseOpacity = 0.3 + (level * 0.15);
+    fireDiv.style.opacity = Math.max(baseOpacity, intensity);
+
+    // Add data attribute for CSS styling based on level
+    hearthDiv.setAttribute('data-hearth-level', level);
   } else {
     hearthDiv.classList.remove('heated');
+    hearthDiv.removeAttribute('data-hearth-level');
     fireDiv.style.opacity = '0.1';
     fireDiv.style.transform = 'scale(0.3)';
   }

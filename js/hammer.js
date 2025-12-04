@@ -3,7 +3,7 @@
  * Physics-based hammer striking mechanic for letter generation
  */
 
-import { isHearthHeated, getHearthBounds } from './hearth.js';
+import { isHearthHeated, getHearthBounds, getHearthLevel } from './hearth.js';
 import { gameState } from './state.js';
 
 export class HammerSystem {
@@ -403,7 +403,11 @@ spawnSparks(x, y, power, options = {}) {
 
       // Calculate which heat level we should be at based on time
       const maxHeatLevel = gameState.heatLevels;
-      const targetLevel = Math.min(maxHeatLevel, Math.floor(hammer.heatingTimer / hammer.heatingRequired));
+      const hearthLevel = getHearthLevel();
+
+      // Hammer can't exceed hearth's current heat level
+      const effectiveMaxLevel = Math.min(maxHeatLevel, hearthLevel);
+      const targetLevel = Math.min(effectiveMaxLevel, Math.floor(hammer.heatingTimer / hammer.heatingRequired));
 
       // Level up if we've reached a new heat level
       if (targetLevel > hammer.heatLevel) {
