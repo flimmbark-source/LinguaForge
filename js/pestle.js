@@ -382,8 +382,10 @@ onPointerMove(e) {
 
     const tiles = Array.from(letterPoolDiv.querySelectorAll('.letter-tile'));
     const canvasRect = this.canvas.getBoundingClientRect();
-    const pestleHeadX = canvasRect.left + this.pestle.headX;
-    const pestleHeadY = canvasRect.top + this.pestle.headY;
+// Use the *other end* (tip) of the pestle instead of the head
+    const tip = this.getPestleTipPosition();
+    const pestleHeadX = canvasRect.left + tip.x;
+    const pestleHeadY = canvasRect.top + tip.y;
 
     for (const tile of tiles) {
       const tileRect = tile.getBoundingClientRect();
@@ -590,7 +592,7 @@ spawnInkDrop(x, y) {
       vy *= damping;
 
       // Apply gravity
-      const g = this.gravity * 0.5; // Less gravity when following mouse
+      const g = this.gravity; // Less gravity when following mouse
       vy += g * safeDt;
 
       // Store previous position
@@ -615,7 +617,7 @@ spawnInkDrop(x, y) {
       // Free movement with physics
       if (!pestle.isHeld) {
         const g = this.gravity;
-        const friction = this.airFriction;
+        const friction = this.airFriction * 1.01;
         const x = pestle.headX;
         const y = pestle.headY;
         const prevX = pestle.prevHeadX;
