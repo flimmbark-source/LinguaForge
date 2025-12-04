@@ -25,7 +25,7 @@ export const UPGRADE_TREE = {
   gripStrength: {
     id: 'gripStrength',
     name: 'Grip Strength',
-    description: 'Decrease rip threshold by 10% per level. Makes it easier to rip out stuck hammers.',
+    description: 'Increase grip strength by 10% per level. Allows for harder hits.',
     icon: '💪',
     maxLevel: 5,
     baseCost: { renown: 10, ink: 0 },
@@ -34,9 +34,9 @@ export const UPGRADE_TREE = {
     position: { x: 0, y: 0 },
     connections: ['activateHearth', 'hireScribes', 'increasePestleCap'],
     onPurchase: (level) => {
-      // Each level decreases ripSpeedThreshold by 10%
+      // Each level increases ripSpeedThreshold by 10%
       const baseThreshold = 3400;
-      gameState.ripSpeedThreshold = baseThreshold * Math.pow(0.9, level);
+      gameState.ripSpeedThreshold = baseThreshold * Math.pow(1.1, level);
       console.log(`Grip Strength upgraded to level ${level}, threshold: ${gameState.ripSpeedThreshold}`);
     }
   },
@@ -451,11 +451,48 @@ function createUpgradeNode(upgrade) {
   const tooltip = createUpgradeTooltip(upgrade);
   node.appendChild(tooltip);
 
+  // Keep tooltip inside the upgrade modal horizontally (and a bit vertically)
+  node.addEventListener('mouseenter', () => {
+    const container =
+      document.querySelector('.upgrade-modal-content') ||
+      document.querySelector('.upgrade-tree-container');
+    if (!container) return;
+
+    // Let the browser lay it out first
+    requestAnimationFrame(() => {
+      const containerRect = container.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+
+      const padding = 12; // safe margin from edges
+      let offsetX = 0;
+      let offsetY = -10; // your original upward offset
+
+      // Clamp left/right
+      if (tooltipRect.left < containerRect.left + padding) {
+        offsetX = (containerRect.left + padding) - tooltipRect.left;
+      } else if (tooltipRect.right > containerRect.right - padding) {
+        offsetX = (containerRect.right - padding) - tooltipRect.right;
+      }
+
+      // Optional: stop it from going above the header area
+      if (tooltipRect.top < containerRect.top + padding) {
+        offsetY += (containerRect.top + padding) - tooltipRect.top;
+      }
+
+      // Override the default transform
+      tooltip.style.transform = `translateX(calc(-50% + ${offsetX}px)) translateY(${offsetY}px)`;
+    });
+  });
+
+  // Reset transform when leaving so transitions stay nice
+  node.addEventListener('mouseleave', () => {
+    tooltip.style.transform = 'translateX(-50%) translateY(-10px)';
+  });
+
   // Add click handler
   node.addEventListener('click', () => {
     if (purchaseUpgrade(upgrade.id)) {
       renderUpgradeTree();
-      // Update UI to reflect changes
       if (window.updateUI) {
         window.updateUI();
       }
@@ -464,6 +501,7 @@ function createUpgradeNode(upgrade) {
 
   return node;
 }
+
 
 /**
  * Create tooltip for an upgrade
