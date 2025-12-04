@@ -37,9 +37,9 @@ export class HammerSystem {
       isHeld: false,
       strikeCooldown: 0,
       reboundLock: 0,
-      isHeated: false,
+      heatLevel: 0, // Current heat level (0 = not heated, 1+ = red hot levels)
       heatingTimer: 0, // Time spent over heated hearth
-      heatingRequired: 5, // Seconds needed to heat up hammer
+      heatingRequired: 5, // Seconds needed to reach next heat level
       baseLength: 180, // visual "original" handle length that never changes
       isFree: false,
       regrabCooldown: 0
@@ -398,16 +398,33 @@ spawnSparks(x, y, power, options = {}) {
 
     // Update hammer heating state
     if (isHearthHeated() && this.isHammerOverHearth()) {
-      // Hammer is over heated hearth, start heating
+      // Hammer is over heated hearth, accumulate heat
       hammer.heatingTimer += dt;
-      if (hammer.heatingTimer >= hammer.heatingRequired && !hammer.isHeated) {
-        hammer.isHeated = true;
-        console.log('Hammer is now red-hot!');
+
+      // Calculate which heat level we should be at based on time
+      const maxHeatLevel = gameState.heatLevels;
+      const targetLevel = Math.min(maxHeatLevel, Math.floor(hammer.heatingTimer / hammer.heatingRequired));
+
+      // Level up if we've reached a new heat level
+      if (targetLevel > hammer.heatLevel) {
+        hammer.heatLevel = targetLevel;
+        console.log(`Hammer heat level increased to ${hammer.heatLevel}!`);
       }
     } else {
-      // Not over hearth, reset heating timer if not already heated
-      if (!hammer.isHeated) {
+      // Not over hearth, cool down gradually
+      if (hammer.heatLevel > 0) {
         hammer.heatingTimer = Math.max(0, hammer.heatingTimer - dt * 0.5);
+
+        // Recalculate heat level based on remaining timer
+        const newLevel = Math.floor(hammer.heatingTimer / hammer.heatingRequired);
+        if (newLevel < hammer.heatLevel) {
+          hammer.heatLevel = newLevel;
+          if (hammer.heatLevel === 0) {
+            console.log('Hammer has cooled down completely.');
+          }
+        }
+      } else {
+        hammer.heatingTimer = 0;
       }
     }
 
@@ -654,34 +671,33 @@ updateFreeHammer(dt) {
       const impactY = anvil.y;
       this.spawnSparks(impactX, impactY, power);
 
-      // If hammer is red-hot, cool it down and produce more letters
-      if (hammer.isHeated) {
-        hammer.isHeated = false;
-        hammer.heatingTimer = 0;
-        console.log('Red-hot hammer struck anvil! Cooling down and producing extra letters.');
+      // Calculate multiplier based on heat level
+      // Heat level 0 = 1x, level 1 = 2x, level 2 = 3x, level 3 = 4x, etc.
+      const multiplier = 1 + hammer.heatLevel;
 
-        // Produce extra letters (2x multiplier for red-hot hammer)
-        if (this.onLetterForged) {
-          this.onLetterForged(impactX, impactY, power, hammer.headVx, 2); // 2x multiplier
-        }
-      } else {
-        // Normal anvil strike
-        if (this.onLetterForged) {
-          this.onLetterForged(impactX, impactY, power, hammer.headVx, 1);
-        }
+      if (hammer.heatLevel > 0) {
+        console.log(`Heat level ${hammer.heatLevel} hammer struck anvil! ${multiplier}x letters produced. Cooling down.`);
+        // Cool down completely after striking
+        hammer.heatLevel = 0;
+        hammer.heatingTimer = 0;
+      }
+
+      // Produce letters with calculated multiplier
+      if (this.onLetterForged) {
+        this.onLetterForged(impactX, impactY, power, hammer.headVx, multiplier);
       }
     }
   }
 
-  // Check for mold viewport collision (only when hammer is red-hot and moving down)
-  if (hammer.isHeated && this.isHammerOverMoldViewport() && downwardSpeed > impactThreshold) {
+  // Check for mold viewport collision (only when hammer is heated and moving down)
+  if (hammer.heatLevel > 0 && this.isHammerOverMoldViewport() && downwardSpeed > impactThreshold) {
     if (hammer.strikeCooldown <= 0) {
       hammer.strikeCooldown = 0.25;
       const impactX = headX;
       const impactY = headY;
 
       // Cool down the hammer
-      hammer.isHeated = false;
+      hammer.heatLevel = 0;
       hammer.heatingTimer = 0;
 
       // Spawn sparks at impact point
@@ -793,61 +809,82 @@ drawHammer(ctx, hammer) {
   const headWidth = hammer.width;
   const headHeight = 42;
 
-  const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
-  headGradient.addColorStop(0, '#e5e7eb');
-  headGradient.addColorStop(1, '#475569');
-  ctx.fillStyle = headGradient;
+  // Draw hammer head with heat level effects
+  if (hammer.heatLevel > 0) {
+    // Red-hot glow - intensity increases with heat level
+    const glowIntensity = 20 + (hammer.heatLevel * 10);
+    ctx.shadowColor = hammer.heatLevel >= 3 ? '#fef3c7' : hammer.heatLevel >= 2 ? '#f97316' : '#dc2626';
+    ctx.shadowBlur = glowIntensity;
+
+    const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
+
+    // More intense colors for higher heat levels
+    if (hammer.heatLevel >= 3) {
+      // Level 3: White-hot
+      headGradient.addColorStop(0, '#ffffff');
+      headGradient.addColorStop(0.3, '#fef3c7');
+      headGradient.addColorStop(1, '#f97316');
+    } else if (hammer.heatLevel >= 2) {
+      // Level 2: Yellow-orange
+      headGradient.addColorStop(0, '#fef3c7');
+      headGradient.addColorStop(0.3, '#fbbf24');
+      headGradient.addColorStop(1, '#f97316');
+    } else {
+      // Level 1: Orange-red
+      headGradient.addColorStop(0, '#fef3c7');
+      headGradient.addColorStop(0.3, '#f97316');
+      headGradient.addColorStop(1, '#dc2626');
+    }
+    ctx.fillStyle = headGradient;
+  } else {
+    // Normal silver head
+    const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
+    headGradient.addColorStop(0, '#e5e7eb');
+    headGradient.addColorStop(1, '#475569');
+    ctx.fillStyle = headGradient;
+  }
 
   ctx.beginPath();
   ctx.roundRect(-headWidth / 2, -headHeight, headWidth, headHeight, 10);
   ctx.fill();
 
+  // Reset shadow
+  ctx.shadowBlur = 0;
 
-    // If hammer is heated, draw red-hot effect
-    if (hammer.isHeated) {
-      // Red-hot glow
-      ctx.shadowColor = '#dc2626';
-      ctx.shadowBlur = 20;
+  // Show progress indicator for heating to next level
+  if (hammer.heatingTimer > 0) {
+    const currentLevelTime = hammer.heatLevel * hammer.heatingRequired;
+    const progressToNextLevel = (hammer.heatingTimer - currentLevelTime) / hammer.heatingRequired;
 
-      const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
-      headGradient.addColorStop(0, '#fef3c7'); // Hot yellow-white
-      headGradient.addColorStop(0.3, '#f97316'); // Orange
-      headGradient.addColorStop(1, '#dc2626'); // Red
-      ctx.fillStyle = headGradient;
-    } else {
-      // Normal silver head
-      const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
-      headGradient.addColorStop(0, '#e5e7eb');
-      headGradient.addColorStop(1, '#475569');
-      ctx.fillStyle = headGradient;
+    if (progressToNextLevel > 0 && progressToNextLevel < 1) {
+      // Show progress bar for next heat level
+      const barHeight = 4;
+      const barY = -headHeight - 8;
+
+      // Background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(-headWidth / 2, barY, headWidth, barHeight);
+
+      // Progress (color based on next level)
+      const nextLevel = hammer.heatLevel + 1;
+      const progressColor = nextLevel >= 3 ? '#fef3c7' : nextLevel >= 2 ? '#fbbf24' : '#f97316';
+      ctx.fillStyle = progressColor;
+      ctx.fillRect(-headWidth / 2, barY, headWidth * progressToNextLevel, barHeight);
     }
+  }
 
-    ctx.beginPath();
-    ctx.roundRect(-headWidth / 2, -headHeight, headWidth, headHeight, 10);
-    ctx.fill();
+  // Shine on head (brighter if heated)
+  if (hammer.heatLevel > 0) {
+    ctx.globalAlpha = 0.5 + (hammer.heatLevel * 0.1);
+    ctx.fillStyle = '#ffffff';
+  } else {
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#f9fafb';
+  }
+  ctx.fillRect(-headWidth / 2 + 4, -headHeight + 6, headWidth - 8, 10);
+  ctx.globalAlpha = 1;
 
-    // Reset shadow
-    ctx.shadowBlur = 0;
-
-    // If heating but not yet red-hot, show progress indicator
-    if (!hammer.isHeated && hammer.heatingTimer > 0) {
-      const progress = hammer.heatingTimer / hammer.heatingRequired;
-      ctx.fillStyle = `rgba(249, 115, 22, ${progress * 0.5})`;
-      ctx.fillRect(-headWidth / 2, -headHeight, headWidth * progress, headHeight);
-    }
-
-    // Shine on head (brighter if heated)
-    if (hammer.isHeated) {
-      ctx.globalAlpha = 0.6;
-      ctx.fillStyle = '#ffffff';
-    } else {
-      ctx.globalAlpha = 0.3;
-      ctx.fillStyle = '#f9fafb';
-    }
-    ctx.fillRect(-headWidth / 2 + 4, -headHeight + 6, headWidth - 8, 10);
-    ctx.globalAlpha = 1;
-
-    ctx.restore();
+  ctx.restore();
   }
 
   /**
