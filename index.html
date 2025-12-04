@@ -20,6 +20,21 @@
     </div>
   </div>
 
+  <!-- TOOL RACK -->
+  <div class="column">
+    <h3>Tools</h3>
+    <div class="tool-selector">
+      <button id="selectHammer" class="tool-button active" data-tool="hammer" title="Hammer & Anvil - Strike to forge letters">
+        <span class="tool-icon">🔨</span>
+        <span class="tool-label">Hammer</span>
+      </button>
+      <button id="selectPestle" class="tool-button" data-tool="pestle" title="Pestle & Mortar - Grind letters to produce ink">
+        <span class="tool-icon">🥄</span>
+        <span class="tool-label">Pestle</span>
+      </button>
+    </div>
+  </div>
+
   <!-- RIGHT COLUMN: VERSE / GRAMMAR -->
   <div class="column">
     <h2>Verse: Foundations of Magic</h2>
@@ -45,7 +60,6 @@
 
   <!-- MOLD VIEWPORT BAR -->
   <div class="mold-viewport-bar">
-    <button id="forgeWordsBtn">Forge</button>
     <div class="mold-viewport">
       <button id="prevMoldBtn" class="secondary">&lt;</button>
       <span id="moldIndexLabel" style="font-size:12px; opacity:0.8;"></span>
@@ -54,10 +68,12 @@
     </div>
   </div>
 
-  <!-- HAMMER & ANVIL FORGE -->
-  <div class="hammer-forge">
-    <canvas id="hammerCanvas"></canvas>
-    <div id="hammerHint">Click and drag the hammer, swing down onto the anvil to forge letters</div>
+  
+
+  <!-- CRAFTING FORGE (HAMMER OR PESTLE) -->
+  <div class="crafting-forge">
+    <canvas id="craftingCanvas"></canvas>
+    <div id="craftingHint" class="crafting-hint"></div>
   </div>
 
   <!-- FLOATING STATS -->
@@ -79,11 +95,13 @@
           Drag letters from the pool onto molds. Only letters that fit a mold will be consumed.
         </div>
       </div>
-            <div class="bottom-dock-column"">
-        <h3>Sell Letters</h3>
-        <div id="letterSell" class="letter-board"></div>
+            <div class="bottom-dock-column">
+        <h3>Hearth</h3>
+        <div id="hearth" class="hearth-container">
+          <div id="hearthFire" class="hearth-fire"></div>
+        </div>
         <div style="margin-top:6px; font-size:12px; opacity:0.75;">
-        Drop a letter tile here to dissolve it into <strong>Ink</strong> (1 Ink per letter for now).
+          Drop letters here to <strong>heat the hearth</strong>. Place the hammer head over the heated hearth for 5 seconds to make it red-hot!
         </div>
       </div>
       <div class="bottom-dock-column">

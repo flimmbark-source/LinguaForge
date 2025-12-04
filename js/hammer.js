@@ -3,6 +3,8 @@
  * Physics-based hammer striking mechanic for letter generation
  */
 
+import { isHearthHeated, getHearthBounds } from './hearth.js';
+
 export class HammerSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -11,6 +13,7 @@ export class HammerSystem {
     // Callbacks set by app
     this.onLetterForged = null;
     this.onLetterLanded = null;
+    this.onForgeTriggered = null; // Called when red-hot hammer hits mold viewport
 
     // World physics constants
     this.gravity = 2600; // px/s^2
@@ -31,7 +34,11 @@ export class HammerSystem {
       headVx: 0,
       headVy: 0,
       isHeld: false,
-      strikeCooldown: 0
+      strikeCooldown: 0,
+      isHeated: false,
+      heatingTimer: 0, // Time spent over heated hearth
+      heatingRequired: 5, // Seconds needed to heat up hammer
+      baseLength: 180, // visual “original” handle length that never changes
     };
 
     // Anvil state
@@ -82,6 +89,9 @@ export class HammerSystem {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.width = rect.width;
     this.height = rect.height;
+    this.hammer.length = 180;
+    this.hammer.baseLength = 180; // keep original handle length for the static overlay
+
 
     // Position anvil just above the letter pool bar (160px from bottom)
     // Canvas now covers full viewport, so position relative to bottom
@@ -139,7 +149,7 @@ export class HammerSystem {
     const cx = x1 + dx * t;
     const cy = y1 + dy * t;
     const dist = Math.hypot(px - cx, py - cy);
-    return dist < 40;
+    return dist < 140;
   }
 
   /**
@@ -285,6 +295,53 @@ export class HammerSystem {
   }
 
   /**
+   * Check if hammer head is over hearth
+   */
+  isHammerOverHearth() {
+    const hearthBounds = getHearthBounds();
+    if (!hearthBounds) return false;
+
+    const headX = this.hammer.headX;
+    const headY = this.hammer.headY;
+
+    // Convert canvas coordinates to viewport coordinates
+    const canvasRect = this.canvas.getBoundingClientRect();
+    const viewportX = canvasRect.left + headX;
+    const viewportY = canvasRect.top + headY;
+
+    return (
+      viewportX > hearthBounds.left &&
+      viewportX < hearthBounds.right &&
+      viewportY > hearthBounds.top &&
+      viewportY < hearthBounds.bottom
+    );
+  }
+
+  /**
+   * Check if hammer head is over mold viewport
+   */
+  isHammerOverMoldViewport() {
+    const moldViewport = document.querySelector('.mold-viewport');
+    if (!moldViewport) return false;
+
+    const moldBounds = moldViewport.getBoundingClientRect();
+    const headX = this.hammer.headX;
+    const headY = this.hammer.headY;
+
+    // Convert canvas coordinates to viewport coordinates
+    const canvasRect = this.canvas.getBoundingClientRect();
+    const viewportX = canvasRect.left + headX;
+    const viewportY = canvasRect.top + headY;
+
+    return (
+      viewportX > moldBounds.left &&
+      viewportX < moldBounds.right &&
+      viewportY > moldBounds.top &&
+      viewportY < moldBounds.bottom
+    );
+  }
+
+  /**
    * Update hammer physics
    */
   updateHammer(dt) {
@@ -293,6 +350,21 @@ export class HammerSystem {
     const friction = this.airFriction;
 
     hammer.strikeCooldown = Math.max(0, hammer.strikeCooldown - dt);
+
+    // Update hammer heating state
+    if (isHearthHeated() && this.isHammerOverHearth()) {
+      // Hammer is over heated hearth, start heating
+      hammer.heatingTimer += dt;
+      if (hammer.heatingTimer >= hammer.heatingRequired && !hammer.isHeated) {
+        hammer.isHeated = true;
+        console.log('Hammer is now red-hot!');
+      }
+    } else {
+      // Not over hearth, reset heating timer if not already heated
+      if (!hammer.isHeated) {
+        hammer.heatingTimer = Math.max(0, hammer.heatingTimer - dt * 0.5);
+      }
+    }
 
     const x = hammer.headX;
     const y = hammer.headY;
@@ -371,10 +443,51 @@ export class HammerSystem {
         const impactY = anvil.y;
         this.spawnSparks(impactX, impactY, power);
 
-        // Trigger letter forging with canvas position and velocity
-        if (this.onLetterForged) {
-          this.onLetterForged(impactX, impactY, power, hammer.headVx);
+        // If hammer is red-hot, cool it down and produce more letters
+        if (hammer.isHeated) {
+          hammer.isHeated = false;
+          hammer.heatingTimer = 0;
+          console.log('Red-hot hammer struck anvil! Cooling down and producing extra letters.');
+
+          // Produce extra letters (2x multiplier for red-hot hammer)
+          if (this.onLetterForged) {
+            this.onLetterForged(impactX, impactY, power, hammer.headVx, 2); // 2x multiplier
+          }
+        } else {
+          // Normal anvil strike
+          if (this.onLetterForged) {
+            this.onLetterForged(impactX, impactY, power, hammer.headVx, 1);
+          }
         }
+      }
+    }
+
+    // Check for mold viewport collision (only when hammer is red-hot and moving down)
+    if (hammer.isHeated && this.isHammerOverMoldViewport() && downwardSpeed > impactThreshold) {
+      if (hammer.strikeCooldown <= 0) {
+        hammer.strikeCooldown = 0.25;
+        const impactX = headX;
+        const impactY = headY;
+
+        // Cool down the hammer
+        hammer.isHeated = false;
+        hammer.heatingTimer = 0;
+
+        // Spawn sparks at impact point
+        this.spawnSparks(impactX, impactY, 1.2);
+
+        // Trigger forge functionality
+        if (this.onForgeTriggered) {
+          this.onForgeTriggered();
+          console.log('Red-hot hammer struck mold viewport! Forging words...');
+        }
+
+        // Bounce the hammer back
+        const bounceFactor = 0.6;
+        hammer.headVy = -downwardSpeed * bounceFactor;
+        hammer.headVx = hammer.headVx * 0.8;
+        hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
+        hammer.prevHeadY = hammer.headY - hammer.headVy * dt;
       }
     }
 
@@ -427,42 +540,99 @@ export class HammerSystem {
   /**
    * Draw hammer
    */
-  drawHammer(ctx, hammer) {
-    ctx.save();
-    const pivotX = hammer.pivotX;
-    const pivotY = hammer.pivotY;
-    const dx = hammer.headX - pivotX;
-    const dy = hammer.headY - pivotY;
-    const angle = Math.atan2(dy, dx) + Math.PI / 2;
-    const length = Math.hypot(dx, dy) || hammer.length;
+  /**
+ * Draw hammer
+ */
+drawHammer(ctx, hammer) {
+  ctx.save();
+  const pivotX = hammer.pivotX;
+  const pivotY = hammer.pivotY;
+  const dx = hammer.headX - pivotX;
+  const dy = hammer.headY - pivotY;
+  const angle = Math.atan2(dy, dx) + Math.PI / 2;
+  const length = Math.hypot(dx, dy) || hammer.length;
 
-    ctx.translate(pivotX, pivotY);
-    ctx.rotate(angle);
+  ctx.translate(pivotX, pivotY);
+  ctx.rotate(angle);
 
-    // Handle
-    const handleWidth = hammer.handleThickness;
-    const handleLength = length;
-    const handleGradient = ctx.createLinearGradient(0, -handleLength, 0, 0);
-    handleGradient.addColorStop(0, '#fbbf24');
-    handleGradient.addColorStop(1, '#92400e');
-    ctx.fillStyle = handleGradient;
-    ctx.fillRect(-handleWidth / 2, -handleLength, handleWidth, handleLength);
+  const handleWidth = hammer.handleThickness;
+  const handleLength = length;
 
-    // Head
-    const headWidth = hammer.width;
-    const headHeight = 42;
-    ctx.translate(0, -handleLength);
-    const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
-    headGradient.addColorStop(0, '#e5e7eb');
-    headGradient.addColorStop(1, '#475569');
-    ctx.fillStyle = headGradient;
+  // 1) Dynamic handle (physics-based) from PIVOT → HEAD
+  const handleGradient = ctx.createLinearGradient(0, -handleLength, 0, 0);
+  handleGradient.addColorStop(0, '#fbbf24');
+  handleGradient.addColorStop(1, '#92400e');
+  ctx.fillStyle = handleGradient;
+  ctx.fillRect(-handleWidth / 2, -handleLength, handleWidth, handleLength);
+
+  // 2) Move origin to the HEAD position
+  ctx.translate(0, -handleLength);
+
+  // 3) Static handle UNDER the head (anchored at the head, not the click)
+  //    If you stored an original length, use that; otherwise fall back to 160.
+  const staticHandleLength = hammer.baseLength || 160;
+  const staticGradient = ctx.createLinearGradient(0, 0, 0, staticHandleLength);
+  staticGradient.addColorStop(0, '#fbbf24');
+  staticGradient.addColorStop(1, '#92400e');
+  ctx.fillStyle = staticGradient;
+  // This now starts AT THE HEAD (y = 0) and goes *downward*
+  ctx.fillRect(-handleWidth / 2, 0, handleWidth, staticHandleLength);
+
+  // 4) Head (still drawn above the head origin, in negative Y)
+  const headWidth = hammer.width;
+  const headHeight = 42;
+
+  const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
+  headGradient.addColorStop(0, '#e5e7eb');
+  headGradient.addColorStop(1, '#475569');
+  ctx.fillStyle = headGradient;
+
+  ctx.beginPath();
+  ctx.roundRect(-headWidth / 2, -headHeight, headWidth, headHeight, 10);
+  ctx.fill();
+
+
+    // If hammer is heated, draw red-hot effect
+    if (hammer.isHeated) {
+      // Red-hot glow
+      ctx.shadowColor = '#dc2626';
+      ctx.shadowBlur = 20;
+
+      const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
+      headGradient.addColorStop(0, '#fef3c7'); // Hot yellow-white
+      headGradient.addColorStop(0.3, '#f97316'); // Orange
+      headGradient.addColorStop(1, '#dc2626'); // Red
+      ctx.fillStyle = headGradient;
+    } else {
+      // Normal silver head
+      const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
+      headGradient.addColorStop(0, '#e5e7eb');
+      headGradient.addColorStop(1, '#475569');
+      ctx.fillStyle = headGradient;
+    }
+
     ctx.beginPath();
     ctx.roundRect(-headWidth / 2, -headHeight, headWidth, headHeight, 10);
     ctx.fill();
 
-    // Shine on head
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = '#f9fafb';
+    // Reset shadow
+    ctx.shadowBlur = 0;
+
+    // If heating but not yet red-hot, show progress indicator
+    if (!hammer.isHeated && hammer.heatingTimer > 0) {
+      const progress = hammer.heatingTimer / hammer.heatingRequired;
+      ctx.fillStyle = `rgba(249, 115, 22, ${progress * 0.5})`;
+      ctx.fillRect(-headWidth / 2, -headHeight, headWidth * progress, headHeight);
+    }
+
+    // Shine on head (brighter if heated)
+    if (hammer.isHeated) {
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = '#ffffff';
+    } else {
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#f9fafb';
+    }
     ctx.fillRect(-headWidth / 2 + 4, -headHeight + 6, headWidth - 8, 10);
     ctx.globalAlpha = 1;
 

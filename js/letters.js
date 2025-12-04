@@ -5,6 +5,7 @@
 
 import { getAllowedLetters, INK_PER_LETTER } from './config.js';
 import { gameState, addLetters, addInk, getNextLetterId } from './state.js';
+import { heatHearth } from './hearth.js';
 
 /**
  * Get a random allowed letter
@@ -68,6 +69,15 @@ export function sellOneLetterFromTile(tile) {
 }
 
 /**
+ * Feed one letter to the hearth (heat it up)
+ * @param {HTMLElement} tile - Letter tile element
+ */
+export function feedLetterToHearth(tile) {
+  consumeLetterTile(tile);
+  heatHearth(1); // Heat hearth for 5 seconds per letter
+}
+
+/**
  * Check if two rectangles intersect
  * @param {DOMRect} r1 - First rectangle
  * @param {DOMRect} r2 - Second rectangle
@@ -92,15 +102,15 @@ function rectsIntersect(r1, r2) {
  */
 export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled) {
   const tileRect = tile.getBoundingClientRect();
-  const letterSellDiv = document.getElementById('letterSell');
+  const hearthDiv = document.getElementById('hearth');
   const moldListDiv = document.getElementById('moldList');
   const letterPoolDiv = document.getElementById('letterPool');
 
-  // Priority 1: Sell board (convert to ink)
-  if (letterSellDiv) {
-    const sellRect = letterSellDiv.getBoundingClientRect();
-    if (rectsIntersect(tileRect, sellRect)) {
-      sellOneLetterFromTile(tile);
+  // Priority 1: Hearth (heat it up)
+  if (hearthDiv) {
+    const hearthRect = hearthDiv.getBoundingClientRect();
+    if (rectsIntersect(tileRect, hearthRect)) {
+      feedLetterToHearth(tile);
       resetLetterTilePosition(tile);
       return;
     }
