@@ -267,7 +267,8 @@ onPointerDown(e) {
 
     // Convert world positions to canvas positions
     const targetX = poolPos.x - canvasRect.left;
-    const targetY = poolPos.y - canvasRect.top;
+    // Letters fall to the bottom of the screen
+    const targetY = this.height - 10; // Bottom of canvas minus small margin
 
     // Launch the letter from the anvil impact point with an upward arc
     const launchSpeed = 900 + power * 500; // px/s upward
