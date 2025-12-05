@@ -29,7 +29,7 @@ const NODE_COLORS = {
 
 // Big virtual canvas so we can scroll in all directions
 const VIRTUAL_TREE_SIZE = 3000; // pixels, square canvas
-
+let hasCenteredUpgradeTree = false;
 
 /**
  * Upgrade tree data structure
@@ -61,7 +61,7 @@ export const UPGRADE_TREE = {
     costPerLevel: { renown: 0, ink: 0 },
     prerequisites: [],
     position: { x: 0, y: 0 },
-    connections: ['gripStrength','heatLevel', 'hireScribes', 'increasePestleCap'],
+    connections: ['gripStrength','heatLevel', 'hireScribes', 'unlockPestle'],
     nodeShape: NODE_SHAPES.CIRCLE,
     nodeColor: NODE_COLORS.PINK,
     onPurchase: () => {
@@ -109,7 +109,28 @@ gripStrength: {
     }
   },
 
-  increasePestleCap: {
+  unlockPestle: {
+    id: 'unlockPestle',
+    name: 'Unlock Pestle',
+    description: 'Unlock the Pestel to produce Ink from letter blocks.',
+    icon: '🥄',
+    maxLevel: 1,
+    baseCost: { renown: 15, ink: 0 },
+    costPerLevel: { renown: 0, ink: 0 },
+    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
+    position: { x: 2, y: 1 },
+    connections: ['increasePestleCap'],
+    nodeShape: NODE_SHAPES.SQUARE,
+    nodeColor: NODE_COLORS.YELLOW,
+    onPurchase: () => {
+      gameState.pestleUnlocked = true;
+    }
+  },
+
+  // ===============================================
+  // TIER 2 - HEARTH BRANCH
+  // ===============================================
+    increasePestleCap: {
     id: 'increasePestleCap',
     name: 'Pestle Capacity',
     description: 'Increase letters gathered by pestle by 5 per level.',
@@ -117,8 +138,8 @@ gripStrength: {
     maxLevel: 5,
     baseCost: { renown: 15, ink: 10 },
     costPerLevel: { renown: 10, ink: 5 },
-    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
-    position: { x: 2, y: 1 },
+    prerequisites: [{ id: 'unlockPestle', minLevel: 1 }],
+    position: { x: 2, y: 2 },
     connections: ['lettersPerChurn', 'churnSpeed'],
     nodeShape: NODE_SHAPES.SQUARE,
     nodeColor: NODE_COLORS.YELLOW,
@@ -126,10 +147,7 @@ gripStrength: {
       gameState.pestleCapacity = 10 + (level * 5);
     }
   },
-
-  // ===============================================
-  // TIER 2 - HEARTH BRANCH
-  // ===============================================
+  
   redHotDurability: {
     id: 'redHotDurability',
     name: 'Red Hot Durability',
@@ -313,7 +331,7 @@ gripStrength: {
     baseCost: { renown: 40, ink: 30 },
     costPerLevel: { renown: 10, ink: 10 },
     prerequisites: [{ id: 'increasePestleCap', minLevel: 1 }],
-    position: { x: 2.5, y: 2.2 },
+    position: { x: 2.5, y: 2.6 },
     connections: ['multiChurn'],
     nodeShape: NODE_SHAPES.CIRCLE,
     nodeColor: NODE_COLORS.YELLOW,
@@ -545,6 +563,16 @@ export function renderUpgradeTree() {
   const treeContainer = document.getElementById('upgradeTree');
   if (!treeContainer) return;
 
+  const scrollContainer = treeContainer.parentElement; // .upgrade-tree-container
+
+  // Remember current scroll BEFORE clearing (only meaningful after first center)
+  let prevLeft = 0;
+  let prevTop = 0;
+  if (scrollContainer && hasCenteredUpgradeTree) {
+    prevLeft = scrollContainer.scrollLeft;
+    prevTop  = scrollContainer.scrollTop;
+  }
+
   const { visible, locked } = getVisibleUpgrades();
 
   // Clear and size the virtual canvas
@@ -587,7 +615,7 @@ export function renderUpgradeTree() {
     treeContainer.appendChild(node);
   }
 
-  // Draw connection lines AFTER layout
+  // Draw connection lines AFTER layout and then center
   requestAnimationFrame(() => {
     for (const upgradeId of visible) {
       const upgrade = UPGRADE_TREE[upgradeId];
@@ -602,19 +630,45 @@ export function renderUpgradeTree() {
       }
     }
 
-    // Center scroll on the starting node (activateHearth at position {0,0})
-    const scrollContainer = treeContainer.parentElement; // .upgrade-tree-container
-    if (scrollContainer) {
-      const startX = layout.centerX;
-      const startY = layout.centerY;
+    if (!scrollContainer) return;
 
-      scrollContainer.scrollLeft = startX - scrollContainer.clientWidth / 2;
-      scrollContainer.scrollTop  = startY - scrollContainer.clientHeight / 2;
-    }
+if (!hasCenteredUpgradeTree) {
+  const startNode = nodes['activateHearth'];
+
+  if (startNode) {
+    const nodeRect = startNode.getBoundingClientRect();
+    const treeRect = treeContainer.getBoundingClientRect();
+
+    // Center of node in tree content coordinates
+    const nodeCenterX =
+      (nodeRect.left - treeRect.left) + nodeRect.width / 2;
+    const nodeCenterY =
+      (nodeRect.top  - treeRect.top)  + nodeRect.height / 2;
+
+    // Read padding from the scroll container
+    const style = getComputedStyle(scrollContainer);
+    const padLeft   = parseFloat(style.paddingLeft)   || 0;
+    const padRight  = parseFloat(style.paddingRight)  || 0;
+    const padTop    = parseFloat(style.paddingTop)    || 0;
+    const padBottom = parseFloat(style.paddingBottom) || 0;
+
+    const usableWidth  = scrollContainer.clientWidth  - padLeft - padRight;
+    const usableHeight = scrollContainer.clientHeight - padTop  - padBottom;
+
+    scrollContainer.scrollLeft = nodeCenterX - usableWidth  / 2;
+    scrollContainer.scrollTop  = nodeCenterY - usableHeight / 2;
+  }
+
+  hasCenteredUpgradeTree = true;
+} else {
+  scrollContainer.scrollLeft = prevLeft;
+  scrollContainer.scrollTop  = prevTop;
+}
   });
 
   updateHeaderStats();
 }
+
 
 
 /**
