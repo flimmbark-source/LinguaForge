@@ -10,7 +10,7 @@ export class InventoryBagSystem {
   constructor() {
     // Bag state
     this.bag = {
-      x: 50, // Start position in left of bottom bar
+      x: 400, // Start position in left of bottom bar
       y: 0, // Will be set based on window height
       width: 80,
       height: 80,
@@ -204,8 +204,8 @@ export class InventoryBagSystem {
     this.popupElement.style.overflowY = 'auto';
 
     // Position popup - bottom right corner aligned with bottom right of bag
-    const bagRight = this.bag.x + this.bag.width / 2;
-    const bagBottom = this.bag.y + this.bag.height / 2;
+    const bagRight = this.bag.x;
+    const bagBottom = this.bag.y;
     let popupLeft = bagRight; // Bottom right corner of popup at bottom right of bag
     let popupTop = bagBottom;
 

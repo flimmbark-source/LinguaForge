@@ -17,7 +17,7 @@ body {
   display: flex;
   gap: 16px;
   height: 100vh;
-  padding-bottom: 180px;
+  padding-bottom: 160px;
   box-sizing: border-box;
 }
 
@@ -146,27 +146,15 @@ button.secondary {
 }
 
 /* Letter Pool Dock */
-.letter-pool-dock {
+/* Hearth Wrapper - Fixed at bottom center */
+.hearth-wrapper {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 8px 16px;
-  box-sizing: border-box;
-  background: #020617;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.6);
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
   z-index: 100;
-  height: 160px;
-}
-
-.bottom-dock-inner {
-  display: flex;
-  gap: 12px;
-}
-
-.bottom-dock-column {
-  flex: 1;
-  min-width: 0;
+  max-width: 400px;
+  width: calc(100% - 32px);
 }
 
 /* ===============================================
@@ -177,7 +165,7 @@ button.secondary {
 .mold-viewport-bar {
   position: fixed;
   left: 16px;
-  bottom: 160px;
+  bottom: 16px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -406,37 +394,129 @@ button.secondary {
    HEARTH SYSTEM
    =============================================== */
 
-/* Hearth Container */
-.hearth-container {
-  min-height: 72px;
-  border-radius: 8px;
-  border: 2px solid #4b5563;
-  padding: 4px;
+/* Main Hearth Structure */
+.hearth-structure {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(to bottom, #020617, #0f172a);
+  flex-direction: column;
   position: relative;
-  overflow: hidden;
   transition: all 0.3s ease;
 }
 
-.hearth-container.heated {
-  border-color: #f97316;
-  box-shadow: 0 0 20px rgba(249, 115, 22, 0.4), inset 0 0 30px rgba(249, 115, 22, 0.15);
-  background: linear-gradient(to bottom, #451a03, #7c2d12);
+/* Hearth Mantle (top shelf) */
+.hearth-mantle {
+  height: 12px;
+  background: linear-gradient(to bottom, #78716c, #57534e);
+  border-radius: 4px 4px 0 0;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.1);
+  border: 1px solid #44403c;
+  border-bottom: none;
 }
 
-/* Hearth Fire */
+/* Hearth Body (main structure) */
+.hearth-body {
+  position: relative;
+  background: linear-gradient(to bottom, #57534e, #44403c);
+  border-left: 2px solid #292524;
+  border-right: 2px solid #292524;
+  padding: 8px;
+  box-shadow:
+    inset 0 0 20px rgba(0, 0, 0, 0.5),
+    inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Hearth Arch (top of opening) */
+.hearth-arch {
+  position: relative;
+  height: 16px;
+  display: flex;
+  margin-bottom: -4px;
+  z-index: 2;
+}
+
+.hearth-arch-left,
+.hearth-arch-right {
+  width: 24px;
+  background: linear-gradient(to bottom, #57534e, #44403c);
+  box-shadow:
+    inset -2px 0 4px rgba(0, 0, 0, 0.4),
+    0 2px 3px rgba(0, 0, 0, 0.5);
+}
+
+.hearth-arch-top {
+  flex: 1;
+  background: linear-gradient(to bottom, #78716c, #57534e);
+  border-radius: 0 0 80px 80px / 0 0 40px 40px;
+  box-shadow:
+    inset 0 -2px 6px rgba(0, 0, 0, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  border: 1px solid #292524;
+  border-top: none;
+}
+
+/* Hearth Opening (fire chamber) */
+.hearth-opening {
+  position: relative;
+  min-height: 90px;
+  background: linear-gradient(to bottom, #0a0a0a, #1a1a1a);
+  border-radius: 0 0 4px 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  box-shadow:
+    inset 0 0 30px rgba(0, 0, 0, 0.9),
+    inset 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+/* Hearth Back Wall (interior depth) */
+.hearth-back-wall {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at center bottom, #1a1a1a 0%, #0a0a0a 60%),
+    repeating-linear-gradient(
+      90deg,
+      #1a1a1a 0px,
+      #0f0f0f 2px,
+      #1a1a1a 4px
+    );
+  opacity: 0.6;
+}
+
+/* Hearth Floor (base of fire chamber) */
+.hearth-floor {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: linear-gradient(to top, #292524, #1c1917);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.8),
+    0 -1px 3px rgba(0, 0, 0, 0.5);
+  border-top: 1px solid #0a0a0a;
+}
+
+/* Hearth Fire (inside opening) */
 .hearth-fire {
-  width: 80px;
+  width: 70px;
   height: 80px;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   opacity: 0.1;
   transition: opacity 0.5s ease, transform 0.5s ease;
   pointer-events: none;
+  z-index: 10;
+  margin-bottom: 8px;
 }
 
 .hearth-fire-svg {
@@ -445,9 +525,38 @@ button.secondary {
   filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6));
 }
 
-.hearth-container.heated .hearth-fire {
+/* Hearth Base/Foundation */
+.hearth-base {
+  height: 16px;
+  background: linear-gradient(to bottom, #44403c, #292524);
+  border-radius: 0 0 4px 4px;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.6),
+    inset 0 1px 2px rgba(255, 255, 255, 0.05);
+  border: 2px solid #1c1917;
+  border-top: none;
+}
+
+/* Hearth Instructions Text */
+.hearth-instructions {
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.75;
+  text-align: center;
+}
+
+/* ===== HEATED STATES ===== */
+
+/* When hearth is heated */
+.hearth-structure.heated .hearth-fire {
   opacity: 1;
   animation: fireFlicker 0.5s ease-in-out infinite alternate;
+}
+
+.hearth-structure.heated .hearth-opening {
+  box-shadow:
+    inset 0 0 30px rgba(249, 115, 22, 0.3),
+    inset 0 0 20px rgba(249, 115, 22, 0.2);
 }
 
 @keyframes fireFlicker {
@@ -462,35 +571,69 @@ button.secondary {
   }
 }
 
-/* Hearth Heat Levels - Different visual effects based on level */
-.hearth-container[data-hearth-level="1"] {
-  border-color: #f97316;
-  box-shadow: 0 0 20px rgba(249, 115, 22, 0.4), inset 0 0 30px rgba(249, 115, 22, 0.15);
-  background: linear-gradient(to bottom, #451a03, #7c2d12);
+/* ===== HEARTH HEAT LEVELS ===== */
+
+/* Level 1: Low Heat */
+.hearth-structure[data-hearth-level="1"] .hearth-opening {
+  background: radial-gradient(ellipse at center bottom, #451a03 0%, #1a1a1a 60%);
+  box-shadow:
+    inset 0 0 30px rgba(249, 115, 22, 0.4),
+    inset 0 0 20px rgba(249, 115, 22, 0.3),
+    0 0 20px rgba(249, 115, 22, 0.2);
 }
 
-.hearth-container[data-hearth-level="1"] .hearth-fire-svg {
+.hearth-structure[data-hearth-level="1"] .hearth-fire-svg {
   filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.7));
 }
 
-.hearth-container[data-hearth-level="2"] {
-  border-color: #fbbf24;
-  box-shadow: 0 0 25px rgba(251, 191, 36, 0.5), inset 0 0 35px rgba(251, 191, 36, 0.2);
-  background: linear-gradient(to bottom, #713f12, #92400e);
+.hearth-structure[data-hearth-level="1"] .hearth-arch-top,
+.hearth-structure[data-hearth-level="1"] .hearth-mantle {
+  box-shadow:
+    inset 0 -2px 6px rgba(249, 115, 22, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 10px rgba(249, 115, 22, 0.15);
 }
 
-.hearth-container[data-hearth-level="2"] .hearth-fire-svg {
+/* Level 2: Medium Heat */
+.hearth-structure[data-hearth-level="2"] .hearth-opening {
+  background: radial-gradient(ellipse at center bottom, #713f12 0%, #1a1a1a 50%);
+  box-shadow:
+    inset 0 0 35px rgba(251, 191, 36, 0.5),
+    inset 0 0 25px rgba(251, 191, 36, 0.4),
+    0 0 25px rgba(251, 191, 36, 0.3);
+}
+
+.hearth-structure[data-hearth-level="2"] .hearth-fire-svg {
   filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.8)) brightness(1.1);
 }
 
-.hearth-container[data-hearth-level="3"] {
-  border-color: #fef3c7;
-  box-shadow: 0 0 30px rgba(254, 243, 199, 0.6), inset 0 0 40px rgba(254, 243, 199, 0.25);
-  background: linear-gradient(to bottom, #92400e, #b45309);
+.hearth-structure[data-hearth-level="2"] .hearth-arch-top,
+.hearth-structure[data-hearth-level="2"] .hearth-mantle {
+  box-shadow:
+    inset 0 -2px 6px rgba(251, 191, 36, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 15px rgba(251, 191, 36, 0.2);
 }
 
-.hearth-container[data-hearth-level="3"] .hearth-fire-svg {
+/* Level 3: High Heat */
+.hearth-structure[data-hearth-level="3"] .hearth-opening {
+  background: radial-gradient(ellipse at center bottom, #92400e 0%, #451a03 40%, #1a1a1a 70%);
+  box-shadow:
+    inset 0 0 40px rgba(254, 243, 199, 0.6),
+    inset 0 0 30px rgba(254, 243, 199, 0.5),
+    0 0 30px rgba(254, 243, 199, 0.4);
+}
+
+.hearth-structure[data-hearth-level="3"] .hearth-fire-svg {
   filter: drop-shadow(0 0 20px rgba(254, 243, 199, 0.9)) brightness(1.2) saturate(1.3);
+}
+
+.hearth-structure[data-hearth-level="3"] .hearth-arch-top,
+.hearth-structure[data-hearth-level="3"] .hearth-mantle {
+  box-shadow:
+    inset 0 -2px 6px rgba(254, 243, 199, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(254, 243, 199, 0.3);
 }
 
 /* ===============================================
@@ -610,7 +753,7 @@ button.secondary {
 .stats-wrap {
   position: fixed;
   right: 16px;
-  bottom: 160px;
+  bottom: 16px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
