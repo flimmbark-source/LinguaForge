@@ -169,7 +169,7 @@ gripStrength: {
   heatLevel: {
     id: 'heatLevel',
     name: 'Heat Level',
-    description: 'Add another level of heat. Each level increases heat rate but also consumption.',
+    description: 'Unlock additional heat levels. Each level takes 5s in hearth and grants +1x letter multiplier when striking (Level 1: 2x, Level 2: 3x, Level 3: 4x).',
     icon: '🌡️',
     maxLevel: 3,
     baseCost: { renown: 40, ink: 0 },
