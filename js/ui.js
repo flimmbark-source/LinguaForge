@@ -92,7 +92,9 @@ function updateScribeVisibility() {
     }
   }
 }
+}
 
+/*
  * Update pestle visibility based on unlock state
  */
 function updatePestleVisibility() {

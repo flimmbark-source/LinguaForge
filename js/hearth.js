@@ -31,9 +31,9 @@ export function heatHearth(letterCount = 1) {
   // Level thresholds: 1-14 letters = level 1, 15-34 = level 2, 35+ = level 3
   const maxHearthLevel = gameState.heatLevels || 1;
   let newLevel = 1;
-  if (hearthState.totalLettersConsumed >= 35) {
+  if (hearthState.totalLettersConsumed >= 12) {
     newLevel = 3;
-  } else if (hearthState.totalLettersConsumed >= 15) {
+  } else if (hearthState.totalLettersConsumed >= 6) {
     newLevel = 2;
   }
 

@@ -685,7 +685,7 @@ updateFreeHammer(dt) {
 
       // Calculate multiplier based on heat level
       // Heat level 0 = 1x, level 1 = 2x, level 2 = 3x, level 3 = 4x, etc.
-      const multiplier = 1 + hammer.heatLevel;
+      const multiplier = 1 + (3 * hammer.heatLevel);
 
       if (hammer.heatLevel > 0) {
         console.log(`Heat level ${hammer.heatLevel} hammer struck anvil! ${multiplier}x letters produced. Cooling down.`);
