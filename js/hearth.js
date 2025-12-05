@@ -18,11 +18,12 @@ export const hearthState = {
 
 /**
  * Heat up the hearth when letters are placed
- * @param {number} letterCount - Number of letters placed
+ * 
+ * @param {number} letterount - Number of letters placed
  */
 export function heatHearth(letterCount = 1) {
   // Check if hearth is unlocked
-  if (!gameState.hearthUnlocked) {
+  if (!gameState.hearthUnlocked && !gameState.turnedOn) {
     console.log('Hearth is locked. Purchase the hearth upgrade to use it!');
     return;
   }
@@ -76,6 +77,10 @@ export function updateHearth(dt) {
 
     updateHearthVisuals();
   }
+}
+
+export function canPlaceInHearth() {
+  return gameState.hearthUnlocked && gameState.hearthTurnedon;
 }
 
 /**

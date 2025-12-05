@@ -5,7 +5,7 @@
 
 import { getAllowedLetters, INK_PER_LETTER } from './config.js';
 import { gameState, addLetters, addInk, getNextLetterId } from './state.js';
-import { heatHearth } from './hearth.js';
+import { canPlaceInHearth, heatHearth } from './hearth.js';
 
 /**
  * Get a random allowed letter
@@ -73,8 +73,14 @@ export function sellOneLetterFromTile(tile) {
  * @param {HTMLElement} tile - Letter tile element
  */
 export function feedLetterToHearth(tile) {
+    if (!canPlaceInHearth()) {
+    // maybe snap the letter back or show a tooltip
+    console.log('You cannot place letters in the hearth while it is off.');
+    return;
+  } else {
   consumeLetterTile(tile);
   heatHearth(1); // Heat hearth for 5 seconds per letter
+  }
 }
 
 /**

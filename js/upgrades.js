@@ -66,6 +66,7 @@ export const UPGRADE_TREE = {
     nodeColor: NODE_COLORS.PINK,
     onPurchase: () => {
       gameState.hearthUnlocked = true;
+      gameState.hearthTurnedon = true;
     }
   },
 

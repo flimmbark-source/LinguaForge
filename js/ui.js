@@ -57,7 +57,6 @@ export function updateStatsDisplay() {
 
   // Update hearth visibility based on unlock state
   updateHearthVisibility();
-
   // Update scribe visibility based on unlock state
   updateScribeVisibility();
   // Update pestle visibility based on unlock state
