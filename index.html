@@ -89,11 +89,32 @@
   <div class="section letter-pool-dock">
     <div class="bottom-dock-inner">
       <div class="bottom-dock-column">
-        <h3>Hearth</h3>
-        <div id="hearth" class="hearth-container">
-          <div id="hearthFire" class="hearth-fire"></div>
+        <!-- HEARTH STRUCTURE -->
+        <div id="hearth" class="hearth-structure">
+          <!-- Hearth mantle/top -->
+          <div class="hearth-mantle"></div>
+
+          <!-- Hearth arch and opening -->
+          <div class="hearth-body">
+            <div class="hearth-arch">
+              <div class="hearth-arch-left"></div>
+              <div class="hearth-arch-top"></div>
+              <div class="hearth-arch-right"></div>
+            </div>
+
+            <!-- Fire chamber (interior) -->
+            <div class="hearth-opening">
+              <div class="hearth-back-wall"></div>
+              <div id="hearthFire" class="hearth-fire"></div>
+              <div class="hearth-floor"></div>
+            </div>
+          </div>
+
+          <!-- Hearth base/foundation -->
+          <div class="hearth-base"></div>
         </div>
-        <div style="margin-top:6px; font-size:12px; opacity:0.75;">
+
+        <div class="hearth-instructions">
           Drop letters here to <strong>heat the hearth</strong>. Place the hammer head over the heated hearth for 5 seconds to make it red-hot!
         </div>
       </div>
