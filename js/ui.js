@@ -83,12 +83,12 @@ function updateHearthVisibility() {
  * Update scribe section visibility based on unlock state
  */
 function updateScribeVisibility() {
-  const scribeColumn = document.querySelector('.column:has(#scribeBlocks)');
-  if (scribeColumn) {
+  const scribeSection = document.querySelector('.section:has(#scribeBlocks)');
+  if (scribeSection) {
     if (gameState.scribesUnlocked) {
-      scribeColumn.style.display = 'flex';
+      scribeSection.style.display = 'block';
     } else {
-      scribeColumn.style.display = 'none';
+      scribeSection.style.display = 'none';
     }
   }
 }
