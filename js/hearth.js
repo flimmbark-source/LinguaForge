@@ -125,10 +125,11 @@ export function updateHearthVisuals() {
     // Add data attribute for CSS styling based on level
     hearthDiv.setAttribute('data-hearth-level', level);
   } else {
+    // Not heated - show visible but dim fire
     hearthDiv.classList.remove('heated');
     hearthDiv.removeAttribute('data-hearth-level');
-    fireDiv.style.opacity = '0.1';
-    fireDiv.style.transform = 'scale(0.3)';
+    fireDiv.style.opacity = '0.4';
+    fireDiv.style.transform = 'scale(0.5)';
   }
 }
 

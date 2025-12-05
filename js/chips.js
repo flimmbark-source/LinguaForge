@@ -26,6 +26,10 @@ export class ChipSystem {
     this.dragOffsetX = 0;
     this.dragOffsetY = 0;
     this.isDragging = false;
+    this.dragStartX = 0;
+    this.dragStartY = 0;
+    this.dragStartTime = 0;
+    this.hasMoved = false;
 
     // Callbacks
     this.onChipHeated = null; // Called when chip is heated
@@ -224,6 +228,10 @@ export class ChipSystem {
         this.dragOffsetX = canvasX - chip.x;
         this.dragOffsetY = canvasY - chip.y;
         this.isDragging = true;
+        this.dragStartX = canvasX;
+        this.dragStartY = canvasY;
+        this.dragStartTime = performance.now();
+        this.hasMoved = false;
 
         // Stop chip motion when grabbed
         chip.vx = 0;
@@ -248,6 +256,14 @@ export class ChipSystem {
     const canvasX = clientX - rect.left;
     const canvasY = clientY - rect.top;
 
+    // Check if pointer has moved significantly (more than 5 pixels)
+    const dx = canvasX - this.dragStartX;
+    const dy = canvasY - this.dragStartY;
+    const distSq = dx * dx + dy * dy;
+    if (distSq > 25) { // 5 pixels
+      this.hasMoved = true;
+    }
+
     this.draggedChip.x = canvasX - this.dragOffsetX;
     this.draggedChip.y = canvasY - this.dragOffsetY;
 
@@ -264,6 +280,19 @@ export class ChipSystem {
     const rect = this.canvas.getBoundingClientRect();
     const clientX = e.clientX || (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0);
     const clientY = e.clientY || (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : 0);
+
+    // Check if this was a click (not a drag)
+    const timeDiff = performance.now() - this.dragStartTime;
+    if (!this.hasMoved && timeDiff < 300) {
+      // It was a click! Align chip to horizontal
+      chip.angle = 0;
+      chip.angularVel = 0;
+      console.log(`Chip "${chip.word.text}" aligned to horizontal`);
+      this.isDragging = false;
+      this.draggedChip = null;
+      e.preventDefault();
+      return;
+    }
 
     // Check if dropped over hearth
     if (this.checkHearthDrop(clientX, clientY, chip)) {
