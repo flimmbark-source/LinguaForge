@@ -61,7 +61,7 @@ export class InventoryBagSystem {
     this.labelElement = document.createElement('div');
     this.labelElement.textContent = 'Letter Blocks';
     this.labelElement.style.position = 'absolute';
-    this.labelElement.style.top = '-20px';
+    this.labelElement.style.top = '-10px';
     this.labelElement.style.left = '50%';
     this.labelElement.style.transform = 'translateX(-50%)';
     this.labelElement.style.fontSize = '12px';
@@ -206,8 +206,8 @@ export class InventoryBagSystem {
     // Position popup - bottom right corner aligned with bottom right of bag
     const bagRight = this.bag.x + this.bag.width / 2;
     const bagBottom = this.bag.y + this.bag.height / 2;
-    let popupLeft = bagRight - 300; // Bottom right corner of popup at bottom right of bag
-    let popupTop = bagBottom - 400;
+    let popupLeft = bagRight; // Bottom right corner of popup at bottom right of bag
+    let popupTop = bagBottom;
 
     // Ensure popup stays on screen
     const margin = 10;
