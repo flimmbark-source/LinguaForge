@@ -223,7 +223,7 @@ button.secondary {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  z-index: 95;
+  z-index: 97;
 }
 
 .mold-viewport {
