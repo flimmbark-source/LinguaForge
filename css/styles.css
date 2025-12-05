@@ -17,7 +17,7 @@ body {
   display: flex;
   gap: 16px;
   height: 100vh;
-  padding-bottom: 180px;
+  padding-bottom: 160px;
   box-sizing: border-box;
 }
 
@@ -146,27 +146,15 @@ button.secondary {
 }
 
 /* Letter Pool Dock */
-.letter-pool-dock {
+/* Hearth Wrapper - Fixed at bottom center */
+.hearth-wrapper {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 8px 16px;
-  box-sizing: border-box;
-  background: #020617;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.6);
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
   z-index: 100;
-  height: 160px;
-}
-
-.bottom-dock-inner {
-  display: flex;
-  gap: 12px;
-}
-
-.bottom-dock-column {
-  flex: 1;
-  min-width: 0;
+  max-width: 400px;
+  width: calc(100% - 32px);
 }
 
 /* ===============================================
@@ -177,7 +165,7 @@ button.secondary {
 .mold-viewport-bar {
   position: fixed;
   left: 16px;
-  bottom: 160px;
+  bottom: 16px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -765,7 +753,7 @@ button.secondary {
 .stats-wrap {
   position: fixed;
   right: 16px;
-  bottom: 160px;
+  bottom: 16px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;

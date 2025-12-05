@@ -69,12 +69,12 @@ export function updateStatsDisplay() {
  * Update hearth visibility based on unlock state
  */
 function updateHearthVisibility() {
-  const hearthColumn = document.querySelector('.bottom-dock-column:has(#hearth)');
-  if (hearthColumn) {
+  const hearthWrapper = document.querySelector('.hearth-wrapper');
+  if (hearthWrapper) {
     if (gameState.hearthUnlocked) {
-      hearthColumn.style.display = 'block';
+      hearthWrapper.style.display = 'block';
     } else {
-      hearthColumn.style.display = 'none';
+      hearthWrapper.style.display = 'none';
     }
   }
 }
