@@ -802,7 +802,7 @@ spawnInkDrop(x, y) {
       ctx.beginPath();
       ctx.arc(
         centerX + pestleOffsetX,
-        visibleHandleLength,
+        visibleHandleLength - 7,
         handleWidth * 0.8,
         0,
         Math.PI * 2);

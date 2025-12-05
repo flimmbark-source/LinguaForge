@@ -670,6 +670,33 @@ if (!hasCenteredUpgradeTree) {
   updateHeaderStats();
 }
 
+function nudgeUpgradeTreeDown(offset = 120, duration = 800) {
+  const treeContainer = document.getElementById('upgradeTree');
+  if (!treeContainer) return;
+  const scrollContainer = treeContainer.parentElement; // .upgrade-tree-container
+  if (!scrollContainer) return;
+
+  const startTop = scrollContainer.scrollTop;
+  const targetTop = startTop + offset;
+  const startTime = performance.now();
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(1, elapsed / duration);
+
+    // Smoothstep easing
+    const eased = t * t * (3 - 2 * t);
+
+    scrollContainer.scrollTop = startTop + (targetTop - startTop) * eased;
+
+    if (t < 1) {
+      requestAnimationFrame(step);
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+
 
 
 /**
@@ -744,15 +771,39 @@ function createUpgradeNode(upgrade, isLocked, layout) {
     const tooltip = createUpgradeTooltip(upgrade);
     node.appendChild(tooltip);
 
-    node.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (purchaseUpgrade(upgrade.id)) {
-        renderUpgradeTree();
-        if (window.updateUI) window.updateUI();
-      }
-    });
-  }
+node.addEventListener('click', (e) => {
+  e.stopPropagation();
 
+  // 1. Snapshot what’s visible BEFORE purchase
+  const before = getVisibleUpgrades();
+  const beforeSet = new Set([
+    ...before.visible,
+    ...before.locked
+  ]);
+
+  // 2. Try to purchase
+  if (purchaseUpgrade(upgrade.id)) {
+    // 3. Compute visibility AFTER purchase (state has changed now)
+    const after = getVisibleUpgrades();
+    const afterIds = [...after.visible, ...after.locked];
+
+    const revealedNewNodes = afterIds.some(id => !beforeSet.has(id));
+
+    // 4. Re-render tree
+    renderUpgradeTree();
+
+    // 5. Only slide down if new nodes were revealed
+    if (revealedNewNodes) {
+      // Let renderUpgradeTree restore scroll, then animate
+      requestAnimationFrame(() => {
+        nudgeUpgradeTreeDown(120, 800); // tweak offset/duration to taste
+      });
+    }
+
+    if (window.updateUI) window.updateUI();
+  }
+});
+  }
   return node;
 }
 
