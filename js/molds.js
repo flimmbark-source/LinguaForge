@@ -40,10 +40,10 @@ export function navigateNextMold() {
 
 /**
  * Forge words from completed molds
- * @returns {number} Number of words forged
+ * @returns {Array} Array of forged word objects
  */
 export function forgeWords() {
-  let forgedCount = 0;
+  const forgedWords = [];
 
   gameState.currentLine.molds.forEach(mold => {
     // Check if all slots are filled
@@ -56,14 +56,14 @@ export function forgeWords() {
         power: computeWordPower(mold.pattern.length),
       };
       addWord(word);
+      forgedWords.push(word);
 
       // Reset mold slots
       mold.slots = new Array(mold.pattern.length).fill(false);
-      forgedCount++;
     }
   });
 
-  return forgedCount;
+  return forgedWords;
 }
 
 /**

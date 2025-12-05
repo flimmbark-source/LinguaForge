@@ -451,7 +451,7 @@ export function updateUI() {
   updateStatsDisplay();
   updateScribePurchaseButton();
   renderMolds();
-  renderWordList();
+  // renderWordList(); // Disabled - chips now appear on screen with physics
   renderScribeBlocks();
   updateGrammarUI();
   updateEnscribeButton();
