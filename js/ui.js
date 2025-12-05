@@ -89,6 +89,7 @@ function updateScribeVisibility() {
       scribeSection.style.display = 'block';
     } else {
       scribeSection.style.display = 'none';
+    }
   }
 }
 }
