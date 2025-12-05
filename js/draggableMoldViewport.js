@@ -72,10 +72,13 @@ export class DraggableMoldViewport {
    * Handle pointer down
    */
   onPointerDown(e) {
-    // Only drag if clicking on the viewport bar itself, not buttons or mold slots
-    if (e.target.tagName === 'BUTTON' ||
-        e.target.classList.contains('mold-slot') ||
-        e.target.closest('.mold-viewport')) {
+    // Don't drag if clicking on buttons or mold slots
+    if (e.target.tagName === 'BUTTON' || e.target.classList.contains('mold-slot')) {
+      return;
+    }
+
+    // Don't drag if clicking directly on the inner mold viewport content
+    if (e.target.classList.contains('mold-viewport')) {
       return;
     }
 
