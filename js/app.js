@@ -16,6 +16,8 @@ import { addLetters } from './state.js';
 import { HammerSystem } from './hammer.js';
 import { PestleSystem } from './pestle.js';
 import { ChipSystem } from './chips.js';
+import { InventoryBagSystem } from './inventoryBag.js';
+import { DraggableMoldViewport } from './draggableMoldViewport.js';
 import { initializeHearth, updateHearth } from './hearth.js';
 import { addInk /*, whatever else you need */ } from './state.js';
 import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
@@ -24,6 +26,8 @@ import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
 let hammerSystem = null;
 let pestleSystem = null;
 let chipSystem = null;
+let inventoryBagSystem = null;
+let draggableMoldViewport = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
 
 /**
@@ -51,6 +55,15 @@ function initializeGame() {
 
   // Initialize hearth system
   initializeHearth();
+
+  // Initialize inventory bag system
+  inventoryBagSystem = new InventoryBagSystem();
+  inventoryBagSystem.onUpdate = updateUI;
+  inventoryBagSystem.initialize();
+
+  // Initialize draggable mold viewport
+  draggableMoldViewport = new DraggableMoldViewport();
+  draggableMoldViewport.initialize();
 
   // Setup tool selection
   setupToolSelection();
@@ -151,6 +164,11 @@ function initializeCraftingSystems() {
     }
 
     updateUI();
+
+    // Update inventory bag popup if open
+    if (inventoryBagSystem) {
+      inventoryBagSystem.updatePopup();
+    }
   };
 
   // Callback when red-hot hammer strikes mold viewport - forge words and spawn chips

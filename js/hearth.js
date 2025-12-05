@@ -21,6 +21,12 @@ export const hearthState = {
  * @param {number} letterCount - Number of letters placed
  */
 export function heatHearth(letterCount = 1) {
+  // Check if hearth is unlocked
+  if (!gameState.hearthUnlocked) {
+    console.log('Hearth is locked. Purchase the hearth upgrade to use it!');
+    return;
+  }
+
   const secondsPerLetter = gameState.secondsPerLetter || 5;
   const additionalHeat = letterCount * secondsPerLetter;
 

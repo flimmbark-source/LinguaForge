@@ -85,17 +85,10 @@
     </div>
   </div>
 
-  <!-- BOTTOM DOCK: LETTER POOL + INVENTORY -->
+  <!-- BOTTOM DOCK: HEARTH -->
   <div class="section letter-pool-dock">
     <div class="bottom-dock-inner">
       <div class="bottom-dock-column">
-        <h3>Letter Pool</h3>
-        <div id="letterPool" class="letter-board"></div>
-        <div style="margin-top:6px; font-size:12px; opacity:0.75;">
-          Drag letters from the pool onto molds. Only letters that fit a mold will be consumed.
-        </div>
-      </div>
-            <div class="bottom-dock-column">
         <h3>Hearth</h3>
         <div id="hearth" class="hearth-container">
           <div id="hearthFire" class="hearth-fire"></div>
@@ -105,8 +98,12 @@
         </div>
       </div>
       <!-- Inventory removed - chips now appear on screen with physics -->
+      <!-- Letter pool moved to inventory bag -->
     </div>
   </div>
+
+  <!-- Hidden letter pool div (used by inventory bag popup) -->
+  <div id="letterPool" class="letter-board" style="display: none;"></div>
 
   <!-- UPGRADE MODAL -->
   <div id="upgradeModal" class="upgrade-modal hidden">

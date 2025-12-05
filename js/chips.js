@@ -35,6 +35,9 @@ export class ChipSystem {
     this.onChipHeated = null; // Called when chip is heated
     this.onUpdate = null; // Called when state changes
 
+    // Ghost preview for verse placement
+    this.ghostPreview = null;
+
     // Bind methods
     this.update = this.update.bind(this);
     this.render = this.render.bind(this);
@@ -85,6 +88,10 @@ export class ChipSystem {
       angularVel: (Math.random() - 0.5) * 8, // rad/s
       isSettled: false,
       heatLevel: 0, // 0 = not heated, 1 = heated (ready for verse)
+      heatingProgress: 0, // 0 to 1 (0% to 100%)
+      heatingTime: 0, // Time spent heating (in seconds)
+      heatingDuration: 4, // Total time to heat up (4 seconds)
+      sparks: [], // Array of spark objects
       isDraggable: true
     };
 
@@ -156,6 +163,12 @@ export class ChipSystem {
         chip.y = canvasHeight - halfHeight;
         chip.vy = -Math.abs(chip.vy) * this.wallBounceDamping;
       }
+
+      // Check if chip is over hearth and update heating
+      this.updateChipHeating(chip, dt);
+
+      // Update sparks on chip
+      this.updateChipSparks(chip, dt);
     }
 
     // Simple chip-to-chip collision detection
@@ -209,6 +222,83 @@ export class ChipSystem {
     const dx = px - chip.x;
     const dy = py - chip.y;
     return Math.abs(dx) < chip.width / 2 && Math.abs(dy) < chip.height / 2;
+  }
+
+  /**
+   * Update chip heating progress when over hearth
+   */
+  updateChipHeating(chip, dt) {
+    if (chip.heatLevel >= 1) return; // Already fully heated
+
+    // Check if chip is over hearth
+    const canvasRect = this.canvas.getBoundingClientRect();
+    const chipViewportX = canvasRect.left + chip.x;
+    const chipViewportY = canvasRect.top + chip.y;
+
+    const hearthBounds = getHearthBounds();
+    if (!hearthBounds) return;
+
+    const isOverHearth =
+      chipViewportX > hearthBounds.left &&
+      chipViewportX < hearthBounds.right &&
+      chipViewportY > hearthBounds.top &&
+      chipViewportY < hearthBounds.bottom;
+
+    if (isOverHearth && isHearthHeated()) {
+      const previousProgress = chip.heatingProgress;
+
+      // Increment heating time
+      chip.heatingTime += dt;
+      chip.heatingProgress = Math.min(1, chip.heatingTime / chip.heatingDuration);
+
+      // Check for spark thresholds (25%, 50%, 75%, 100%)
+      const thresholds = [0.25, 0.5, 0.75, 1.0];
+      for (const threshold of thresholds) {
+        if (previousProgress < threshold && chip.heatingProgress >= threshold) {
+          // Add a spark at this threshold
+          this.addSparkToChip(chip);
+        }
+      }
+
+      // If fully heated, set heat level
+      if (chip.heatingProgress >= 1) {
+        chip.heatLevel = 1;
+        console.log(`Chip "${chip.word.text}" fully heated - ready for verse!`);
+        if (this.onChipHeated) {
+          this.onChipHeated(chip);
+        }
+        if (this.onUpdate) {
+          this.onUpdate();
+        }
+      }
+    }
+  }
+
+  /**
+   * Add a spark to a chip
+   */
+  addSparkToChip(chip) {
+    const spark = {
+      x: (Math.random() - 0.5) * chip.width * 0.6,
+      y: (Math.random() - 0.5) * chip.height * 0.6,
+      age: 0,
+      lifetime: 4, // Fade over 4 seconds
+      size: 3 + Math.random() * 2
+    };
+    chip.sparks.push(spark);
+  }
+
+  /**
+   * Update sparks on a chip (age and remove old ones)
+   */
+  updateChipSparks(chip, dt) {
+    // Age all sparks
+    for (const spark of chip.sparks) {
+      spark.age += dt;
+    }
+
+    // Remove sparks that have exceeded their lifetime
+    chip.sparks = chip.sparks.filter(spark => spark.age < spark.lifetime);
   }
 
   /**
@@ -267,6 +357,13 @@ export class ChipSystem {
 
     this.draggedChip.x = canvasX - this.dragOffsetX;
     this.draggedChip.y = canvasY - this.dragOffsetY;
+
+    // Show ghost preview if dragging a heated chip over verse area
+    if (this.draggedChip.heatLevel >= 1) {
+      this.updateGhostPreview(clientX, clientY);
+    } else {
+      this.removeGhostPreview();
+    }
 
     e.preventDefault();
   }
@@ -346,7 +443,93 @@ export class ChipSystem {
 
     this.isDragging = false;
     this.draggedChip = null;
+
+    // Remove ghost preview
+    this.removeGhostPreview();
+
     e.preventDefault();
+  }
+
+  /**
+   * Update ghost preview when dragging heated chip over verse
+   */
+  updateGhostPreview(clientX, clientY) {
+    const verseArea = document.getElementById('grammarHebrewLine');
+    if (!verseArea) {
+      this.removeGhostPreview();
+      return;
+    }
+
+    const verseBounds = verseArea.getBoundingClientRect();
+    const isOverVerse =
+      clientX > verseBounds.left &&
+      clientX < verseBounds.right &&
+      clientY > verseBounds.top &&
+      clientY < verseBounds.bottom;
+
+    if (!isOverVerse) {
+      this.removeGhostPreview();
+      return;
+    }
+
+    // Calculate insertion index
+    const chips = Array.from(verseArea.children).filter(el =>
+      el.classList.contains('line-word-chip') && !el.classList.contains('ghost-preview')
+    );
+
+    chips.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+
+    let insertIndex = 0;
+    for (const existingChip of chips) {
+      const rect = existingChip.getBoundingClientRect();
+      const midX = rect.left + rect.width / 2;
+      if (clientX < midX) {
+        break;
+      }
+      insertIndex++;
+    }
+
+    // Create or update ghost preview
+    if (!this.ghostPreview) {
+      this.ghostPreview = document.createElement('div');
+      this.ghostPreview.className = 'line-word-chip ghost-preview';
+      this.ghostPreview.style.opacity = '0.4';
+      this.ghostPreview.style.pointerEvents = 'none';
+      this.ghostPreview.style.border = '2px dashed #f59e0b';
+      this.ghostPreview.style.background = '#fef3c7';
+    }
+
+    this.ghostPreview.textContent = this.draggedChip.word.text;
+    this.ghostPreview.style.direction = 'rtl';
+
+    // Insert ghost at calculated position
+    if (this.ghostPreview.parentElement !== verseArea) {
+      if (insertIndex >= chips.length) {
+        verseArea.appendChild(this.ghostPreview);
+      } else {
+        verseArea.insertBefore(this.ghostPreview, chips[insertIndex]);
+      }
+    } else {
+      // Move ghost to correct position if needed
+      const currentIndex = Array.from(verseArea.children).indexOf(this.ghostPreview);
+      if (currentIndex !== insertIndex) {
+        if (insertIndex >= chips.length) {
+          verseArea.appendChild(this.ghostPreview);
+        } else {
+          verseArea.insertBefore(this.ghostPreview, chips[insertIndex]);
+        }
+      }
+    }
+  }
+
+  /**
+   * Remove ghost preview
+   */
+  removeGhostPreview() {
+    if (this.ghostPreview && this.ghostPreview.parentElement) {
+      this.ghostPreview.parentElement.removeChild(this.ghostPreview);
+    }
+    this.ghostPreview = null;
   }
 
   /**
@@ -504,6 +687,21 @@ export class ChipSystem {
     ctx.textBaseline = 'middle';
     ctx.direction = 'rtl';
     ctx.fillText(chip.word.text, 0, 0);
+
+    // Draw sparks
+    for (const spark of chip.sparks) {
+      const opacity = 1 - (spark.age / spark.lifetime);
+      ctx.fillStyle = `rgba(251, 191, 36, ${opacity})`;
+      ctx.beginPath();
+      ctx.arc(spark.x, spark.y, spark.size, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner glow
+      ctx.fillStyle = `rgba(254, 243, 199, ${opacity * 0.8})`;
+      ctx.beginPath();
+      ctx.arc(spark.x, spark.y, spark.size * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.restore();
   }
