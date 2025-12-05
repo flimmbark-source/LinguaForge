@@ -37,6 +37,7 @@ export class HammerSystem {
       isHeld: false,
       strikeCooldown: 0,
       reboundLock: 0,
+      anvilExitReady: true,
       heatLevel: 0, // Current heat level (0 = not heated, 1+ = red hot levels)
       heatingTimer: 0, // Time spent over heated hearth
       heatingRequired: 5, // Seconds needed to reach next heat level
@@ -585,196 +586,208 @@ updateFreeHammer(dt) {
    * Update physics simulation
    */
   update(dt) {
-  const { hammer, anvil } = this;
+    const { hammer, anvil } = this;
 
-  this.updateHammer(dt);
+    this.updateHammer(dt);
 
-  const headX = hammer.headX;
-  const headY = hammer.headY;
-  const downwardSpeed = hammer.headVy;
-  const impactThreshold = 900;
+    const headX = hammer.headX;
+    const headY = hammer.headY;
+    const downwardSpeed = hammer.headVy;
+    const impactThreshold = 900;
 
-  const isOverAnvil =
-    headX > anvil.x &&
-    headX < anvil.x + anvil.width &&
-    headY > anvil.y - 20 &&
-    headY < anvil.y + anvil.height * 0.6;
+    // Track when the hammer has cleared the anvil so the next strike can arm
+    const anvilTop = anvil.y - 20;
+    const anvilBottom = anvil.y + anvil.height * 0.6;
 
-  if (isOverAnvil && downwardSpeed > impactThreshold) {
-  const power = Math.min(1.5, downwardSpeed / (impactThreshold * 1.3));
-  const ripThreshold = gameState.ripSpeedThreshold;
+    if (headY < anvilTop) {
+      hammer.anvilExitReady = true;
+    }
 
-  // --- Was this a huge hit that rips the hammer free? ---
-  if (hammer.isHeld && downwardSpeed > ripThreshold) {
-    // Capture incoming velocity (direction of swing)
-    const incomingVx = hammer.headVx;
-    const incomingVy = hammer.headVy;
-    const incomingSpeed = Math.hypot(incomingVx, incomingVy) || downwardSpeed;
+    const isOverAnvil =
+      headX > anvil.x &&
+      headX < anvil.x + anvil.width &&
+      headY > anvilTop &&
+      headY < anvilBottom;
 
-    // Decide how hard the hammer should fly back
-    const backSpeed = incomingSpeed * 1.1; // tweak for feel
+    if (isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
+      const power = Math.min(1.5, downwardSpeed / (impactThreshold * 1.3));
+      const ripThreshold = gameState.ripSpeedThreshold;
 
-    // Reverse the direction (opposite of swing)
-    let dirX = -incomingVx;
-    let dirY = -incomingVy;
-    const len = Math.hypot(dirX, dirY) || 1;
-    dirX /= len;
-    dirY /= len;
+      // --- Was this a huge hit that rips the hammer free? ---
+      if (hammer.isHeld && downwardSpeed > ripThreshold) {
+        // Capture incoming velocity (direction of swing)
+        const incomingVx = hammer.headVx;
+        const incomingVy = hammer.headVy;
+        const incomingSpeed = Math.hypot(incomingVx, incomingVy) || downwardSpeed;
 
-    // Optionally bias a bit more "upwards" so it feels cartoony
-    const upBias = 0.3; // 0 = pure opposite, 1 = more vertical
-    dirY = dirY - upBias;
-    const len2 = Math.hypot(dirX, dirY) || 1;
-    dirX /= len2;
-    dirY /= len2;
+        // Decide how hard the hammer should fly back
+        const backSpeed = incomingSpeed * 1.1; // tweak for feel
 
-    // Release the hammer from the hand + switch to free-flight
-    hammer.isHeld = false;
-    this.input.isDown = false;
-    hammer.isFree = true;
-    hammer.regrabCooldown = 0.25;
+        // Reverse the direction (opposite of swing)
+        let dirX = -incomingVx;
+        let dirY = -incomingVy;
+        const len = Math.hypot(dirX, dirY) || 1;
+        dirX /= len;
+        dirY /= len;
 
-    // Place the head just above the anvil face
-    hammer.headX = headX;
-    hammer.headY = anvil.y - 18;
+        // Optionally bias a bit more "upwards" so it feels cartoony
+        const upBias = 0.3; // 0 = pure opposite, 1 = more vertical
+        dirY = dirY - upBias;
+        const len2 = Math.hypot(dirX, dirY) || 1;
+        dirX /= len2;
+        dirY /= len2;
 
-    // Give it the "flung back" velocity
-    hammer.headVx = dirX * backSpeed;
-    hammer.headVy = dirY * backSpeed;
+        // Release the hammer from the hand + switch to free-flight
+        hammer.isHeld = false;
+        this.input.isDown = false;
+        hammer.isFree = true;
+        hammer.regrabCooldown = 0.25;
 
-    // Encode that into prevHead* for the verlet integrator
-    hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
-    hammer.prevHeadY = hammer.headY - hammer.headVy * dt;
+        // Place the head just above the anvil face
+        hammer.headX = headX;
+        hammer.headY = anvil.y - 18;
 
-    // Optional: still do effects / letters on a ripped hit
-    if (hammer.strikeCooldown <= 0) {
-      hammer.strikeCooldown = 0.25;
-      const impactX = headX;
-      const impactY = anvil.y;
-      this.spawnSparks(impactX, impactY, power, { isRip: true });
+        // Give it the "flung back" velocity
+        hammer.headVx = dirX * backSpeed;
+        hammer.headVy = dirY * backSpeed;
 
-      if (this.onLetterForged) {
-        this.onLetterForged(impactX, impactY, power, hammer.headVx, 1);
+        // Encode that into prevHead* for the verlet integrator
+        hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
+        hammer.prevHeadY = hammer.headY - hammer.headVy * dt;
+
+        // Optional: still do effects / letters on a ripped hit
+        if (hammer.strikeCooldown <= 0) {
+          hammer.strikeCooldown = 0.25;
+          hammer.anvilExitReady = false;
+          const impactX = headX;
+          const impactY = anvil.y;
+          this.spawnSparks(impactX, impactY, power, { isRip: true });
+
+          if (this.onLetterForged) {
+            this.onLetterForged(impactX, impactY, power, hammer.headVx, 1);
+          }
+        }
+
+        // Important: skip the normal bounce logic when ripped
+        return;
+      }
+
+      const baseBounce = 0.85;
+      const extraBounce = 0.35 * power;
+      const bounceFactor = Math.min(0.9, baseBounce + extraBounce);
+      const newVy = -downwardSpeed * bounceFactor;
+      const tangentDamping = 0.3;
+      const newVx = hammer.headVx * tangentDamping;
+
+      hammer.headY = anvil.y - 18;
+      // Lift slightly higher so the hammer must leave the strike zone
+      hammer.headY -= 6;
+      hammer.headX = headX;
+      hammer.headVx = newVx;
+      hammer.headVy = newVy;
+      hammer.prevHeadX = hammer.headX - newVx * dt;
+      hammer.prevHeadY = hammer.headY - newVy * dt;
+
+      hammer.reboundLock = 0.18;
+
+      if (hammer.strikeCooldown <= 0) {
+        hammer.strikeCooldown = 0.25;
+        hammer.anvilExitReady = false;
+        const impactX = headX;
+        const impactY = anvil.y;
+        this.spawnSparks(impactX, impactY, power);
+
+        // Calculate multiplier based on heat level
+        // Heat level 0 = 1x, level 1 = 2x, level 2 = 3x, level 3 = 4x, etc.
+        const multiplier = 1 + (3 * hammer.heatLevel);
+
+        if (hammer.heatLevel > 0) {
+          console.log(`Heat level ${hammer.heatLevel} hammer struck anvil! ${multiplier}x letters produced. Cooling down.`);
+          // Cool down completely after striking
+          hammer.heatLevel = 0;
+          hammer.heatingTimer = 0;
+        }
+
+        // Produce letters with calculated multiplier
+        if (this.onLetterForged) {
+          this.onLetterForged(impactX, impactY, power, hammer.headVx, multiplier);
+        }
       }
     }
 
-    // Important: skip the normal bounce logic when ripped
-    return;
-  }
+    // Check for mold viewport collision (only when hammer is heated and moving down)
+    if (hammer.heatLevel > 0 && this.isHammerOverMoldViewport() && downwardSpeed > impactThreshold) {
+      if (hammer.strikeCooldown <= 0) {
+        hammer.strikeCooldown = 0.25;
+        const impactX = headX;
+        const impactY = headY;
 
-  const baseBounce = 0.85;
-  const extraBounce = 0.35 * power;
-  const bounceFactor = Math.min(0.9, baseBounce + extraBounce);
-  const newVy = -downwardSpeed * bounceFactor;
-  const tangentDamping = 0.3;
-  const newVx = hammer.headVx * tangentDamping;
-
-  hammer.headY = anvil.y - 18;
-  hammer.headX = headX;
-  hammer.headVx = newVx;
-  hammer.headVy = newVy;
-  hammer.prevHeadX = hammer.headX - newVx * dt;
-  hammer.prevHeadY = hammer.headY - newVy * dt;
-
-  hammer.reboundLock = 0.18;
-
-  if (hammer.strikeCooldown <= 0) {
-      hammer.strikeCooldown = 0.25;
-      const impactX = headX;
-      const impactY = anvil.y;
-      this.spawnSparks(impactX, impactY, power);
-
-      // Calculate multiplier based on heat level
-      // Heat level 0 = 1x, level 1 = 2x, level 2 = 3x, level 3 = 4x, etc.
-      const multiplier = 1 + (3 * hammer.heatLevel);
-
-      if (hammer.heatLevel > 0) {
-        console.log(`Heat level ${hammer.heatLevel} hammer struck anvil! ${multiplier}x letters produced. Cooling down.`);
-        // Cool down completely after striking
+        // Cool down the hammer
         hammer.heatLevel = 0;
         hammer.heatingTimer = 0;
-      }
 
-      // Produce letters with calculated multiplier
-      if (this.onLetterForged) {
-        this.onLetterForged(impactX, impactY, power, hammer.headVx, multiplier);
+        // Spawn sparks at impact point
+        this.spawnSparks(impactX, impactY, 1.2);
+
+        // Trigger forge functionality
+        if (this.onForgeTriggered) {
+          this.onForgeTriggered();
+          console.log('Red-hot hammer struck mold viewport! Forging words...');
+        }
+
+        // Bounce the hammer back
+        const bounceFactor = 0.6;
+        hammer.headVy = -downwardSpeed * bounceFactor;
+        hammer.headVx = hammer.headVx * 0.8;
+        hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
+        hammer.prevHeadY = hammer.headY - hammer.headVy * dt;
       }
     }
-  }
 
-  // Check for mold viewport collision (only when hammer is heated and moving down)
-  if (hammer.heatLevel > 0 && this.isHammerOverMoldViewport() && downwardSpeed > impactThreshold) {
-    if (hammer.strikeCooldown <= 0) {
-      hammer.strikeCooldown = 0.25;
-      const impactX = headX;
-      const impactY = headY;
+    // Update sparks
+    this.sparks = this.sparks.filter(s => s.age < s.life);
+    for (const s of this.sparks) {
+      s.age += dt;
+      s.x += s.vx;
+      s.y += s.vy;
+      s.vy += 18 * dt;
+    }
 
-      // Cool down the hammer
-      hammer.heatLevel = 0;
-      hammer.heatingTimer = 0;
+    // Update flying letters with physics
+    const blockGravity = this.gravity * 0.8;
+    const landedLetters = [];
 
-      // Spawn sparks at impact point
-      this.spawnSparks(impactX, impactY, 1.2);
+    for (const letter of this.flyingLetters) {
+      if (!letter.isFlying) continue;
 
-      // Trigger forge functionality
-      if (this.onForgeTriggered) {
-        this.onForgeTriggered();
-        console.log('Red-hot hammer struck mold viewport! Forging words...');
+      // Apply gravity
+      letter.vy += blockGravity * dt;
+
+      // Update position
+      letter.x += letter.vx * dt;
+      letter.y += letter.vy * dt;
+
+      // Update rotation
+      letter.angle += letter.angularVel * dt;
+
+      // Check if letter has fallen to target Y (letter pool level)
+      if (letter.vy > 0 && letter.y >= letter.targetY) {
+        letter.isFlying = false;
+        landedLetters.push(letter);
       }
-
-      // Bounce the hammer back
-      const bounceFactor = 0.6;
-      hammer.headVy = -downwardSpeed * bounceFactor;
-      hammer.headVx = hammer.headVx * 0.8;
-      hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
-      hammer.prevHeadY = hammer.headY - hammer.headVy * dt;
     }
-  }
 
-  // Update sparks
-  this.sparks = this.sparks.filter(s => s.age < s.life);
-  for (const s of this.sparks) {
-    s.age += dt;
-    s.x += s.vx;
-    s.y += s.vy;
-    s.vy += 18 * dt;
-  }
+    // Remove landed letters and trigger DOM spawning
+    if (landedLetters.length > 0) {
+      this.flyingLetters = this.flyingLetters.filter(l => l.isFlying);
 
-  // Update flying letters with physics
-  const blockGravity = this.gravity * 0.8;
-  const landedLetters = [];
-
-  for (const letter of this.flyingLetters) {
-    if (!letter.isFlying) continue;
-
-    // Apply gravity
-    letter.vy += blockGravity * dt;
-
-    // Update position
-    letter.x += letter.vx * dt;
-    letter.y += letter.vy * dt;
-
-    // Update rotation
-    letter.angle += letter.angularVel * dt;
-
-    // Check if letter has fallen to target Y (letter pool level)
-    if (letter.vy > 0 && letter.y >= letter.targetY) {
-      letter.isFlying = false;
-      landedLetters.push(letter);
-    }
-  }
-
-  // Remove landed letters and trigger DOM spawning
-  if (landedLetters.length > 0) {
-    this.flyingLetters = this.flyingLetters.filter(l => l.isFlying);
-
-    if (this.onLetterLanded) {
-      for (const letter of landedLetters) {
-        this.onLetterLanded(letter.letter);
+      if (this.onLetterLanded) {
+        for (const letter of landedLetters) {
+          this.onLetterLanded(letter.letter);
+        }
       }
     }
   }
-}
 
 
   /**
