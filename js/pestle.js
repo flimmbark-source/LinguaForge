@@ -798,10 +798,15 @@ spawnInkDrop(x, y) {
       ctx.fillRect(centerX + pestleOffsetX - handleWidth / 2, 0, handleWidth, visibleHandleLength);
 
       // Draw handle top (grab point)
-      ctx.fillStyle = '#fbbf24';
+      ctx.fillStyle = '#353535ff';
       ctx.beginPath();
-      ctx.arc(centerX + pestleOffsetX, 0, handleWidth * 0.8, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.arc(
+        centerX + pestleOffsetX,
+        visibleHandleLength,
+        handleWidth * 0.8,
+        0,
+        Math.PI * 2);
+        ctx.fill();
 
       // Draw attached letters indicator on handle if present
       if (pestle.attachedLetters.length > 0) {
