@@ -56,6 +56,9 @@ export function updateStatsDisplay() {
 
   // Update hearth visibility based on unlock state
   updateHearthVisibility();
+
+  // Update scribe visibility based on unlock state
+  updateScribeVisibility();
 }
 
 /**
@@ -68,6 +71,20 @@ function updateHearthVisibility() {
       hearthColumn.style.display = 'block';
     } else {
       hearthColumn.style.display = 'none';
+    }
+  }
+}
+
+/**
+ * Update scribe section visibility based on unlock state
+ */
+function updateScribeVisibility() {
+  const scribeColumn = document.querySelector('.column:has(#scribeBlocks)');
+  if (scribeColumn) {
+    if (gameState.scribesUnlocked) {
+      scribeColumn.style.display = 'flex';
+    } else {
+      scribeColumn.style.display = 'none';
     }
   }
 }
@@ -201,10 +218,14 @@ export function renderWordList() {
 
     const sellBtn = document.createElement('button');
     sellBtn.textContent = 'Sell';
-    sellBtn.onclick = () => {
-      sellWord(word.id);
-      updateUI();
-    };
+    sellBtn.className = 'sell-btn';
+    sellBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const success = sellWord(word.id);
+      if (success) {
+        updateUI();
+      }
+    });
     right.appendChild(sellBtn);
 
     card.appendChild(left);
