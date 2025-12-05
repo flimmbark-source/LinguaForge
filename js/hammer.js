@@ -400,6 +400,9 @@ spawnSparks(x, y, power, options = {}) {
     if (isHearthHeated() && this.isHammerOverHearth()) {
       // Hammer is over heated hearth, accumulate heat
       hammer.heatingTimer += dt;
+      if (hammer.heatingTimer >= hammer.heatingRequired && !hammer.isHeated) {
+        hammer.isHeated = true
+        console.log('Hammer is now red-hot!');
 
       // Calculate which heat level we should be at based on time
       const maxHeatLevel = gameState.heatLevels;
@@ -855,6 +858,33 @@ drawHammer(ctx, hammer) {
   // Reset shadow
   ctx.shadowBlur = 0;
 
+    // If hammer is heated, draw red-hot effect
+    if (hammer.isHeated) {
+      // Red-hot glow
+      ctx.shadowColor = '#dc2626';
+      ctx.shadowBlur = 20;
+      
+    if (!hammer.isHeated && hammer.heatingTimer > 0) {
+      const progress = Math.min(1, hammer.heatingTimer / hammer.heatingRequired);
+      ctx.fillStyle = `rgba(249, 115, 22, ${progress * 0.5})`;
+      ctx.fillRect(-headWidth / 2, -headHeight, headWidth * progress, headHeight);
+}
+      const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
+      headGradient.addColorStop(0, '#fef3c7'); // Hot yellow-white
+      headGradient.addColorStop(0.3, '#f97316'); // Orange
+      headGradient.addColorStop(1, '#dc2626'); // Red
+      ctx.fillStyle = headGradient;
+    } else {
+      // Normal silver head
+      const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
+      headGradient.addColorStop(0, '#e5e7eb');
+      headGradient.addColorStop(1, '#475569');
+      ctx.fillStyle = headGradient;
+    }
+
+    ctx.beginPath();
+    ctx.roundRect(-headWidth / 2, -headHeight, headWidth, headHeight, 10);
+    ctx.fill();
   // Show progress indicator for heating to next level
   if (hammer.heatingTimer > 0) {
     const currentLevelTime = hammer.heatLevel * hammer.heatingRequired;
