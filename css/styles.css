@@ -120,8 +120,8 @@ button.secondary {
 
 .letter-basket {
   position: fixed;
-  left: 16px;
-  bottom: 16px;
+  left: 45px;
+  bottom: 55px;
   width: calc((100% - 32px) / 3);
   min-width: 280px;
   max-width: 420px;

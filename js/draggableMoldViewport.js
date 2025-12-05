@@ -39,8 +39,8 @@ export class DraggableMoldViewport {
 
     // Get initial position
     const rect = this.viewport.getBoundingClientRect();
-    this.x = 30;
-    this.y = 375;
+    this.x = 90;
+    this.y = 315;
 
     // Set initial position
     this.updatePosition();

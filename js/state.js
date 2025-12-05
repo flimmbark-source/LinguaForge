@@ -45,7 +45,7 @@ export const gameState = {
   upgrades: {},
 
   // Unlockable features (disabled by default)
-  hearthUnlocked: true, // Start unlocked for now - can be set to false if upgrade is needed
+  hearthUnlocked: false, // Start unlocked for now - can be set to false if upgrade is needed
   scribesUnlocked: false,
   pestleUnlocked: false,
 
