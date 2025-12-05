@@ -38,6 +38,7 @@ export function initializeElements() {
   elements.grammarLiteralDiv = document.getElementById('grammarLiteral');
   elements.grammarNaturalDiv = document.getElementById('grammarNatural');
   elements.grammarScoreDiv = document.getElementById('grammarScore');
+  elements.pestle = document.getElementById('selectPestle');
 }
 
 /**
@@ -59,6 +60,9 @@ export function updateStatsDisplay() {
 
   // Update scribe visibility based on unlock state
   updateScribeVisibility();
+  // Update pestle visibility based on unlock state
+  updatePestleVisibility();
+
 }
 
 /**
@@ -88,6 +92,19 @@ function updateScribeVisibility() {
     }
   }
 }
+
+ * Update pestle visibility based on unlock state
+ */
+function updatePestleVisibility() {
+  if (!elements.pestle) return;
+
+  if (gameState.pestleUnlocked) {
+    elements.pestle.style.display = '';
+  } else {
+    elements.pestle.style.display = 'none';
+  }
+}
+
 
 /**
  * Update scribe purchase button

@@ -47,6 +47,7 @@ export const gameState = {
   // Unlockable features (disabled by default)
   hearthUnlocked: false,
   scribesUnlocked: false,
+  pestleUnlocked: false,
 
   // Upgrade-affected properties
   pestleCapacity: 10,

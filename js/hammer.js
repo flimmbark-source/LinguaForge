@@ -381,92 +381,100 @@ spawnSparks(x, y, power, options = {}) {
   /**
    * Update hammer physics
    */
-  updateHammer(dt) {
-    const hammer = this.hammer;
-    const g = this.gravity;
-    const friction = this.airFriction;
+updateHammer(dt) {
+  const hammer = this.hammer;
+  const g = this.gravity;
+  const friction = this.airFriction;
 
-  hammer.strikeCooldown = Math.max(0, hammer.strikeCooldown - dt);
-  hammer.reboundLock   = Math.max(0, hammer.reboundLock   - dt);
-  hammer.regrabCooldown = Math.max(0, hammer.regrabCooldown - dt);
+  hammer.strikeCooldown  = Math.max(0, hammer.strikeCooldown  - dt);
+  hammer.reboundLock     = Math.max(0, hammer.reboundLock     - dt);
+  hammer.regrabCooldown  = Math.max(0, hammer.regrabCooldown  - dt);
 
-    // If flying free, use different physics
+  // If flying free, use different physics
   if (hammer.isFree) {
     this.updateFreeHammer(dt);
     return;
   }
 
-    // Update hammer heating state
-    if (isHearthHeated() && this.isHammerOverHearth()) {
-      // Hammer is over heated hearth, accumulate heat
-      hammer.heatingTimer += dt;
+  // -------------------------
+  // HEATING / COOLING LOGIC
+  // -------------------------
+  if (isHearthHeated() && this.isHammerOverHearth()) {
+    // Over heated hearth → accumulate heat
+    hammer.heatingTimer += dt;
 
-      // Calculate which heat level we should be at based on time
-      const maxHeatLevel = gameState.heatLevels;
-      const hearthLevel = getHearthLevel();
+    // Compute desired heat level from timer
+    const maxHeatLevel     = gameState.heatLevels || 0;
+    const hearthLevel      = getHearthLevel() || 0;
+    const effectiveMax     = Math.min(maxHeatLevel, hearthLevel);
+    const targetLevel      = Math.min(
+      effectiveMax,
+      Math.floor(hammer.heatingTimer / hammer.heatingRequired)
+    );
 
-      // Hammer can't exceed hearth's current heat level
-      const effectiveMaxLevel = Math.min(maxHeatLevel, hearthLevel);
-      const targetLevel = Math.min(effectiveMaxLevel, Math.floor(hammer.heatingTimer / hammer.heatingRequired));
+    if (targetLevel > hammer.heatLevel) {
+      hammer.heatLevel = targetLevel;
+      hammer.isHeated  = hammer.heatLevel > 0;
+      console.log(`Hammer heat level increased to ${hammer.heatLevel}!`);
+    }
+  } else {
+    // Not over hearth → cool down gradually
+    if (hammer.heatLevel > 0) {
+      hammer.heatingTimer = Math.max(0, hammer.heatingTimer - dt * 0.5);
 
-      // Level up if we've reached a new heat level
-      if (targetLevel > hammer.heatLevel) {
-        hammer.heatLevel = targetLevel;
-        console.log(`Hammer heat level increased to ${hammer.heatLevel}!`);
+      const newLevel = Math.floor(hammer.heatingTimer / hammer.heatingRequired);
+      if (newLevel < hammer.heatLevel) {
+        hammer.heatLevel = newLevel;
+        if (hammer.heatLevel === 0) {
+          hammer.isHeated = false;
+          console.log('Hammer has cooled down completely.');
+        }
       }
     } else {
-      // Not over hearth, cool down gradually
-      if (hammer.heatLevel > 0) {
-        hammer.heatingTimer = Math.max(0, hammer.heatingTimer - dt * 0.5);
-
-        // Recalculate heat level based on remaining timer
-        const newLevel = Math.floor(hammer.heatingTimer / hammer.heatingRequired);
-        if (newLevel < hammer.heatLevel) {
-          hammer.heatLevel = newLevel;
-          if (hammer.heatLevel === 0) {
-            console.log('Hammer has cooled down completely.');
-          }
-        }
-      } else {
-        hammer.heatingTimer = 0;
-      }
+      hammer.heatingTimer = 0;
+      hammer.isHeated = false;
     }
-
-    const x = hammer.headX;
-    const y = hammer.headY;
-    const prevX = hammer.prevHeadX;
-    const prevY = hammer.prevHeadY;
-    const safeDt = Math.max(dt, 0.0001);
-
-    let vx = (x - prevX) / safeDt;
-    let vy = (y - prevY) / safeDt;
-
-    vx *= friction;
-    vy *= friction;
-
-    hammer.prevHeadX = x;
-    hammer.prevHeadY = y;
-
-    vy += g * safeDt;
-
-    hammer.headX += vx * safeDt;
-    hammer.headY += vy * safeDt;
-
-    const px = hammer.pivotX;
-    const py = hammer.pivotY;
-    let dx = hammer.headX - px;
-    let dy = hammer.headY - py;
-    let dist = Math.hypot(dx, dy) || 1;
-    const desired = hammer.length;
-    const diff = (desired - dist) / dist;
-
-    hammer.headX += dx * diff;
-    hammer.headY += dy * diff;
-
-    hammer.headVx = (hammer.headX - hammer.prevHeadX) / safeDt;
-    hammer.headVy = (hammer.headY - hammer.prevHeadY) / safeDt;
-    hammer.angle = Math.atan2(hammer.headY - hammer.pivotY, hammer.headX - hammer.pivotX) + Math.PI / 2;
   }
+
+  const x = hammer.headX;
+  const y = hammer.headY;
+  const prevX = hammer.prevHeadX;
+  const prevY = hammer.prevHeadY;
+  const safeDt = Math.max(dt, 0.0001);
+
+  let vx = (x - prevX) / safeDt;
+  let vy = (y - prevY) / safeDt;
+
+  vx *= friction;
+  vy *= friction;
+
+  hammer.prevHeadX = x;
+  hammer.prevHeadY = y;
+
+  vy += g * safeDt;
+
+  hammer.headX += vx * safeDt;
+  hammer.headY += vy * safeDt;
+
+  const px = hammer.pivotX;
+  const py = hammer.pivotY;
+  let dx = hammer.headX - px;
+  let dy = hammer.headY - py;
+  let dist = Math.hypot(dx, dy) || 1;
+  const desired = hammer.length;
+  const diff = (desired - dist) / dist;
+
+  hammer.headX += dx * diff;
+  hammer.headY += dy * diff;
+
+  hammer.headVx = (hammer.headX - hammer.prevHeadX) / safeDt;
+  hammer.headVy = (hammer.headY - hammer.prevHeadY) / safeDt;
+  hammer.angle = Math.atan2(
+    hammer.headY - hammer.pivotY,
+    hammer.headX - hammer.pivotX
+  ) + Math.PI / 2;
+}
+
 
 updateFreeHammer(dt) {
   const hammer = this.hammer;
@@ -855,6 +863,33 @@ drawHammer(ctx, hammer) {
   // Reset shadow
   ctx.shadowBlur = 0;
 
+    // If hammer is heated, draw red-hot effect
+    if (hammer.isHeated) {
+      // Red-hot glow
+      ctx.shadowColor = '#dc2626';
+      ctx.shadowBlur = 20;
+      
+    if (!hammer.isHeated && hammer.heatingTimer > 0) {
+      const progress = Math.min(1, hammer.heatingTimer / hammer.heatingRequired);
+      ctx.fillStyle = `rgba(249, 115, 22, ${progress * 0.5})`;
+      ctx.fillRect(-headWidth / 2, -headHeight, headWidth * progress, headHeight);
+}
+      const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
+      headGradient.addColorStop(0, '#fef3c7'); // Hot yellow-white
+      headGradient.addColorStop(0.3, '#f97316'); // Orange
+      headGradient.addColorStop(1, '#dc2626'); // Red
+      ctx.fillStyle = headGradient;
+    } else {
+      // Normal silver head
+      const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
+      headGradient.addColorStop(0, '#e5e7eb');
+      headGradient.addColorStop(1, '#475569');
+      ctx.fillStyle = headGradient;
+    }
+
+    ctx.beginPath();
+    ctx.roundRect(-headWidth / 2, -headHeight, headWidth, headHeight, 10);
+    ctx.fill();
   // Show progress indicator for heating to next level
   if (hammer.heatingTimer > 0) {
     const currentLevelTime = hammer.heatLevel * hammer.heatingRequired;
