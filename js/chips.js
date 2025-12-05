@@ -50,12 +50,13 @@ export class ChipSystem {
    * Setup event listeners for chip dragging
    */
   setupEventListeners() {
-    this.canvas.addEventListener('mousedown', this.onPointerDown);
-    this.canvas.addEventListener('mousemove', this.onPointerMove);
-    this.canvas.addEventListener('mouseup', this.onPointerUp);
-    this.canvas.addEventListener('touchstart', this.onPointerDown, { passive: false });
-    this.canvas.addEventListener('touchmove', this.onPointerMove, { passive: false });
-    this.canvas.addEventListener('touchend', this.onPointerUp);
+    // Listen on document to capture events even when canvas has pointer-events: none
+    document.addEventListener('mousedown', this.onPointerDown);
+    document.addEventListener('mousemove', this.onPointerMove);
+    document.addEventListener('mouseup', this.onPointerUp);
+    document.addEventListener('touchstart', this.onPointerDown, { passive: false });
+    document.addEventListener('touchmove', this.onPointerMove, { passive: false });
+    document.addEventListener('touchend', this.onPointerUp);
   }
 
   /**
