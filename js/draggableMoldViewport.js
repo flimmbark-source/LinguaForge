@@ -127,7 +127,8 @@ export class DraggableMoldViewport {
       const rect = this.viewport.getBoundingClientRect();
       const margin = 10;
       this.x = Math.max(margin, Math.min(window.innerWidth - rect.width - margin, this.x));
-      this.y = Math.max(margin, Math.min(window.innerHeight - rect.height - margin, this.y));
+      // Allow viewport to overlap bottom bar - only constrain top edge
+      this.y = Math.max(margin, this.y);
     }
 
     this.updatePosition();
