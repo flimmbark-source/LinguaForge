@@ -92,7 +92,6 @@ function updateScribeVisibility() {
     }
   }
 }
-}
 
 /*
  * Update pestle visibility based on unlock state
@@ -451,7 +450,7 @@ export function updateUI() {
   updateStatsDisplay();
   updateScribePurchaseButton();
   renderMolds();
-  renderWordList();
+  // renderWordList(); // Disabled - chips now appear on screen with physics
   renderScribeBlocks();
   updateGrammarUI();
   updateEnscribeButton();

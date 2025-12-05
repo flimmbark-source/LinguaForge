@@ -15,6 +15,9 @@ import { gameState } from './state.js';
 import { addLetters } from './state.js';
 import { HammerSystem } from './hammer.js';
 import { PestleSystem } from './pestle.js';
+import { ChipSystem } from './chips.js';
+import { InventoryBagSystem } from './inventoryBag.js';
+import { DraggableMoldViewport } from './draggableMoldViewport.js';
 import { initializeHearth, updateHearth } from './hearth.js';
 import { addInk /*, whatever else you need */ } from './state.js';
 import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
@@ -22,6 +25,9 @@ import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
 // Global crafting system references
 let hammerSystem = null;
 let pestleSystem = null;
+let chipSystem = null;
+let inventoryBagSystem = null;
+let draggableMoldViewport = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
 
 /**
@@ -49,6 +55,15 @@ function initializeGame() {
 
   // Initialize hearth system
   initializeHearth();
+
+  // Initialize inventory bag system
+  inventoryBagSystem = new InventoryBagSystem();
+  inventoryBagSystem.onUpdate = updateUI;
+  inventoryBagSystem.initialize();
+
+  // Initialize draggable mold viewport
+  draggableMoldViewport = new DraggableMoldViewport();
+  draggableMoldViewport.initialize();
 
   // Setup tool selection
   setupToolSelection();
@@ -149,13 +164,34 @@ function initializeCraftingSystems() {
     }
 
     updateUI();
+
+    // Update inventory bag popup if open
+    if (inventoryBagSystem) {
+      inventoryBagSystem.updatePopup();
+    }
   };
 
-  // Callback when red-hot hammer strikes mold viewport - forge words
+  // Callback when red-hot hammer strikes mold viewport - forge words and spawn chips
   hammerSystem.onForgeTriggered = () => {
-    forgeWords();
+    const forgedWords = forgeWords();
+
+    // Spawn physics chips for each forged word
+    if (forgedWords.length > 0 && chipSystem) {
+      const moldViewport = document.querySelector('.mold-viewport');
+      if (moldViewport) {
+        const moldBounds = moldViewport.getBoundingClientRect();
+        forgedWords.forEach(word => {
+          chipSystem.spawnChip(word, moldBounds);
+        });
+      }
+    }
+
     updateUI();
   };
+
+  // Create chip system
+  chipSystem = new ChipSystem(craftingCanvas);
+  chipSystem.onUpdate = updateUI;
 
   // Create pestle system with callbacks
   pestleSystem = new PestleSystem(craftingCanvas);
@@ -303,6 +339,12 @@ function gameLoop(timestamp) {
 
   // Update hearth
   updateHearth(dt);
+
+  // Update chip physics
+  if (chipSystem) {
+    chipSystem.update(dt);
+    chipSystem.render();
+  }
 
   // Update scribes
   if (gameState.scribeList.length > 0) {

@@ -21,6 +21,12 @@ export const hearthState = {
  * @param {number} letterCount - Number of letters placed
  */
 export function heatHearth(letterCount = 1) {
+  // Check if hearth is unlocked
+  if (!gameState.hearthUnlocked) {
+    console.log('Hearth is locked. Purchase the hearth upgrade to use it!');
+    return;
+  }
+
   const secondsPerLetter = gameState.secondsPerLetter || 5;
   const additionalHeat = letterCount * secondsPerLetter;
 
@@ -125,10 +131,11 @@ export function updateHearthVisuals() {
     // Add data attribute for CSS styling based on level
     hearthDiv.setAttribute('data-hearth-level', level);
   } else {
+    // Not heated - show visible but dim fire
     hearthDiv.classList.remove('heated');
     hearthDiv.removeAttribute('data-hearth-level');
-    fireDiv.style.opacity = '0.1';
-    fireDiv.style.transform = 'scale(0.3)';
+    fireDiv.style.opacity = '0.4';
+    fireDiv.style.transform = 'scale(0.5)';
   }
 }
 
