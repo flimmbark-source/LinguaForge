@@ -4,7 +4,7 @@
  */
 
 import { gameState } from './state.js';
-import { createLetterTile } from './letters.js';
+import { createLetterTile, updateLetterTileLabel } from './letters.js';
 
 export class InventoryBagSystem {
   constructor() {
@@ -303,18 +303,14 @@ export class InventoryBagSystem {
     }
 
     tiles.forEach(tile => {
-      const clone = tile.cloneNode(true);
-      // Re-setup drag handlers on cloned tile
-      const char = clone.dataset.letterChar;
+      const char = tile.dataset.letterChar;
+      const count = tile.dataset.count || '1';
+
       if (char) {
         const newTile = createLetterTile(char, this.onUpdate);
-        newTile.dataset.count = clone.dataset.count || '1';
-        if (parseInt(newTile.dataset.count) > 1) {
-          const badge = newTile.querySelector('.letter-count');
-          if (badge) {
-            badge.textContent = 'x' + newTile.dataset.count;
-          }
-        }
+        // Set the count and update the label to show the badge
+        newTile.dataset.count = count;
+        updateLetterTileLabel(newTile);
         container.appendChild(newTile);
       }
     });
