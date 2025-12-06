@@ -175,6 +175,8 @@ export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled
       const rewardAmount = 2;
       addLetters(rewardAmount);
       spawnResourceGain(centerX, centerY, rewardAmount, 'renown');
+      addLetters(2);
+      spawnResourceGain(centerX, centerY, 2, 'renown');
       consumeLetterTile(tile);
       matched = true;
       if (onSlotFilled) onSlotFilled();
