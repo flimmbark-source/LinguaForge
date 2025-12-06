@@ -13,7 +13,7 @@ export function setMoldViewportWidth() {
   const moldViewportDiv = document.querySelector('.mold-viewport');
   if (!moldViewportDiv || !gameState.currentLine.molds.length) return;
 
-  const longest = gameState.currentLine.molds.reduce((max, m) => Math.max(max, m.pattern.length), 0);
+  const longest = gameState.currentLine.molds.reduce((max, m) => Math.max(max, m.pattern.length + 1), 0);
   const slotWidth = 32;
   const gap = 6;
   const extra = 96;

@@ -16,7 +16,6 @@ import { addLetters } from './state.js';
 import { HammerSystem } from './hammer.js';
 import { PestleSystem } from './pestle.js';
 import { ChipSystem } from './chips.js';
-import { DraggableMoldViewport } from './draggableMoldViewport.js';
 import { initializeHearth, updateHearth } from './hearth.js';
 import { addInk /*, whatever else you need */ } from './state.js';
 import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
@@ -25,7 +24,6 @@ import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
 let hammerSystem = null;
 let pestleSystem = null;
 let chipSystem = null;
-let draggableMoldViewport = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
 
 /**
@@ -53,10 +51,6 @@ function initializeGame() {
 
   // Initialize hearth system
   initializeHearth();
-
-  // Initialize draggable mold viewport
-  draggableMoldViewport = new DraggableMoldViewport();
-  draggableMoldViewport.initialize();
 
   // Setup tool selection
   setupToolSelection();

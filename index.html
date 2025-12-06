@@ -9,14 +9,27 @@
 <body>
   <!-- LEFT COLUMN: SCRIBES -->
   <div class="column">
-    <h2>Workers</h2>
-    <div class="section locked-hidden">
-      <h3>Apprentice Scribes</h3>
-      <div class="row">
-        <button id="buyScribeBtn">Hire Scribe</button>
-        <span style="font-size:12px;">Cost: <span id="scribeCost">10</span> Renown</span>
+    <div class="column">
+      <h2>Workers</h2>
+      <div class="section">
+        <h3>Apprentice Scribes</h3>
+        <div class="row">
+          <button id="buyScribeBtn">Hire Scribe</button>
+          <span style="font-size:12px;">Cost: <span id="scribeCost">10</span> Renown</span>
+        </div>
+        <div id="scribeBlocks" class="scribe-grid"></div>
       </div>
-      <div id="scribeBlocks" class="scribe-grid"></div>
+    </div>
+  <div class="column">
+      <h2>Molds</h2>
+      <div class="section mold-panel">
+        <div class="mold-viewport">
+          <button id="prevMoldBtn" class="secondary">&lt;</button>
+          <span id="moldIndexLabel" style="font-size:12px; opacity:0.8;"></span>
+          <div id="moldList" class="mold-list"></div>
+          <button id="nextMoldBtn" class="secondary">&gt;</button>
+        </div>
+       </div>
     </div>
   </div>
 
@@ -62,18 +75,6 @@
       </div>
     </div>
   </div>
-
-  <!-- MOLD VIEWPORT BAR -->
-  <div class="mold-viewport-bar">
-    <div class="mold-viewport">
-      <button id="prevMoldBtn" class="secondary">&lt;</button>
-      <span id="moldIndexLabel" style="font-size:12px; opacity:0.8;"></span>
-      <div id="moldList" class="mold-list"></div>
-      <button id="nextMoldBtn" class="secondary">&gt;</button>
-    </div>
-  </div>
-
-  
 
   <!-- CRAFTING FORGE (HAMMER OR PESTLE) -->
   <div class="crafting-forge">

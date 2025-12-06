@@ -43,6 +43,25 @@ body {
   overflow: auto;
 }
 
+.column-split {
+  gap: 16px;
+}
+
+.split-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.split-section .section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* Typography */
 h2 {
   margin: 0 0 4px 0;
@@ -226,18 +245,6 @@ button.secondary {
    MOLD SYSTEM
    =============================================== */
 
-/* Mold Viewport Bar */
-.mold-viewport-bar {
-  position: fixed;
-  left: 16px;
-  bottom: calc(var(--letter-basket-height) + 32px);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  z-index: 97;
-}
-
 .mold-viewport {
   display: flex;
   align-items: center;
@@ -246,7 +253,7 @@ button.secondary {
   border-radius: 999px;
   background: #020617;
   box-shadow: 0 0 0 1px rgba(55, 65, 81, 0.8);
-  width: 320px;
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -254,6 +261,18 @@ button.secondary {
   flex: 1;
   overflow: hidden;
 }
+
+.mold-panel {
+  justify-content: center;
+  background: rgba(2, 6, 23, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(55, 65, 81, 0.6);
+}
+
+.mold-panel .mold-list {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
 
 /* Mold List */
 .mold-list {
