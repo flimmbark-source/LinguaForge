@@ -115,7 +115,7 @@ function rectsIntersect(r1, r2) {
  * @param {number} clientY - Mouse Y position
  * @param {HTMLElement} tile - Letter tile element
  * @param {Object} dragState - Drag state object
- * @param {Function} onSlotFilled - Callback when slot is filled
+ * @param {Function} onSlotFilled - Callback when slot is filled (receives the slot element)
  */
 export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled) {
   const tileRect = tile.getBoundingClientRect();
@@ -170,7 +170,7 @@ export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled
       mold.slots[slotIndex] = true;
       consumeLetterTile(tile);
       matched = true;
-      if (onSlotFilled) onSlotFilled();
+      if (onSlotFilled) onSlotFilled(slotEl);
     });
   }
 
