@@ -6,6 +6,7 @@
 import { isHearthHeated, getHearthBounds } from './hearth.js';
 import { gameState, addLetters } from './state.js';
 import { placeWordInVerse } from './grammar.js';
+import { spawnResourceGain } from './resourceGainFeedback.js';
 
 export class ChipSystem {
   constructor(canvas) {
@@ -100,6 +101,12 @@ export class ChipSystem {
     // Grant renown equal to 2x letters used
     const renownGained = word.length * 2;
     addLetters(renownGained);
+
+    // Spawn resource gain feedback at mold viewport position
+    const screenX = canvasRect.left + moldCenterX;
+    const screenY = canvasRect.top + moldTopY;
+    spawnResourceGain(screenX, screenY, renownGained, 'renown');
+
     console.log(`Chip created: "${word.text}" - Gained ${renownGained} renown (${word.length} letters × 2)`);
   }
 

@@ -483,7 +483,7 @@ else if (side !== this.churnTracker.currentSide) {
     this.spawnInkDrop(tip.x, tip.y);
 
     if (this.onInkProduced) {
-      this.onInkProduced(letter);
+      this.onInkProduced(letter, tip.x, tip.y);
     }
 
     console.log('Churned to', side, 'side - produced ink from letter:', letter);
