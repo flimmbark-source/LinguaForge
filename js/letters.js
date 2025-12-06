@@ -5,6 +5,7 @@
 
 import { getAllowedLetters, INK_PER_LETTER } from './config.js';
 import { gameState, addLetters, addInk, getNextLetterId } from './state.js';
+import { spawnResourceGain } from './resourceGainFeedback.js';
 import { canPlaceInHearth, heatHearth } from './hearth.js';
 
 function getLetterDragOverlay() {
@@ -154,24 +155,30 @@ export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled
   const char = tile.dataset.letterChar || '';
   if (moldListDiv) {
     const visibleSlots = moldListDiv.querySelectorAll('.slot');
-    visibleSlots.forEach(slotEl => {
-      if (matched) return;
+    for (const slotEl of visibleSlots) {
+      if (matched) break;
+
       const moldId = Number(slotEl.dataset.moldId);
       const slotIndex = Number(slotEl.dataset.slotIndex);
       const mold = gameState.currentLine.molds.find(m => m.id === moldId);
-      if (!mold) return;
-      if (mold.slots[slotIndex]) return; // Already filled
-      if (mold.pattern[slotIndex] !== char) return; // Wrong letter
+      if (!mold) continue;
+      if (mold.slots[slotIndex]) continue; // Already filled
+      if (mold.pattern[slotIndex] !== char) continue; // Wrong letter
 
       const slotRect = slotEl.getBoundingClientRect();
-      if (!rectsIntersect(tileRect, slotRect)) return;
+      if (!rectsIntersect(tileRect, slotRect)) continue;
 
       // Valid drop! Fill the slot
       mold.slots[slotIndex] = true;
+      const centerX = slotRect.left + slotRect.width / 2;
+      const centerY = slotRect.top + slotRect.height / 2;
+      const rewardAmount = 2;
+      addLetters(rewardAmount);
+      spawnResourceGain(centerX, centerY, rewardAmount, 'renown');
       consumeLetterTile(tile);
       matched = true;
       if (onSlotFilled) onSlotFilled();
-    });
+    }
   }
 
   if (matched) {
