@@ -593,6 +593,9 @@ button.secondary {
   flex-wrap: wrap;
   justify-content: flex-start;
   min-height: 40px;
+  border: 2px dashed rgba(148, 163, 184, 0.4);
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 
 #grammarTranslit,
