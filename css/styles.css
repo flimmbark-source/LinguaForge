@@ -43,6 +43,23 @@ body {
   overflow: auto;
 }
 
+.empty-column {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.workers-panel {
+  position: fixed;
+  right: 15px;
+  top: 425px;
+  width: calc((110%) / 3);
+  min-width: 280px;
+  max-width: 445px;
+  box-sizing: border-box;
+  z-index: 96;
+}
+
 .column-split {
   gap: 16px;
 }
@@ -137,9 +154,8 @@ button.secondary {
 
 /* Letter Board Container */
 .letter-board {
-  min-height: 118px;
+  min-height: 108px;
   border-radius: 8px;
-  border: 1px dashed #4b5563;
   padding: 8px;
   display: flex;
   flex-wrap: wrap;
@@ -184,7 +200,7 @@ button.secondary {
 .letter-basket::before {
   content: '';
   position: absolute;
-  inset: 8px 8px 8px;  /* inset to leave a solid wood frame */
+  inset: 0px 8px 8px;  /* inset to leave a solid wood frame */
   border-radius: 10px;
   z-index: 0;
 
@@ -223,6 +239,25 @@ button.secondary {
 
 .letter-basket-board {
   pointer-events: auto; /* re-enable interaction for the letter area */
+
+  /* NEW: make this a flex container so we can push the letter-board down */
+  display: flex;
+  flex: 1;
+}
+
+.letter-basket .letter-board {
+  margin-top: auto;          /* pushes the whole board to the bottom */
+  padding-bottom: 10px;      /* tweak this value to move the letters UP a bit */
+}
+
+.letter-basket .letter-board {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap-reverse;    /* rows stack from bottom upwards */
+  align-content: flex-start;  /* with wrap-reverse, this means "toward bottom" */
+  justify-content: flex-start;
+  padding: 8px 8px 15px;      /* increase 20px to move the letters higher */
+  box-sizing: border-box;
 }
 
 .letter-basket-header {
@@ -314,13 +349,20 @@ button.secondary {
 
 .mold-viewport-wrapper {
   position: fixed;
-  left: 40px;                 /* line up with body padding / left column */
-  top: 290px;                 /* tweak this until it matches the old spot */
-  width: calc((85%) / 3);  /* same width as a column */
-  z-index: 95;                /* under hearth/letter basket if needed */
+  left: 13px; /* match letter-basket or column edge */
+  top: 290px;
+  width: calc((100% - 32px) / 3); /* same as a column / basket width */
+  z-index: 95;
   pointer-events: auto;
+
+  display: flex;
+  justify-content: center;
 }
 
+.mold-viewport {
+  max-width: 100%;
+  margin: 0 auto;
+}
 
 .mold-viewport .mold-list {
   flex: 1;
@@ -568,6 +610,9 @@ button.secondary {
   flex-wrap: wrap;
   justify-content: flex-start;
   min-height: 40px;
+  border: 2px dashed rgba(148, 163, 184, 0.4);
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 
 #grammarTranslit,
@@ -1074,11 +1119,11 @@ button.secondary {
 /* Floating Stats */
 .stats-wrap {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  left: 16px;
+  top: 16px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-direction: column-reverse;
+  align-items: flex-start;
   gap: 8px;
   z-index: 96;
 }
@@ -1086,10 +1131,6 @@ button.secondary {
 .core-stats-float {
   width: 220px;
 }
-
-/* ===============================================
-   UPGRADE SYSTEM (NODE-BASED)
-   =============================================== */
 
 /* ===============================================
    UPGRADE TREE - NODE-BASED SKILL TREE
