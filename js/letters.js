@@ -5,6 +5,7 @@
 
 import { getAllowedLetters, INK_PER_LETTER } from './config.js';
 import { gameState, addLetters, addInk, getNextLetterId } from './state.js';
+import { spawnResourceGain } from './resourceGainFeedback.js';
 import { canPlaceInHearth, heatHearth } from './hearth.js';
 
 function getLetterDragOverlay() {
@@ -168,6 +169,10 @@ export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled
 
       // Valid drop! Fill the slot
       mold.slots[slotIndex] = true;
+      const centerX = slotRect.left + slotRect.width / 2;
+      const centerY = slotRect.top + slotRect.height / 2;
+      addLetters(2);
+      spawnResourceGain(centerX, centerY, 2, 'renown');
       consumeLetterTile(tile);
       matched = true;
       if (onSlotFilled) onSlotFilled();
