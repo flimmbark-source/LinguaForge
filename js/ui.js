@@ -99,7 +99,7 @@ function updatePestleVisibility() {
   if (!elements.pestle) return;
 
   if (gameState.pestleUnlocked) {
-    elements.pestle.style.display = '';
+    elements.pestle.style.display = 'inline-flex';
   } else {
     elements.pestle.style.display = 'none';
   }
