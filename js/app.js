@@ -28,6 +28,22 @@ let chipSystem = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
 
 /**
+ * Handle mold slot being filled by a letter drop.
+ * Spawns renown feedback at the slot location, then updates UI.
+ * @param {HTMLElement} slotEl
+ */
+function handleMoldSlotFilled(slotEl) {
+  if (slotEl) {
+    const rect = slotEl.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    spawnResourceGain(centerX, centerY, 2, 'renown');
+  }
+
+  updateUI();
+}
+
+/**
  * Initialize the game
  */
 function initializeGame() {
@@ -58,7 +74,7 @@ function initializeGame() {
 
   // Spawn starting letters
   for (let i = 0; i < STARTING_LETTERS; i++) {
-    spawnLetter(updateUI);
+    spawnLetter(handleMoldSlotFilled);
   }
 
   // Set mold viewport width
@@ -147,7 +163,7 @@ function initializeCraftingSystems() {
       }, 200);
     } else {
       // Create new tile
-      const tile = createLetterTile(letterChar, updateUI);
+      const tile = createLetterTile(letterChar, handleMoldSlotFilled);
       letterPoolDiv.appendChild(tile);
 
       // Brief entrance animation
@@ -361,7 +377,7 @@ function gameLoop(timestamp) {
 
   // Update scribes
   if (gameState.scribeList.length > 0) {
-    updateScribes(dt, updateUI);
+    updateScribes(dt, handleMoldSlotFilled);
   }
 
   // Update resource gain feedback
