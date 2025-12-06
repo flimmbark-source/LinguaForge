@@ -137,7 +137,7 @@ button.secondary {
 
 /* Letter Board Container */
 .letter-board {
-  min-height: 118px;
+  min-height: 108px;
   border-radius: 8px;
   border: 1px dashed #4b5563;
   padding: 8px;
