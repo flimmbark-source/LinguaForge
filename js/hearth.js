@@ -121,7 +121,11 @@ export function updateHearthVisuals() {
     const intensity = getHearthIntensity();
     const level = hearthState.hearthLevel;
 
+    const isLowHeat = intensity > 0 && intensity <= 0.25;
+
     hearthDiv.classList.add('heated');
+    hearthDiv.classList.toggle('fading', isLowHeat);
+    fireDiv.classList.toggle('fading', isLowHeat);
 
     // Base scale increases with hearth level
     // Level 1: 0.5-1.0, Level 2: 0.7-1.2, Level 3: 0.9-1.4
@@ -138,9 +142,11 @@ export function updateHearthVisuals() {
   } else {
     // Not heated - show visible but dim fire
     hearthDiv.classList.remove('heated');
+    hearthDiv.classList.remove('fading');
     hearthDiv.removeAttribute('data-hearth-level');
     fireDiv.style.opacity = '0.4';
     fireDiv.style.transform = 'scale(0.5)';
+    fireDiv.classList.remove('fading');
   }
 }
 
