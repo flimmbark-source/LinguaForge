@@ -7,6 +7,17 @@ import { getAllowedLetters, INK_PER_LETTER } from './config.js';
 import { gameState, addLetters, addInk, getNextLetterId } from './state.js';
 import { canPlaceInHearth, heatHearth } from './hearth.js';
 
+function getLetterDragOverlay() {
+  let overlay = document.getElementById('letterDragOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'letterDragOverlay';
+    overlay.className = 'letter-drag-overlay';
+    document.body.appendChild(overlay);
+  }
+  return overlay;
+}
+
 /**
  * Get a random allowed letter
  * @returns {string} Random Hebrew letter
@@ -178,6 +189,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
   tile.addEventListener('pointerdown', e => {
     e.preventDefault();
     const rect = tile.getBoundingClientRect();
+    const overlay = getLetterDragOverlay();
     gameState.activeLetterDrag = {
       tile,
       pointerId: e.pointerId,
@@ -185,6 +197,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
       offsetY: e.clientY - rect.top,
       originalParent: tile.parentElement,
     };
+    overlay.appendChild(tile);
     tile.style.position = 'fixed';
     tile.style.left = rect.left + 'px';
     tile.style.top = rect.top + 'px';

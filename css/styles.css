@@ -123,6 +123,13 @@ button.secondary {
   background: #020617;
 }
 
+.letter-drag-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 120;
+}
+
 .letter-basket {
   position: fixed;
   left: 45px;
