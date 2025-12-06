@@ -62,6 +62,12 @@ body {
   gap: 8px;
 }
 
+.left-column {  
+  max-height: 170px;        /* pick the height you want */
+  overflow: auto;           /* scroll if content is taller than max-height */
+}
+
+
 /* Typography */
 h2 {
   margin: 0 0 4px 0;
@@ -123,7 +129,6 @@ button.secondary {
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 11px;
-  background: #111827;
 }
 
 /* ===============================================
@@ -132,14 +137,13 @@ button.secondary {
 
 /* Letter Board Container */
 .letter-board {
-  min-height: 72px;
+  min-height: 118px;
   border-radius: 8px;
   border: 1px dashed #4b5563;
-  padding: 4px;
+  padding: 8px;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  background: #020617;
+  gap: 6px;
 }
 
 .letter-drag-overlay {
@@ -158,16 +162,67 @@ button.secondary {
   max-width: 420px;
   height: var(--letter-basket-height);
   box-sizing: border-box;
-  padding: 10px 12px;
-  background: linear-gradient(135deg, #2d1f13 0%, #1a120b 100%);
+  padding: 2px 10px;
   border: 2px solid #8b5a2b;
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 6px rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    inset 0 1px 6px rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   gap: 6px;
   pointer-events: none;
   z-index: 96;
+
+  /* IMPORTANT for the weave pseudo-element */
+  position: fixed;
+  overflow: hidden;
+  background: #3a2413; /* warm base color under the weave */
+}
+
+/* woven interior */
+.letter-basket::before {
+  content: '';
+  position: absolute;
+  inset: 8px 8px 8px;  /* inset to leave a solid wood frame */
+  border-radius: 10px;
+  z-index: 0;
+
+  background:
+    /* subtle vertical shading */
+    linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.15),
+      rgba(0, 0, 0, 0)
+    ),
+    /* diagonal strips 1 */
+    repeating-linear-gradient(
+      45deg,
+      #b77a3a 0px,
+      #b77a3a 6px,
+      #8f5a2b 6px,
+      #8f5a2b 12px
+    ),
+    /* diagonal strips 2 (cross weave) */
+    repeating-linear-gradient(
+      -45deg,
+      #c78945 0px,
+      #c78945 6px,
+      #945a26 6px,
+      #945a26 12px
+    );
+  background-blend-mode: multiply;
+}
+
+/* make header + board sit on top of the weave */
+.letter-basket-header,
+.letter-basket-board {
+  position: relative;
+  z-index: 1;
+  pointer-events: none; /* keep your existing behaviour */
+}
+
+.letter-basket-board {
+  pointer-events: auto; /* re-enable interaction for the letter area */
 }
 
 .letter-basket-header {
@@ -187,15 +242,6 @@ button.secondary {
 .basket-subtitle {
   font-size: 11px;
   color: rgba(249, 250, 251, 0.7);
-}
-
-.letter-basket-board {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  border-style: solid;
-  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 40%), #0f172a;
-  pointer-events: auto;
 }
 
 /* Letter Tile */
@@ -265,6 +311,16 @@ button.secondary {
   box-sizing: border-box;
   border: 1px solid #292524;
 }
+
+.mold-viewport-wrapper {
+  position: fixed;
+  left: 40px;                 /* line up with body padding / left column */
+  top: 290px;                 /* tweak this until it matches the old spot */
+  width: calc((85%) / 3);  /* same width as a column */
+  z-index: 95;                /* under hearth/letter basket if needed */
+  pointer-events: auto;
+}
+
 
 .mold-viewport .mold-list {
   flex: 1;
