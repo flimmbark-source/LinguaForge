@@ -25,6 +25,11 @@ body {
   box-sizing: border-box;
 }
 
+/* Utility helpers */
+.locked-hidden {
+  display: none;
+}
+
 /* Column Layout */
 .column {
   flex: 1;
