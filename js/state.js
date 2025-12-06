@@ -52,10 +52,10 @@ export const gameState = {
 
   // Upgrade-affected properties
   pestleCapacity: 10,
-  redHotHits: 3,
+  redHotHits: 1,
   heatLevels: 1,
   secondsPerLetter: 5,
-  lettersPerRedHot: 3,
+  lettersPerRedHot: 4,
   scribeLettersPerInk: 5,
   inkPerChurn: 1,
   ripSpeedThreshold: 3400, // Base threshold for hammer rip

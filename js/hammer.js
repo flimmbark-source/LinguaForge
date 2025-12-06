@@ -398,9 +398,7 @@ updateHammer(dt) {
     return;
   }
 
-  // -------------------------
-  // HEATING / COOLING LOGIC
-  // -------------------------
+
 // -------------------------
 // HEATING / COOLING LOGIC
 // -------------------------
@@ -454,7 +452,6 @@ if (isHearthHeated() && this.isHammerOverHearth()) {
     hammer.isHeated = false;
   }
 }
-
 
   const x = hammer.headX;
   const y = hammer.headY;
@@ -597,9 +594,6 @@ updateFreeHammer(dt) {
     hammer.headX - hammer.pivotX
   ) + Math.PI / 2;
 }
-
-
-
   /**
    * Update physics simulation
    */
@@ -717,7 +711,7 @@ updateFreeHammer(dt) {
 
         // Calculate multiplier based on heat level
         // Heat level 0 = 1x, level 1 = 2x, level 2 = 3x, level 3 = 4x, etc.
-        const multiplier = 1 + (3 * hammer.heatLevel);
+        const multiplier = 1 + (4 * hammer.heatLevel);
 
         if (hammer.heatLevel > 0) {
           console.log(`Heat level ${hammer.heatLevel} hammer struck anvil! ${multiplier}x letters produced. Cooling down.`);
