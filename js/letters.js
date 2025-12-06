@@ -136,8 +136,6 @@ export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled
     const hearthRect = hearthDiv.getBoundingClientRect();
     if (rectsIntersect(tileRect, hearthRect)) {
       const consumed = feedLetterToHearth(tile);
-      if (!consumed) {
-      const consumed = feedLetterToHearth(tile);
       if (consumed) {
         if (tile.isConnected) {
           returnTileToBasket();
@@ -146,7 +144,6 @@ export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled
       } else {
         returnTileToBasket();
         resetLetterTilePosition(tile);
-      }
       }
       return;
     }
