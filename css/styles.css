@@ -510,6 +510,7 @@ button.secondary {
   user-select: none;
   touch-action: none;
   transition: transform 0.2s ease, box-shadow 0.1s;
+  z-index: 97
 }
 
 /* Placeholder shown during drag */
