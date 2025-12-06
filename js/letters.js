@@ -175,6 +175,7 @@ export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled
   }
 
   if (matched) {
+    returnTileToBasket(tile);
     resetLetterTilePosition(tile);
     return;
   }
