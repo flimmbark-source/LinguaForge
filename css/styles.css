@@ -314,13 +314,20 @@ button.secondary {
 
 .mold-viewport-wrapper {
   position: fixed;
-  left: 40px;                 /* line up with body padding / left column */
-  top: 290px;                 /* tweak this until it matches the old spot */
-  width: calc((85%) / 3);  /* same width as a column */
-  z-index: 95;                /* under hearth/letter basket if needed */
+  left: 15px; /* match letter-basket or column edge */
+  top: 290px;
+  width: calc((100% - 32px) / 3); /* same as a column / basket width */
+  z-index: 95;
   pointer-events: auto;
+
+  display: flex;
+  justify-content: center;
 }
 
+.mold-viewport {
+  max-width: 100%;
+  margin: 0 auto;
+}
 
 .mold-viewport .mold-list {
   flex: 1;
