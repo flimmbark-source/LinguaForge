@@ -84,14 +84,14 @@ export function sellOneLetterFromTile(tile) {
  * @param {HTMLElement} tile - Letter tile element
  */
 export function feedLetterToHearth(tile) {
-    if (!canPlaceInHearth()) {
+  if (!canPlaceInHearth()) {
     // maybe snap the letter back or show a tooltip
     console.log('You cannot place letters in the hearth while it is off.');
-    return;
-  } else {
+    return false;
+  }
   consumeLetterTile(tile);
   heatHearth(1); // Heat hearth for 5 seconds per letter
-  }
+  return true;
 }
 
 /**
@@ -123,12 +123,31 @@ export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled
   const moldListDiv = document.getElementById('moldList');
   const letterPoolDiv = document.getElementById('letterPool');
 
+  const returnTileToBasket = () => {
+    if (letterPoolDiv) {
+      letterPoolDiv.appendChild(tile);
+    } else if (dragState.originalParent && dragState.originalParent.isConnected) {
+      dragState.originalParent.appendChild(tile);
+    }
+  };
+
   // Priority 1: Hearth (heat it up)
   if (hearthDiv) {
     const hearthRect = hearthDiv.getBoundingClientRect();
     if (rectsIntersect(tileRect, hearthRect)) {
-      feedLetterToHearth(tile);
-      resetLetterTilePosition(tile);
+      const consumed = feedLetterToHearth(tile);
+      if (!consumed) {
+      const consumed = feedLetterToHearth(tile);
+      if (consumed) {
+        if (tile.isConnected) {
+          returnTileToBasket();
+          resetLetterTilePosition(tile);
+        }
+      } else {
+        returnTileToBasket();
+        resetLetterTilePosition(tile);
+      }
+      }
       return;
     }
   }
@@ -174,9 +193,7 @@ export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled
   }
 
   // Priority 4: Default - return to original parent
-  if (dragState.originalParent && dragState.originalParent.isConnected) {
-    dragState.originalParent.appendChild(tile);
-  }
+  returnTileToBasket();
   resetLetterTilePosition(tile);
 }
 
