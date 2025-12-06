@@ -401,42 +401,60 @@ updateHammer(dt) {
   // -------------------------
   // HEATING / COOLING LOGIC
   // -------------------------
-  if (isHearthHeated() && this.isHammerOverHearth()) {
-    // Over heated hearth → accumulate heat
-    hammer.heatingTimer += dt;
+// -------------------------
+// HEATING / COOLING LOGIC
+// -------------------------
+if (isHearthHeated() && this.isHammerOverHearth()) {
+  // Over heated hearth → accumulate heat
+  hammer.heatingTimer += dt;
 
-    // Compute desired heat level from timer
-    const maxHeatLevel     = gameState.heatLevels || 0;
-    const hearthLevel      = getHearthLevel() || 0;
-    const effectiveMax     = Math.min(maxHeatLevel, hearthLevel);
-    const targetLevel      = Math.min(
-      effectiveMax,
-      Math.floor(hammer.heatingTimer / hammer.heatingRequired)
-    );
+  const maxHeatLevel = Math.max(1, gameState.heatLevels || 0);
+  const hearthLevel  = getHearthLevel() || 0;
+  const effectiveMax = Math.min(maxHeatLevel, hearthLevel);
 
-    if (targetLevel > hammer.heatLevel) {
-      hammer.heatLevel = targetLevel;
-      hammer.isHeated  = hammer.heatLevel > 0;
-      console.log(`Hammer heat level increased to ${hammer.heatLevel}!`);
-    }
-  } else {
-    // Not over hearth → cool down gradually
-    if (hammer.heatLevel > 0) {
-      hammer.heatingTimer = Math.max(0, hammer.heatingTimer - dt * 0.5);
+  // Compute desired heat level from total time in hearth
+  const targetLevel = Math.min(
+    effectiveMax,
+    Math.floor(hammer.heatingTimer / hammer.heatingRequired)
+  );
 
-      const newLevel = Math.floor(hammer.heatingTimer / hammer.heatingRequired);
-      if (newLevel < hammer.heatLevel) {
-        hammer.heatLevel = newLevel;
-        if (hammer.heatLevel === 0) {
-          hammer.isHeated = false;
-          console.log('Hammer has cooled down completely.');
-        }
-      }
-    } else {
-      hammer.heatingTimer = 0;
-      hammer.isHeated = false;
-    }
+  // Prevent timer from storing progress beyond the unlocked cap
+  hammer.heatingTimer = Math.min(
+    hammer.heatingTimer,
+    effectiveMax * hammer.heatingRequired
+  );
+
+  // Only ever go UP in level here
+  if (targetLevel > hammer.heatLevel) {
+    hammer.heatLevel = targetLevel;
+    hammer.isHeated  = hammer.heatLevel > 0;
+    console.log(`Hammer heat level increased to ${hammer.heatLevel}!`);
   }
+} else {
+  // Not over hearth:
+  // - Heat LEVEL stays as-is (hammer remains red-hot)
+  // - Only the PROGRESS TOWARD THE NEXT LEVEL cools down
+
+  if (hammer.heatLevel > 0) {
+    const currentLevelTime = hammer.heatLevel * hammer.heatingRequired;
+    const extra = hammer.heatingTimer - currentLevelTime;
+
+    if (extra > 0) {
+      const cooledExtra = Math.max(0, extra - dt * 0.5);
+      hammer.heatingTimer = currentLevelTime + cooledExtra;
+    }
+
+    // Don't touch hammer.heatLevel here; it will be cleared only on impact
+    hammer.isHeated = true; // already hot; stay hot
+  } else {
+    // Level 0: we can cool the bar all the way back to zero
+    if (hammer.heatingTimer > 0) {
+      hammer.heatingTimer = Math.max(0, hammer.heatingTimer - dt * 0.5);
+    }
+    hammer.isHeated = false;
+  }
+}
+
 
   const x = hammer.headX;
   const y = hammer.headY;

@@ -55,7 +55,7 @@ export const gameState = {
   redHotHits: 3,
   heatLevels: 1,
   secondsPerLetter: 5,
-  lettersPerRedHot: 1,
+  lettersPerRedHot: 3,
   scribeLettersPerInk: 5,
   inkPerChurn: 1,
   ripSpeedThreshold: 3400, // Base threshold for hammer rip
