@@ -19,6 +19,7 @@ import { ChipSystem } from './chips.js';
 import { initializeHearth, updateHearth } from './hearth.js';
 import { addInk /*, whatever else you need */ } from './state.js';
 import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
+import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js';
 
 // Global crafting system references
 let hammerSystem = null;
@@ -103,8 +104,18 @@ function initializeCraftingSystems() {
   };
 
   // Callback when letter lands in pool - create DOM tile
-  hammerSystem.onLetterLanded = (letterChar) => {
+  hammerSystem.onLetterLanded = (letterChar, canvasX, canvasY) => {
     addLetters(1);
+
+    // Spawn resource gain feedback at letter position
+    const craftingCanvas = document.getElementById('craftingCanvas');
+    if (craftingCanvas) {
+      const rect = craftingCanvas.getBoundingClientRect();
+      const screenX = rect.left + canvasX;
+      const screenY = rect.top + canvasY;
+      spawnResourceGain(screenX, screenY, 1, 'renown');
+    }
+
     const letterPoolDiv = document.getElementById('letterPool');
     if (!letterPoolDiv) return;
 
@@ -179,10 +190,21 @@ function initializeCraftingSystems() {
   pestleSystem = new PestleSystem(craftingCanvas);
 
   // Callback when ink is produced
-  pestleSystem.onInkProduced = (letter) => {
-    addInk(1);
+  pestleSystem.onInkProduced = (letter, canvasX, canvasY) => {
+    const inkAmount = gameState.inkPerChurn;
+    addInk(inkAmount);
+
+    // Spawn resource gain feedback at pestle tip position
+    const craftingCanvas = document.getElementById('craftingCanvas');
+    if (craftingCanvas) {
+      const rect = craftingCanvas.getBoundingClientRect();
+      const screenX = rect.left + canvasX;
+      const screenY = rect.top + canvasY;
+      spawnResourceGain(screenX, screenY, inkAmount, 'ink');
+    }
+
     updateUI();
-    console.log('Produced 1 ink from letter:', letter);
+    console.log('Produced', inkAmount, 'ink from letter:', letter);
   };
 
   // Start with hammer active
@@ -278,6 +300,15 @@ function setupEventHandlers() {
   if (enscribeBtn) {
     enscribeBtn.addEventListener('click', () => {
       if (completeVerse()) {
+        // Spawn resource gain feedback at verse area center
+        const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
+        if (grammarHebrewLineDiv) {
+          const rect = grammarHebrewLineDiv.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+          spawnResourceGain(centerX, centerY, VERSE_COMPLETION_REWARD, 'ink');
+        }
+
         alert('Verse completed! You gain ' + VERSE_COMPLETION_REWARD + ' Ink (prototype value).');
         updateUI();
       }
@@ -332,6 +363,9 @@ function gameLoop(timestamp) {
   if (gameState.scribeList.length > 0) {
     updateScribes(dt, updateUI);
   }
+
+  // Update resource gain feedback
+  updateResourceFeedback(dt);
 
   // Update UI
   updateUI();

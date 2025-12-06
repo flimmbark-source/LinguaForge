@@ -795,7 +795,7 @@ updateFreeHammer(dt) {
 
       if (this.onLetterLanded) {
         for (const letter of landedLetters) {
-          this.onLetterLanded(letter.letter);
+          this.onLetterLanded(letter.letter, letter.x, letter.y);
         }
       }
     }
