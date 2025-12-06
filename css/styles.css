@@ -463,7 +463,9 @@ button.secondary {
 
 #grammarHebrewLine {
   direction: rtl;
-  justify-content: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   min-height: 40px;
 }
 
