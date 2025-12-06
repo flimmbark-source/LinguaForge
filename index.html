@@ -7,32 +7,22 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <!-- LEFT COLUMN: SCRIBES -->
+  
+<!-- LEFT COLUMN: SCRIBES -->
+<div class="column left-column">
   <div class="column">
-    <div class="column">
-      <h2>Workers</h2>
-      <div class="section">
-        <h3>Apprentice Scribes</h3>
-        <div class="row">
-          <button id="buyScribeBtn">Hire Scribe</button>
-          <span style="font-size:12px;">Cost: <span id="scribeCost">10</span> Renown</span>
-        </div>
-        <div id="scribeBlocks" class="scribe-grid"></div>
+    <h2>Workers</h2>
+    <div class="section">
+      <h3>Apprentice Scribes</h3>
+      <div class="row">
+        <button id="buyScribeBtn">Hire Scribe</button>
+        <span style="font-size:12px;">Cost: <span id="scribeCost">10</span> Renown</span>
       </div>
-    </div>
-  <div class="column">
-      <h2>Molds</h2>
-      <div class="section mold-panel">
-        <div class="mold-viewport">
-          <button id="prevMoldBtn" class="secondary">&lt;</button>
-          <span id="moldIndexLabel" style="font-size:12px; opacity:0.8;"></span>
-          <div id="moldList" class="mold-list"></div>
-          <button id="nextMoldBtn" class="secondary">&gt;</button>
-        </div>
-       </div>
+      <div id="scribeBlocks" class="scribe-grid"></div>
     </div>
   </div>
-
+</div>
+  
   <!-- TOOL RACK -->
   <div class="column">
     <h3>Tools</h3>
@@ -122,11 +112,24 @@
     </div>
   </div>
 
+<!-- FLOATING MOLD VIEWPORT -->
+<div class="mold-viewport-wrapper">
+  <div class="section mold-panel">
+    <h2 style="margin-bottom:6px;"></h2>
+    <div class="mold-viewport">
+      <button id="prevMoldBtn" class="secondary">&lt;</button>
+      <span id="moldIndexLabel" style="font-size:12px; opacity:0.8;"></span>
+      <div id="moldList" class="mold-list"></div>
+      <button id="nextMoldBtn" class="secondary">&gt;</button>
+    </div>
+  </div>
+</div>
+
   <!-- LETTER BASKET (FIXED AT BOTTOM LEFT) -->
   <div class="letter-basket">
     <div class="letter-basket-header">
-      <div class="basket-title">Letter Basket</div>
-      <div class="basket-subtitle">Drag letters to the hearth or molds</div>
+      <div class="basket-title"></div>
+      <div class="basket-subtitle"></div>
     </div>
     <div id="letterPool" class="letter-board letter-basket-board"></div>
   </div>
