@@ -132,7 +132,7 @@ button.secondary {
 
 .letter-basket {
   position: fixed;
-  left: 45px;
+  left: 25px;
   bottom: 55px;
   width: calc((100% - 32px) / 3);
   min-width: 280px;
