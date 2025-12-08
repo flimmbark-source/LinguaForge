@@ -3,7 +3,7 @@
  * Simple shovel tool for scooping letters from the letter basket and dumping into the hearth
  */
 
-import { getHearthBounds, heatHearth } from './hearth.js';
+import { canPlaceInHearth, getHearthBounds, heatHearth } from './hearth.js';
 import { createLetterTile, consumeLetterTile } from './letters.js';
 import { spawnResourceGain } from './resourceGainFeedback.js';
 import { gameState } from './state.js';
@@ -195,7 +195,16 @@ resize() {
     const releaseY = clientY;
 
     const hearthRect = getHearthBounds();
-    if (hearthRect && releaseX >= hearthRect.left && releaseX <= hearthRect.right && releaseY >= hearthRect.top && releaseY <= hearthRect.bottom) {
+    const hearthEnabled = canPlaceInHearth();
+
+    if (
+      hearthEnabled &&
+      hearthRect &&
+      releaseX >= hearthRect.left &&
+      releaseX <= hearthRect.right &&
+      releaseY >= hearthRect.top &&
+      releaseY <= hearthRect.bottom
+    ) {
       // dump into hearth
       if (this.collected.length > 0) {
         heatHearth(this.collected.length);
@@ -265,6 +274,19 @@ resize() {
     const headWorldX = canvasRect.left + this.shovel.headX;
     const headWorldY = canvasRect.top + this.shovel.headY;
 
+    // Only the shovel head should collect letters. Use the rendered head size
+    // to build a pickup rectangle around the head in world-space coordinates.
+    const headWidth = 48;
+    const headHeight = 148;
+    const headHalfWidth = headWidth / 2;
+    const headTopY = headWorldY - headHeight + 6; // mirror drawShovel ellipse offset
+    const headBounds = {
+      left: headWorldX - headHalfWidth,
+      right: headWorldX + headHalfWidth,
+      top: headTopY,
+      bottom: headWorldY,
+    };
+
     const tiles = Array.from(
       letterPool.querySelectorAll(
         '.letter-tile, [data-letter-char], [data-letter], [data-char], [data-symbol]'
@@ -273,12 +295,13 @@ resize() {
 
     for (const tile of tiles) {
       const r = tile.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height / 2;
-      const pickupRadius = Math.max(r.width, r.height) / 2 + 28;
-      const dist = Math.hypot(headWorldX - cx, headWorldY - cy);
+      const overlapsHead =
+        r.left <= headBounds.right &&
+        r.right >= headBounds.left &&
+        r.top <= headBounds.bottom &&
+        r.bottom >= headBounds.top;
 
-      if (dist < pickupRadius) {
+      if (overlapsHead) {
         const ch = getLetterFromTile(tile);
         if (!ch) continue;
 
