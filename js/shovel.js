@@ -111,6 +111,7 @@ export class ShovelSystem {
   }
 
   onPointerDown(e) {
+    if (!this.isRunning) return;
     const rect = this.canvas.getBoundingClientRect();
     const client = e.touches ? e.touches[0] : e;
 
@@ -150,6 +151,7 @@ export class ShovelSystem {
   }
 
   onPointerMove(e) {
+    if (!this.isRunning) return;
     const rect = this.canvas.getBoundingClientRect();
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
@@ -157,6 +159,7 @@ export class ShovelSystem {
   }
 
   onPointerUp(e) {
+    if (!this.isRunning) return;
     this.input.isDown = false;
     // on release, drop collected letters into hearth if over hearth, else return to basket
     const rect = this.canvas.getBoundingClientRect();
@@ -198,12 +201,19 @@ export class ShovelSystem {
     if (!this.isRunning) {
       this.isRunning = true;
       this.lastTime = 0;
+      // Enable pointer interaction when shovel is the active tool
+      this.canvas.style.pointerEvents = 'auto';
+      this.canvas.style.cursor = 'grab';
       requestAnimationFrame(this.loop);
     }
   }
 
   stop() {
     this.isRunning = false;
+    this.input.isDown = false;
+    this.shovel.isHeld = false;
+    // Restore default non-interactive canvas so other UI remains clickable
+    this.canvas.style.pointerEvents = 'none';
   }
 
   loop(timestamp) {
@@ -218,10 +228,8 @@ export class ShovelSystem {
   }
 
   // simple helper to check proximity to letter tiles and pick them up
-  tryPickupLetterIfPassing(speed) {
-    // require only modest movement to avoid picking up when idle
-    const speedThreshold = 10; // was 600
-    if (speed < speedThreshold) return;
+  tryPickupLetterIfPassing() {
+    // prevent overfilling the shovel
     if (this.collected.length >= 5) return;
 
     const letterPool = document.getElementById('letterPool');
@@ -241,9 +249,10 @@ export class ShovelSystem {
       const r = tile.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
+      const pickupRadius = Math.max(r.width, r.height) / 2 + 28;
       const dist = Math.hypot(headWorldX - cx, headWorldY - cy);
 
-      if (dist < Math.max(r.width, r.height)) {
+      if (dist < pickupRadius) {
         const ch = getLetterFromTile(tile);
         if (!ch) continue;
 

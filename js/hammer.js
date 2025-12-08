@@ -42,6 +42,7 @@ export class HammerSystem {
       heatingTimer: 0, // Time spent over heated hearth
       heatingRequired: 5, // Seconds needed to reach next heat level
       baseLength: 180, // visual "original" handle length that never changes
+      maxLength: 180, // maximum length when the handle is stretched by the player
       isFree: false,
       regrabCooldown: 0,
       headMass: 3.0 // 1.0 = default mass; increase to make the head heavier/sluggish
@@ -71,6 +72,9 @@ export class HammerSystem {
     this.lastTime = 0;
     this.isRunning = false;
 
+    // Precompute valid length caps
+    this.refreshHandleCaps(true);
+
     // Bind methods
     this.update = this.update.bind(this);
     this.render = this.render.bind(this);
@@ -98,6 +102,7 @@ export class HammerSystem {
     this.height = rect.height;
     this.hammer.length = 180;
     this.hammer.baseLength = 180; // keep original handle length for the static overlay
+    this.refreshHandleCaps(true);
 
 
     // Position anvil just above the letter pool bar (160px from bottom)
@@ -124,6 +129,47 @@ export class HammerSystem {
     this.hammer.headVx = 0;
     this.hammer.headVy = 0;
   }
+
+ /**
+   * Resolve a safe maximum handle length using the configured cap or a base-derived fallback
+   */
+  getMaxHandleLength() {
+    const hammer = this.hammer;
+    const base = Number.isFinite(hammer.baseLength) && hammer.baseLength > 0
+      ? hammer.baseLength
+      : 180;
+
+    const configuredMax = hammer.maxLength;
+
+    if (Number.isFinite(configuredMax) && configuredMax > 0) {
+      return configuredMax;
+    }
+
+    return base * 1.25;
+  }
+
+  /**
+   * Refresh cached handle caps and optionally clamp the stored length to prevent runaway growth
+   */
+  refreshHandleCaps(clampLength = false) {
+    const hammer = this.hammer;
+    const safeMax = this.getMaxHandleLength();
+    const base = Number.isFinite(hammer.baseLength) && hammer.baseLength > 0
+      ? hammer.baseLength
+      : 180;
+
+    hammer.maxLength = safeMax;
+
+    if (clampLength) {
+      const currentLength = Number.isFinite(hammer.length) && hammer.length > 0
+        ? hammer.length
+        : base;
+      hammer.length = Math.min(currentLength, safeMax);
+    }
+
+    return safeMax;
+  }
+
 
   /**
    * Setup event listeners for hammer interaction
@@ -194,9 +240,11 @@ onPointerDown(e) {
   const dx = hx - this.input.mouseX;
   const dy = hy - this.input.mouseY;
   const newLength = Math.hypot(dx, dy);
+  const maxLength = this.getMaxHandleLength();
+  const clampedLength = Math.min(newLength, maxLength);
 
-  if (newLength > 10) {
-    hammer.length = newLength;
+  if (clampedLength > 10) {
+    hammer.length = clampedLength;
   }
 
   // Player is grabbing it again → leave free-flight mode
@@ -537,7 +585,7 @@ if (isHearthHeated() && this.isHammerOverHearth()) {
   let dx = hammer.headX - px;
   let dy = hammer.headY - py;
   let dist = Math.hypot(dx, dy) || 1;
-  const desired = hammer.length;
+  const desired = Math.min(hammer.length, this.getMaxHandleLength());
   const diff = (desired - dist) / dist;
 
   // Apply constraint correction.
@@ -649,8 +697,9 @@ updateFreeHammer(dt) {
   }
 
   // Keep pivot a fixed distance above the head so drawing still works nicely
+  const freeLength = Math.min(hammer.length, this.getMaxHandleLength());
   hammer.pivotX = hammer.headX;
-  hammer.pivotY = hammer.headY - hammer.length;
+  hammer.pivotY = hammer.headY - freeLength;
 
   // Keep prevHead* coherent for other code using a verlet-ish scheme
   hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
@@ -930,7 +979,7 @@ drawHammer(ctx, hammer) {
   ctx.rotate(angle);
 
   const handleWidth = hammer.handleThickness;
-  const handleLength = length;
+  const handleLength = Math.min(length, this.getMaxHandleLength());
 
   // 1) Dynamic handle (physics-based) from PIVOT → HEAD
   const handleGradient = ctx.createLinearGradient(0, -handleLength, 0, 0);
@@ -1282,6 +1331,9 @@ drawHammer(ctx, hammer) {
    * Start the hammer system
    */
   start() {
+    // Ensure handle caps and current length are valid when resuming
+    this.refreshHandleCaps(true);
+
     if (!this.isRunning) {
       this.isRunning = true;
       this.lastTime = 0;
