@@ -122,8 +122,8 @@ resize() {
 
   s.length = 120;
   s.angle = Math.PI / 2;
-  s.headX = s.pivotX;
-  s.headY = s.pivotY + s.length;
+  s.headX = s.pivotX - Math.sin(s.angle) * s.length;
+  s.headY = s.pivotY + Math.cos(s.angle) * s.length;
   this.prevHeadX = s.headX;
   this.prevHeadY = s.headY;
 }
@@ -271,20 +271,26 @@ resize() {
     if (!letterPool) return;
 
     const canvasRect = this.canvas.getBoundingClientRect();
-    const headWorldX = canvasRect.left + this.shovel.headX;
-    const headWorldY = canvasRect.top + this.shovel.headY;
 
-    // Only the shovel head should collect letters. Use the rendered head size
-    // to build a pickup rectangle around the head in world-space coordinates.
     const headWidth = 48;
     const headHeight = 148;
-    const headHalfWidth = headWidth / 2;
-    const headTopY = headWorldY - headHeight + 6; // mirror drawShovel ellipse offset
+    const halfHeadW = headWidth / 2;
+    const halfHeadH = headHeight / 2;
+    const cosA = Math.cos(this.shovel.angle);
+    const sinA = Math.sin(this.shovel.angle);
+
+    // Anchor the pickup box at the visual center of the shovel head instead of
+    // pivoting around an arbitrary point. The ellipse in drawShovel is centered
+    // at y = headH / 2 - 6 relative to the top of the head, so add that offset
+    // to the handle length to find the world position of the head center.
+    const headCenterOffset = this.shovel.length + halfHeadH - 6;
+    const headWorldCenterX = canvasRect.left + this.shovel.pivotX - sinA * headCenterOffset;
+    const headWorldCenterY = canvasRect.top + this.shovel.pivotY + cosA * headCenterOffset;
     const headBounds = {
-      left: headWorldX - headHalfWidth,
-      right: headWorldX + headHalfWidth,
-      top: headTopY,
-      bottom: headWorldY,
+      left: headWorldCenterX - halfHeadW,
+      right: headWorldCenterX + halfHeadW,
+      top: headWorldCenterY - halfHeadH,
+      bottom: headWorldCenterY + halfHeadH,
     };
 
     const tiles = Array.from(
@@ -307,7 +313,6 @@ resize() {
 
         consumeLetterTile(tile);
         this.collected.push(ch);
-        spawnResourceGain(headWorldX, headWorldY, 1, 'renown');
         return;
       }
     }
@@ -352,8 +357,8 @@ resize() {
     s.angle += this._angleVel * dt;
 
     // --- HEAD POSITION / PICKUP LOGIC ------------------------
-    const targetHeadX = s.pivotX + Math.cos(s.angle) * s.length;
-    const targetHeadY = s.pivotY + Math.sin(s.angle) * s.length;
+    const targetHeadX = s.pivotX - Math.sin(s.angle) * s.length;
+    const targetHeadY = s.pivotY + Math.cos(s.angle) * s.length;
 
     const massFactor = Math.max(2, s.headMass || 2);
     const followFactor = 1 / Math.sqrt(massFactor);
@@ -381,7 +386,7 @@ resize() {
 
     // try to pick up letters when moving quickly
     if (s.isHeld) {
-      this.tryPickupLetterIfPassing(speed);
+      this.tryPickupLetterIfPassing();
     }
 
     this.prevHeadX = s.headX;
