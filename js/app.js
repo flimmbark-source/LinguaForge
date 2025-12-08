@@ -252,8 +252,10 @@ function setupToolSelection() {
     activeTool = 'hammer';
     hammerBtn.classList.add('active');
     pestleBtn.classList.remove('active');
+    shovelBtn.classList.remove('active');
 
     // Switch systems
+    if (shovelSystem) shovelSystem.stop();
     if (pestleSystem) pestleSystem.stop();
     if (hammerSystem) hammerSystem.start();
 
@@ -270,11 +272,13 @@ function setupToolSelection() {
     if (activeTool === 'pestle') return;
 
     activeTool = 'pestle';
+    shovelBtn.classList.remove('active');
     pestleBtn.classList.add('active');
     hammerBtn.classList.remove('active');
 
     // Switch systems
     if (hammerSystem) hammerSystem.stop();
+    if (shovelSystem) shovelSystem.stop();
     if (pestleSystem) pestleSystem.start();
 
     // Update hint text

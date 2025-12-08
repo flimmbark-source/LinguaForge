@@ -127,22 +127,28 @@ export class ShovelSystem {
     const localX = Math.cos(angle) * dx - Math.sin(angle) * dy;
     const localY = Math.sin(angle) * dx + Math.cos(angle) * dy;
 
-    const handleW = 10, handleL = s.length;
-    const headW = 48, headH = 28;
+    // Dimensions that mirror drawShovel
+    const handleW = 10;
+    const handleL = s.length;
+    const headW = 48;
+    const headH = 148;
 
-    const onHandle =
-      localX > -handleW / 2 &&
-      localX < handleW / 2 &&
-      localY > 0 &&
-      localY < handleL;
+    // Generous padding so players can grab near the edges
+    const PAD = 26;
 
-    const onHead =
-      localY > handleL &&
-      localX > -headW / 2 &&
-      localX < headW / 2 &&
-      localY < handleL + headH;
+    const withinHandle =
+      localX > -handleW / 2 - PAD &&
+      localX < handleW / 2 + PAD &&
+      localY > -PAD &&
+      localY < handleL + PAD;
 
-    if (onHandle || onHead) {
+    const withinHead =
+      localX > -headW / 2 - PAD &&
+      localX < headW / 2 + PAD &&
+      localY > handleL - PAD &&
+      localY < handleL + headH + PAD;
+
+    if (withinHandle || withinHead) {
       this.input.isDown = true;
       this.shovel.isHeld = true;
       if (e.cancelable) e.preventDefault();
@@ -201,8 +207,8 @@ export class ShovelSystem {
     if (!this.isRunning) {
       this.isRunning = true;
       this.lastTime = 0;
-      // Enable pointer interaction when shovel is the active tool
-      this.canvas.style.pointerEvents = 'auto';
+      // Keep the canvas non-interactive so it doesn't block UI buttons; we listen on document instead
+      this.canvas.style.pointerEvents = 'none';
       this.canvas.style.cursor = 'grab';
       requestAnimationFrame(this.loop);
     }
