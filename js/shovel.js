@@ -90,25 +90,43 @@ export class ShovelSystem {
     window.addEventListener('resize', this.resize);
   }
 
-  resize() {
-    const rect = this.canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = rect.width * dpr;
-    this.canvas.height = rect.height * dpr;
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.width = rect.width;
-    this.height = rect.height;
+resize() {
+  const rect = this.canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  this.canvas.width = rect.width * dpr;
+  this.canvas.height = rect.height * dpr;
+  this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  this.width = rect.width;
+  this.height = rect.height;
 
-    // position shovel near the anvil/letter basket area
-    this.shovel.pivotX = this.width * 0.18;
-    this.shovel.pivotY = this.height - 180;
-    this.shovel.length = 120;
-    this.shovel.angle = Math.PI / 2; // rest LEFT
-    this.shovel.headX = this.shovel.pivotX;
-    this.shovel.headY = this.shovel.pivotY + this.shovel.length;
-    this.prevHeadX = this.shovel.headX;
-    this.prevHeadY = this.shovel.headY;
+  const s = this.shovel;
+
+  // Try to align the shovel vertically relative to the letter pool,
+  // so it works on both mobile and desktop.
+  const letterPool = document.getElementById('letterPool');
+  if (letterPool) {
+    const poolRect = letterPool.getBoundingClientRect();
+    const canvasRect = this.canvas.getBoundingClientRect();
+
+    // pool's top, in canvas coordinates
+    const poolTopInCanvas = poolRect.top - canvasRect.top;
+
+    s.pivotX = this.width * 0.18;
+    // put the shovel so the head naturally passes through the pool area
+    s.pivotY = poolTopInCanvas - 140; // tweak 140 as needed
+  } else {
+    // fallback if pool not found
+    s.pivotX = this.width * 0.18;
+    s.pivotY = this.height - 180;
   }
+
+  s.length = 120;
+  s.angle = Math.PI / 2;
+  s.headX = s.pivotX;
+  s.headY = s.pivotY + s.length;
+  this.prevHeadX = s.headX;
+  this.prevHeadY = s.headY;
+}
 
   onPointerDown(e) {
     if (!this.isRunning) return;
@@ -217,11 +235,11 @@ export class ShovelSystem {
   }
 
   stop() {
-    this.isRunning = false;
-    this.input.isDown = false;
-    this.shovel.isHeld = false;
-    // Restore default non-interactive canvas so other UI remains clickable
-    this.canvas.style.pointerEvents = 'none';
+  this.isRunning = false;
+  this.input.isDown = false;
+  this.shovel.isHeld = false;
+  this.collected = []; // clear shovel on tool switch
+  this.canvas.style.pointerEvents = 'none';
   }
 
   loop(timestamp) {
