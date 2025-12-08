@@ -24,8 +24,8 @@ let lastForgeEnabledState = null;
  * @param {number} letterount - Number of letters placed
  */
 export function heatHearth(letterCount = 1) {
-  // Check if hearth is unlocked
-  if (!gameState.hearthUnlocked && !gameState.turnedOn) {
+  // Check if hearth is unlocked and turned on
+  if (!gameState.hearthUnlocked || !gameState.hearthTurnedon) {
     console.log('Hearth is locked. Purchase the hearth upgrade to use it!');
     return;
   }
@@ -63,10 +63,11 @@ export function heatHearth(letterCount = 1) {
  * @param {number} dt - Delta time in seconds
  */
 export function updateHearth(dt) {
-  const forgeEnabled = gameState.hearthUnlocked && gameState.hearthTurnedon;
+  const forgeEnabled = gameState.hearthUnlocked;
 
   if (forgeEnabled !== lastForgeEnabledState) {
     updateHearthVisuals();
+    lastForgeEnabledState = forgeEnabled;
   }
 
   if (!forgeEnabled) {
@@ -91,7 +92,7 @@ export function updateHearth(dt) {
 }
 
 export function canPlaceInHearth() {
-  return gameState.hearthUnlocked && gameState.hearthTurnedon;
+  return gameState.hearthUnlocked;
 }
 
 /**
@@ -141,6 +142,9 @@ export function updateHearthVisuals() {
     return;
   }
 
+  // Ensure fire is visible when the hearth is enabled
+  fireDiv.classList.remove('disabled');
+
   if (hearthState.isHeated) {
     const intensity = getHearthIntensity();
     const level = hearthState.hearthLevel;
@@ -172,6 +176,8 @@ export function updateHearthVisuals() {
     fireDiv.style.transform = 'scale(0.5)';
     fireDiv.classList.remove('fading');
   }
+
+  lastForgeEnabledState = forgeEnabled;
 
 }
 

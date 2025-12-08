@@ -4,6 +4,7 @@
  */
 
 import { gameState, spendLetters, spendInk } from './state.js';
+import { updateHearthVisuals } from './hearth.js';
 
 /**
  * Node type definitions for visual styling
@@ -67,6 +68,7 @@ export const UPGRADE_TREE = {
     onPurchase: () => {
       gameState.hearthUnlocked = true;
       gameState.hearthTurnedon = true;
+      updateHearthVisuals();
     }
   },
 
