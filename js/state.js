@@ -53,7 +53,7 @@ export const gameState = {
   // Upgrade-affected properties
   pestleCapacity: 10,
   redHotHits: 1,
-  heatLevels: 1,
+  heatLevels: 0,
   secondsPerLetter: 5,
   lettersPerRedHot: 4,
   scribeLettersPerInk: 5,

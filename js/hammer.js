@@ -57,6 +57,7 @@ export class HammerSystem {
     // Visual effects
     this.sparks = [];
     this.flyingLetters = [];
+    this.clankWords = []; // Comic-style impact words
 
     // Input state
     this.input = {
@@ -303,22 +304,22 @@ onPointerDown(e) {
  * @param {number} y
  * @param {number} power
  * @param {Object} [options]
- *   - isRip: if true, use red-tinted “ripped” sparks
+ *   - isRip: if true, use red-tinted "ripped" sparks
  */
 spawnSparks(x, y, power, options = {}) {
   const isRip = !!options.isRip;
   const count = 16 + Math.floor(power * 8);
 
   for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI - Math.PI / 2;
-    const speed = 3 + Math.random() * 6 * power;
+    const angle = Math.random() * Math.PI - Math.PI;
+    const speed = 0.5 + Math.random() * 2 * power;
 
     this.sparks.push({
       x,
-      y,
+      y: (y + 15),
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed - power * 2,
-      life: 0.4 + Math.random() * 0.3,
+      life: 0.4 + Math.random() * 0.2,
       age: 0,
 
       // NEW: color hint
@@ -332,6 +333,61 @@ spawnSparks(x, y, power, options = {}) {
   }
 }
 
+  /**
+   * Spawn a comic-style "clank" word at impact point
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} power - Impact power (affects size)
+   */
+  spawnClankWord(x, y, power, options = {}) {
+    // Normal pool (exclude "Clonk!" so it only appears on ripped hits)
+    const words = ["Clank", "Clink!", "Clunk"];
+
+    // Debounce duplicate spawns (some code paths may call this multiple times per impact)
+    const now = performance.now();
+    if (this._lastClankTime && now - this._lastClankTime < 180) {
+      return; // skip if we spawned very recently
+    }
+    this._lastClankTime = now;
+
+    // Choose word: allow forcing (used for ripped hits)
+    let wordText = options.force || words[Math.floor(Math.random() * words.length)];
+
+    // Random lateral pop direction and angle
+    const side = Math.random() < 0.5 ? -1 : 1;
+
+    // Increase velocity a bit for snappier pop; rip hits may be stronger
+    const speedBias = options.isRip ? 1.2 : 1.0;
+    const vx = side * (100 + Math.random() * 180) * (0.9 + (power || 0)) * speedBias;
+    const vy = -(100 + Math.random() * 120) - (power || 0) * 160 * speedBias;
+
+    // Visual sizes: start small, grow to target. Make 'Clonk!' larger than the others.
+    const startSize = 4;
+    let targetSize = 6 + (power || 0) * 6;
+    if (wordText === 'Clonk!') {
+      targetSize *= 2; // Clonk is bigger
+    }
+    if (options.sizeMultiplier) {
+      targetSize *= options.sizeMultiplier;
+    }
+
+    this.clankWords.push({
+      x,
+      y,
+      word: wordText,
+      startSize,
+      size: startSize,
+      targetSize,
+      vx,
+      vy,
+      rot: (Math.random() * 0.6 - 0.3) * side, // small initial tilt
+      angularVel: (Math.random() * 6 - 3) * side,
+      friction: 4.0, // horizontal friction (per second)
+      life: 1.0, // seconds
+      age: 0,
+      alpha: 1.0
+    });
+  }
 
   /**
    * Check if hammer head is over hearth
@@ -674,6 +730,7 @@ updateFreeHammer(dt) {
           const impactX = headX;
           const impactY = anvil.y;
           this.spawnSparks(impactX, impactY, power, { isRip: true });
+          this.spawnClankWord(impactX, impactY, power, { isRip: true, force: 'Clonk!' }); // Add clank word (ripped)
 
           if (this.onLetterForged) {
             this.onLetterForged(impactX, impactY, power, hammer.headVx, 1);
@@ -708,6 +765,7 @@ updateFreeHammer(dt) {
         const impactX = headX;
         const impactY = anvil.y;
         this.spawnSparks(impactX, impactY, power);
+        this.spawnClankWord(impactX, impactY, power); // Add clank word
 
         // Calculate multiplier based on heat level
         // Heat level 0 = 1x, level 1 = 2x, level 2 = 3x, level 3 = 4x, etc.
@@ -764,6 +822,43 @@ updateFreeHammer(dt) {
       s.y += s.vy;
       s.vy += 18 * dt;
     }
+
+    // Update clank words (physics: gravity, friction, rotation)
+    const clankGravity = 900; // px/s^2 downward for words
+    for (const word of this.clankWords) {
+      word.age += dt;
+
+      // Grow size (fast at first, then slow down with easing)
+      const growthProgress = Math.min(1, word.age / 0.22); // Grow over ~0.22s
+      const eased = 1 - Math.pow(1 - growthProgress, 3); // Cubic ease-out
+      const baseSize = (word.startSize != null) ? word.startSize : (word.size || 0);
+      word.size = baseSize * (1 - eased) + word.targetSize * eased;
+
+      // Integrate physics
+      // gravity
+      word.vy += clankGravity * dt;
+
+      // horizontal friction (simple linear damping)
+      const frictionFactor = Math.max(0, 1 - word.friction * dt);
+      word.vx *= frictionFactor;
+
+      // integrate position
+      word.x += word.vx * dt;
+      word.y += word.vy * dt;
+
+      // rotation
+      word.rot += (word.angularVel || 0) * dt;
+
+      // Fade out near the end
+      const fadeStart = 0.6; // Start fading at 60% of lifetime
+      if (word.age > word.life * fadeStart) {
+        const fadeProgress = (word.age - word.life * fadeStart) / (word.life * (1 - fadeStart));
+        word.alpha = Math.max(0, 1 - fadeProgress);
+      }
+    }
+
+    // Remove expired clank words
+    this.clankWords = this.clankWords.filter(w => w.age < w.life && w.alpha > 0.02);
 
     // Update flying letters with physics
     const blockGravity = this.gravity * 0.8;
@@ -1037,6 +1132,62 @@ drawHammer(ctx, hammer) {
 }
 
   /**
+   * Draw comic-style clank words
+   */
+  drawClankWords(ctx, words) {
+    ctx.save();
+    for (const word of words) {
+      ctx.save();
+      ctx.translate(word.x, word.y);
+      ctx.rotate(word.rot || 0);
+
+      // Draw text with grey color and transparency
+      const fontSize = Math.max(9, Math.round(word.size));
+      ctx.font = `bold ${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Soft drop shadow for contrast
+      ctx.shadowColor = `rgba(0,0,0,${Math.min(0.5, word.alpha * 0.6)})`;
+      ctx.shadowBlur = Math.max(1, Math.round(fontSize * 0.03));
+
+      // Metallic gradient fill (light -> mid -> dark)
+      const g = ctx.createLinearGradient(-fontSize, -fontSize, fontSize, fontSize);
+      g.addColorStop(0, `rgba(255,255,255,${0.95 * word.alpha})`);
+      g.addColorStop(0.15, `rgba(236,239,241,${0.95 * word.alpha})`);
+      g.addColorStop(0.5, `rgba(209,213,219,${0.95 * word.alpha})`);
+      g.addColorStop(0.85, `rgba(107,114,128,${0.95 * word.alpha})`);
+      g.addColorStop(1, `rgba(30,41,59,${0.9 * word.alpha})`);
+
+      // Thin dark outline for readability
+      ctx.lineWidth = Math.max(1, fontSize * 0.06);
+      ctx.strokeStyle = `rgba(12,14,18,${Math.min(0.9, word.alpha)})`;
+      ctx.lineJoin = 'round';
+      ctx.strokeText(word.word, 0, 0);
+
+      // Fill with metallic gradient
+      ctx.fillStyle = g;
+      ctx.fillText(word.word, 0, 0);
+
+      // Specular highlight: draw a faint white thin stroke over the top-left
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.18 * word.alpha;
+      ctx.lineWidth = Math.max(0.6, fontSize * 0.02);
+      ctx.strokeStyle = 'white';
+      ctx.strokeText(word.word, -Math.max(0.5, fontSize * 0.03), -Math.max(0.5, fontSize * 0.03));
+      ctx.restore();
+
+      // Reset shadow (will also be reset by ctx.restore)
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
+      
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  /**
    * Draw flying letters
    */
   drawFlyingLetters(ctx, letters) {
@@ -1092,6 +1243,9 @@ drawHammer(ctx, hammer) {
 
     // Draw sparks
     this.drawSparks(this.ctx, this.sparks);
+
+    // Draw clank words (on top of everything)
+    this.drawClankWords(this.ctx, this.clankWords);
   }
 
   /**
