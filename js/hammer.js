@@ -58,6 +58,7 @@ export class HammerSystem {
     this.sparks = [];
     this.impactWords = [];
     this.flyingLetters = [];
+    this.impactWordChance = 0.65; // Probability that a strike shows an impact onomatopoeia
 
     // Input state
     this.input = {
@@ -339,7 +340,7 @@ onPointerDown(e) {
    */
   spawnImpactWord(x, y) {
     // Only spawn the word ghost part of the time to keep the effect special
-    if (Math.random() > 0.55) {
+    if (Math.random() > this.impactWordChance) {
       return;
     }
 
@@ -1084,10 +1085,13 @@ drawHammer(ctx, hammer) {
       ctx.save();
       ctx.translate(word.x, word.y - rise);
       ctx.scale(scale, scale);
-      ctx.fillStyle = `rgba(209, 213, 219, ${opacity})`;
-      ctx.shadowColor = `rgba(31, 41, 55, ${opacity * 0.7})`;
+      ctx.fillStyle = `rgba(229, 231, 235, ${opacity})`;
+      ctx.strokeStyle = `rgba(15, 23, 42, ${opacity * 0.9})`;
+      ctx.shadowColor = `rgba(31, 41, 55, ${opacity * 0.65})`;
       ctx.shadowBlur = 10;
       ctx.font = '700 22px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.lineWidth = 1.5 / scale;
+      ctx.strokeText(word.text, 0, 0);
       ctx.fillText(word.text, 0, 0);
       ctx.restore();
     }
