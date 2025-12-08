@@ -173,9 +173,6 @@ export function updateHearthVisuals() {
     fireDiv.classList.remove('fading');
   }
 
-  fireDiv.classList.remove('disabled');
-  lastForgeEnabledState = forgeEnabled;
-  
 }
 
 /**

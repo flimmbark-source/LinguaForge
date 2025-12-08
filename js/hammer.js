@@ -43,7 +43,8 @@ export class HammerSystem {
       heatingRequired: 5, // Seconds needed to reach next heat level
       baseLength: 180, // visual "original" handle length that never changes
       isFree: false,
-      regrabCooldown: 0
+      regrabCooldown: 0,
+      headMass: 3.0 // 1.0 = default mass; increase to make the head heavier/sluggish
     };
 
     // Anvil state
@@ -524,7 +525,9 @@ if (isHearthHeated() && this.isHammerOverHearth()) {
   hammer.prevHeadX = x;
   hammer.prevHeadY = y;
 
-  vy += g * safeDt;
+  // Apply gravity scaled by head mass while the player is swinging the hammer.
+  // Heavier heads feel heavier (fall faster) during player-controlled swings.
+  vy += g * safeDt * (hammer.headMass || 1);
 
   hammer.headX += vx * safeDt;
   hammer.headY += vy * safeDt;
@@ -537,8 +540,13 @@ if (isHearthHeated() && this.isHammerOverHearth()) {
   const desired = hammer.length;
   const diff = (desired - dist) / dist;
 
-  hammer.headX += dx * diff;
-  hammer.headY += dy * diff;
+  // Apply constraint correction.
+  // When the player is holding the hammer, scale the correction by mass so
+  // heavier heads lag behind the pivot and are harder to lift.
+  const mass = Math.max(1, hammer.headMass || 1);
+  const massSwingFactor = hammer.isHeld ? 1 / Math.sqrt(mass) : 1;
+  hammer.headX += dx * diff * massSwingFactor;
+  hammer.headY += dy * diff * massSwingFactor;
 
   hammer.headVx = (hammer.headX - hammer.prevHeadX) / safeDt;
   hammer.headVy = (hammer.headY - hammer.prevHeadY) / safeDt;
@@ -579,8 +587,9 @@ updateFreeHammer(dt) {
     hammer.headY -= penetration; // push back above floor
 
     if (hammer.headVy > 0) {
-      // reflect vertical velocity, damp it
-      hammer.headVy = -hammer.headVy * restitution;
+      // reflect vertical velocity, damp it and account for head mass
+      const massFactor = hammer.headMass || 1;
+      hammer.headVy = -hammer.headVy * restitution / massFactor;
       // lose a bit of sideways speed
       hammer.headVx *= tangentialDamp;
 
@@ -597,7 +606,8 @@ updateFreeHammer(dt) {
     hammer.headY += penetration;
 
     if (hammer.headVy < 0) {
-      hammer.headVy = -hammer.headVy * restitution;
+      const massFactor = hammer.headMass || 1;
+      hammer.headVy = -hammer.headVy * restitution / massFactor;
       hammer.headVx *= tangentialDamp;
 
       if (Math.abs(hammer.headVy) < stopThreshold) {
@@ -612,7 +622,8 @@ updateFreeHammer(dt) {
     hammer.headX += penetration;
 
     if (hammer.headVx < 0) {
-      hammer.headVx = -hammer.headVx * restitution;
+      const massFactor = hammer.headMass || 1;
+      hammer.headVx = -hammer.headVx * restitution / massFactor;
       hammer.headVy *= tangentialDamp;
 
       if (Math.abs(hammer.headVx) < stopThreshold) {
@@ -627,7 +638,8 @@ updateFreeHammer(dt) {
     hammer.headX -= penetration;
 
     if (hammer.headVx > 0) {
-      hammer.headVx = -hammer.headVx * restitution;
+      const massFactor = hammer.headMass || 1;
+      hammer.headVx = -hammer.headVx * restitution / massFactor;
       hammer.headVy *= tangentialDamp;
 
       if (Math.abs(hammer.headVx) < stopThreshold) {
@@ -689,7 +701,8 @@ updateFreeHammer(dt) {
         const incomingSpeed = Math.hypot(incomingVx, incomingVy) || downwardSpeed;
 
         // Decide how hard the hammer should fly back
-        const backSpeed = incomingSpeed * 1.1; // tweak for feel
+        // Heavier heads should be harder to fling back, scale by mass
+        const backSpeed = incomingSpeed * 1.1 / (hammer.headMass || 1);
 
         // Reverse the direction (opposite of swing)
         let dirX = -incomingVx;
@@ -744,9 +757,10 @@ updateFreeHammer(dt) {
       const baseBounce = 0.85;
       const extraBounce = 0.35 * power;
       const bounceFactor = Math.min(0.9, baseBounce + extraBounce);
-      const newVy = -downwardSpeed * bounceFactor;
+      // Heavier heads reduce the outgoing velocity
+      const newVy = -downwardSpeed * bounceFactor / (hammer.headMass || 1);
       const tangentDamping = 0.3;
-      const newVx = hammer.headVx * tangentDamping;
+      const newVx = (hammer.headVx * tangentDamping) / (hammer.headMass || 1);
 
       hammer.headY = anvil.y - 18;
       // Lift slightly higher so the hammer must leave the strike zone

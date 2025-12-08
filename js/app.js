@@ -15,6 +15,7 @@ import { gameState } from './state.js';
 import { addLetters } from './state.js';
 import { HammerSystem } from './hammer.js';
 import { PestleSystem } from './pestle.js';
+import { ShovelSystem } from './shovel.js';
 import { ChipSystem } from './chips.js';
 import { initializeHearth, updateHearth } from './hearth.js';
 import { addInk /*, whatever else you need */ } from './state.js';
@@ -24,6 +25,7 @@ import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } 
 // Global crafting system references
 let hammerSystem = null;
 let pestleSystem = null;
+let shovelSystem = null;
 let chipSystem = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
 
@@ -228,6 +230,9 @@ function initializeCraftingSystems() {
 
   // Start with hammer active
   hammerSystem.start();
+  // Create and start shovel (initialized but not active by default)
+  shovelSystem = new ShovelSystem(craftingCanvas);
+  // do not start shovel until selected
   console.log('Crafting systems initialized');
 }
 
@@ -237,9 +242,9 @@ function initializeCraftingSystems() {
 function setupToolSelection() {
   const hammerBtn = document.getElementById('selectHammer');
   const pestleBtn = document.getElementById('selectPestle');
+  const shovelBtn = document.getElementById('selectShovel');
   const craftingHint = document.getElementById('craftingHint');
-
-  if (!hammerBtn || !pestleBtn) return;
+  if (!hammerBtn || !pestleBtn || !shovelBtn) return;
 
   hammerBtn.addEventListener('click', () => {
     if (activeTool === 'hammer') return;
@@ -279,6 +284,28 @@ function setupToolSelection() {
     }
 
     console.log('Switched to Pestle & Mortar');
+  });
+
+  shovelBtn.addEventListener('click', () => {
+    if (activeTool === 'shovel') return;
+
+    activeTool = 'shovel';
+    shovelBtn.classList.add('active');
+    hammerBtn.classList.remove('active');
+    pestleBtn.classList.remove('active');
+
+    // Switch systems
+    if (hammerSystem) hammerSystem.stop();
+    if (pestleSystem) pestleSystem.stop();
+    if (shovelSystem) shovelSystem.start();
+
+    // Update hint text
+    if (craftingHint) {
+      craftingHint.textContent = '';
+      craftingHint.classList.remove('hidden');
+    }
+
+    console.log('Switched to Shovel');
   });
 }
 
