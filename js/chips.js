@@ -18,9 +18,10 @@ export class ChipSystem {
     this.nextChipId = 1;
 
     // Physics constants
-    this.friction = 0.92; // Friction coefficient (no gravity)
+    this.friction = 0.9; // Friction coefficient (no gravity)
     this.wallBounceDamping = 0.6; // Energy loss on wall collisions
-    this.chipCollisionDamping = 0.8; // Energy loss on chip-to-chip collisions
+    this.chipCollisionDamping = 0.95; // Energy loss on chip-to-chip collisions
+    this.maxSpeed = 100
 
     // Drag state
     this.draggedChip = null;
@@ -127,6 +128,9 @@ export class ChipSystem {
       chip.vx *= this.friction;
       chip.vy *= this.friction;
 
+      // Keep speed within cap before integrating position so the limit is perceptible
+      this.clampChipVelocity(chip);
+
       // Stop if velocity is very small
       const speedSq = chip.vx * chip.vx + chip.vy * chip.vy;
       if (speedSq < 1) {
@@ -199,10 +203,12 @@ export class ChipSystem {
           const ny = dy / dist;
 
           // Separate chips
-          a.x -= nx * overlap * 0.5;
-          a.y -= ny * overlap * 0.5;
-          b.x += nx * overlap * 0.5;
-          b.y += ny * overlap * 0.5;
+          const maxSeparationPerFrame = 18; // limit in px to keep motion sane even in deep overlap
+          const separation = Math.min(overlap, maxSeparationPerFrame);
+          a.x -= nx * separation * 0.5;
+          a.y -= ny * separation * 0.5;
+          b.x += nx * separation * 0.5;
+          b.y += ny * separation * 0.5;
 
           // Exchange velocity
           const relVx = b.vx - a.vx;
@@ -215,9 +221,33 @@ export class ChipSystem {
             a.vy -= ny * impulse;
             b.vx += nx * impulse;
             b.vy += ny * impulse;
+            a.vx *= 0.9;
+            a.vy *= 0.9;
+            b.vx *= 0.9;
+            b.vy *= 0.9;
           }
+
+          this.clampChipVelocity(a);
+          this.clampChipVelocity(b);
         }
       }
+    }
+
+    // Final velocity clamp to prevent runaway speeds
+    for (const chip of this.chips) {
+      this.clampChipVelocity(chip);
+    }
+  }
+
+  /**
+   * Prevent chips from exceeding maximum speed
+   */
+  clampChipVelocity(chip) {
+    const speed = Math.sqrt(chip.vx * chip.vx + chip.vy * chip.vy);
+    if (speed > this.maxSpeed) {
+      const scale = this.maxSpeed / speed;
+      chip.vx *= scale;
+      chip.vy *= scale;
     }
   }
 

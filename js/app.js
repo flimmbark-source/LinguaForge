@@ -189,8 +189,11 @@ function initializeCraftingSystems() {
       const moldViewport = document.querySelector('.mold-viewport');
       if (moldViewport) {
         const moldBounds = moldViewport.getBoundingClientRect();
-        forgedWords.forEach(word => {
-          chipSystem.spawnChip(word, moldBounds);
+        forgedWords.forEach((word, index) => {
+          // Stagger spawns so chips pop out one at a time instead of overlapping
+          setTimeout(() => {
+            chipSystem.spawnChip(word, moldBounds);
+          }, index * 120);
         });
       }
     }

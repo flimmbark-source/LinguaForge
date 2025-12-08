@@ -16,6 +16,8 @@ export const hearthState = {
   totalLettersConsumed: 0, // Total letters fed to hearth since last cooldown
 };
 
+let lastForgeEnabledState = null;
+
 /**
  * Heat up the hearth when letters are placed
  * 
@@ -61,6 +63,15 @@ export function heatHearth(letterCount = 1) {
  * @param {number} dt - Delta time in seconds
  */
 export function updateHearth(dt) {
+  const forgeEnabled = gameState.hearthUnlocked && gameState.hearthTurnedon;
+
+  if (forgeEnabled !== lastForgeEnabledState) {
+    updateHearthVisuals();
+  }
+
+  if (!forgeEnabled) {
+    return;
+  }
   if (hearthState.isHeated && hearthState.heatTimer > 0) {
     // Higher hearth levels consume heat faster
     // Level 1: 1x, Level 2: 1.5x, Level 3: 2x consumption rate
@@ -115,7 +126,20 @@ export function updateHearthVisuals() {
   const hearthDiv = document.getElementById('hearth');
   const fireDiv = document.getElementById('hearthFire');
 
+  const forgeEnabled = gameState.hearthUnlocked && gameState.hearthTurnedon;
+
   if (!hearthDiv || !fireDiv) return;
+
+  if (!forgeEnabled) {
+    hearthDiv.classList.remove('heated');
+    hearthDiv.classList.remove('fading');
+    hearthDiv.removeAttribute('data-hearth-level');
+    fireDiv.style.opacity = '0';
+    fireDiv.style.transform = 'scale(0)';
+    fireDiv.classList.add('disabled');
+    lastForgeEnabledState = forgeEnabled;
+    return;
+  }
 
   if (hearthState.isHeated) {
     const intensity = getHearthIntensity();
@@ -148,6 +172,10 @@ export function updateHearthVisuals() {
     fireDiv.style.transform = 'scale(0.5)';
     fireDiv.classList.remove('fading');
   }
+
+  fireDiv.classList.remove('disabled');
+  lastForgeEnabledState = forgeEnabled;
+  
 }
 
 /**
