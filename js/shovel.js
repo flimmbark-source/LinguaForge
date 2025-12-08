@@ -148,7 +148,9 @@ export class ShovelSystem {
       localY > handleL - PAD &&
       localY < handleL + headH + PAD;
 
-    if (withinHandle || withinHead) {
+    const clickedCanvas = e.target === this.canvas;
+
+    if (withinHandle || withinHead || clickedCanvas) {
       this.input.isDown = true;
       this.shovel.isHeld = true;
       if (e.cancelable) e.preventDefault();
