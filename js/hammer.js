@@ -56,6 +56,7 @@ export class HammerSystem {
 
     // Visual effects
     this.sparks = [];
+    this.impactWords = [];
     this.flyingLetters = [];
 
     // Input state
@@ -298,39 +299,64 @@ onPointerDown(e) {
   }
 
   /**
- * Spawn sparks at impact point
- * @param {number} x
- * @param {number} y
- * @param {number} power
- * @param {Object} [options]
- *   - isRip: if true, use red-tinted “ripped” sparks
- */
-spawnSparks(x, y, power, options = {}) {
-  const isRip = !!options.isRip;
-  const count = 16 + Math.floor(power * 8);
+   * Spawn sparks at impact point
+   * @param {number} x
+   * @param {number} y
+   * @param {number} power
+   * @param {Object} [options]
+   *   - isRip: if true, use red-tinted “ripped” sparks
+   */
+  spawnSparks(x, y, power, options = {}) {
+    const isRip = !!options.isRip;
+    const count = 16 + Math.floor(power * 8);
 
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI - Math.PI / 2;
-    const speed = 3 + Math.random() * 6 * power;
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI - Math.PI / 2;
+      const speed = 3 + Math.random() * 6 * power;
 
-    this.sparks.push({
+      this.sparks.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - power * 2,
+        life: 0.4 + Math.random() * 0.3,
+        age: 0,
+
+        // NEW: color hint
+        isRip,
+        hueBase: isRip ? 17 : 40,          // 0 = red, 35 = warm yellow/orange
+        hueSpread: isRip ? 8 : 20,
+        sat: isRip ? 100 : 95,
+        lightBase: isRip ? 55 : 60,
+        lightSpread: isRip ? 8 : 15
+      });
+    }
+  }
+
+  /**
+   * Spawn an onomatopoeia ghost at the impact point.
+   * The word starts small, grows, and floats upward before fading.
+   */
+  spawnImpactWord(x, y) {
+    // Only spawn the word ghost part of the time to keep the effect special
+    if (Math.random() > 0.55) {
+      return;
+    }
+
+    const options = ['Clank', 'Clink!', 'Clunk', 'Clonk!'];
+    const word = options[Math.floor(Math.random() * options.length)];
+
+    this.impactWords.push({
+      text: word,
       x,
       y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - power * 2,
-      life: 0.4 + Math.random() * 0.3,
       age: 0,
-
-      // NEW: color hint
-      isRip,
-      hueBase: isRip ? 17 : 40,          // 0 = red, 35 = warm yellow/orange
-      hueSpread: isRip ? 8 : 20,
-      sat: isRip ? 100 : 95,
-      lightBase: isRip ? 55 : 60,
-      lightSpread: isRip ? 8 : 15
+      lifetime: 0.9,
+      floatDistance: 46 + Math.random() * 12,
+      startScale: 0.6,
+      endScale: 1.5
     });
   }
-}
 
 
   /**
@@ -674,6 +700,7 @@ updateFreeHammer(dt) {
           const impactX = headX;
           const impactY = anvil.y;
           this.spawnSparks(impactX, impactY, power, { isRip: true });
+          this.spawnImpactWord(impactX, impactY);
 
           if (this.onLetterForged) {
             this.onLetterForged(impactX, impactY, power, hammer.headVx, 1);
@@ -708,6 +735,7 @@ updateFreeHammer(dt) {
         const impactX = headX;
         const impactY = anvil.y;
         this.spawnSparks(impactX, impactY, power);
+        this.spawnImpactWord(impactX, impactY);
 
         // Calculate multiplier based on heat level
         // Heat level 0 = 1x, level 1 = 2x, level 2 = 3x, level 3 = 4x, etc.
@@ -763,6 +791,12 @@ updateFreeHammer(dt) {
       s.x += s.vx;
       s.y += s.vy;
       s.vy += 18 * dt;
+    }
+
+    // Update impact words
+    this.impactWords = this.impactWords.filter(word => word.age < word.lifetime);
+    for (const word of this.impactWords) {
+      word.age += dt;
     }
 
     // Update flying letters with physics
@@ -1036,6 +1070,31 @@ drawHammer(ctx, hammer) {
   ctx.restore();
 }
 
+  drawImpactWords(ctx, words) {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (const word of words) {
+      const progress = Math.min(word.age / word.lifetime, 1);
+      const rise = word.floatDistance * progress;
+      const scale = word.startScale + (word.endScale - word.startScale) * progress;
+      const opacity = 1 - progress;
+
+      ctx.save();
+      ctx.translate(word.x, word.y - rise);
+      ctx.scale(scale, scale);
+      ctx.fillStyle = `rgba(209, 213, 219, ${opacity})`;
+      ctx.shadowColor = `rgba(31, 41, 55, ${opacity * 0.7})`;
+      ctx.shadowBlur = 10;
+      ctx.font = '700 22px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillText(word.text, 0, 0);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
   /**
    * Draw flying letters
    */
@@ -1092,6 +1151,9 @@ drawHammer(ctx, hammer) {
 
     // Draw sparks
     this.drawSparks(this.ctx, this.sparks);
+
+    // Draw impact onomatopoeia
+    this.drawImpactWords(this.ctx, this.impactWords);
   }
 
   /**
