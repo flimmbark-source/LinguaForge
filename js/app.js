@@ -399,13 +399,39 @@ let lastTime = performance.now();
 function gameLoop(timestamp) {
   const dt = (timestamp - lastTime) / 1000;
   lastTime = timestamp;
+  const physicsDt = Math.min(0.04, dt);
+
+  // Clear crafting canvas once per frame
+  const craftingCtx = hammerSystem?.ctx || pestleSystem?.ctx || shovelSystem?.ctx;
+  const canvasWidth = hammerSystem?.width || pestleSystem?.width || shovelSystem?.width;
+  const canvasHeight = hammerSystem?.height || pestleSystem?.height || shovelSystem?.height;
+
+  if (craftingCtx && canvasWidth && canvasHeight) {
+    craftingCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+  }
 
   // Update hearth
   updateHearth(dt);
 
+  // Update active crafting tool visuals
+  if (hammerSystem?.isRunning) {
+    hammerSystem.update(physicsDt);
+    hammerSystem.render();
+  }
+
+  if (pestleSystem?.isRunning) {
+    pestleSystem.update(physicsDt);
+    pestleSystem.render();
+  }
+
+  if (shovelSystem?.isRunning) {
+    shovelSystem.update(physicsDt);
+    shovelSystem.render();
+  }
+
   // Update chip physics
   if (chipSystem) {
-    chipSystem.update(dt);
+    chipSystem.update(physicsDt);
     chipSystem.render();
   }
 
