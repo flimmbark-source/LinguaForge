@@ -91,11 +91,29 @@ function initializeGame() {
  */
 function initializeCraftingSystems() {
   const craftingCanvas = document.getElementById('craftingCanvas');
+  const chipCanvas = document.getElementById('chipCanvas');
 
   if (!craftingCanvas) {
     console.warn('Crafting canvas not found');
     return;
   }
+
+  const chipLayer = chipCanvas || craftingCanvas;
+  const syncChipCanvasSize = () => {
+    const rect = craftingCanvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    chipLayer.width = rect.width * dpr;
+    chipLayer.height = rect.height * dpr;
+    chipLayer.style.width = `${rect.width}px`;
+    chipLayer.style.height = `${rect.height}px`;
+
+    const chipCtx = chipLayer.getContext('2d');
+    chipCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+
+  syncChipCanvasSize();
+  window.addEventListener('resize', syncChipCanvasSize);
 
   // Create hammer system with callbacks
   hammerSystem = new HammerSystem(craftingCanvas);
@@ -204,7 +222,7 @@ function initializeCraftingSystems() {
   };
 
   // Create chip system
-  chipSystem = new ChipSystem(craftingCanvas);
+  chipSystem = new ChipSystem(chipLayer);
   chipSystem.onUpdate = updateUI;
 
   // Render chips after the active tool draws so they remain visible on the shared canvas

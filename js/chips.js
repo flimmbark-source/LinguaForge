@@ -668,6 +668,11 @@ export class ChipSystem {
    * Render all chips
    */
   render() {
+    const dpr = window.devicePixelRatio || 1;
+    const width = this.canvas.width / dpr;
+    const height = this.canvas.height / dpr;
+    this.ctx.clearRect(0, 0, width, height);
+
     for (const chip of this.chips) {
       this.renderChip(chip);
     }
