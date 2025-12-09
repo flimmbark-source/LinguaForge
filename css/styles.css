@@ -1083,16 +1083,26 @@ button.secondary {
   z-index: 150;
 }
 
-#craftingCanvas {
+#craftingCanvas,
+#chipCanvas {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
-  cursor: grab;
   pointer-events: none;
+}
+
+#craftingCanvas {
+  cursor: grab;
 }
 
 #craftingCanvas:active {
   cursor: grabbing;
+}
+
+.chip-layer {
+  z-index: 1;
 }
 
 .crafting-hint {
