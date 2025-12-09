@@ -74,6 +74,7 @@ export class PestleSystem {
     // Bind methods
     this.update = this.update.bind(this);
     this.render = this.render.bind(this);
+    this.loop = this.loop.bind(this);
     this.resize = this.resize.bind(this);
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
@@ -853,6 +854,9 @@ spawnInkDrop(x, y) {
    * Render frame
    */
   render() {
+    // Clear canvas
+    this.ctx.clearRect(0, 0, this.width, this.height);
+
     // Draw mortar
     this.drawMortar(this.ctx, this.mortar);
 
@@ -864,12 +868,29 @@ spawnInkDrop(x, y) {
   }
 
   /**
+   * Main game loop
+   */
+  loop(timestamp) {
+    if (!this.lastTime) this.lastTime = timestamp;
+    const dt = Math.min(0.04, (timestamp - this.lastTime) / 1000);
+    this.lastTime = timestamp;
+
+    this.update(dt);
+    this.render();
+
+    if (this.isRunning) {
+      requestAnimationFrame(this.loop);
+    }
+  }
+
+  /**
    * Start the pestle system
    */
   start() {
     if (!this.isRunning) {
       this.isRunning = true;
       this.lastTime = 0;
+      requestAnimationFrame(this.loop);
     }
   }
 
