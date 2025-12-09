@@ -10,6 +10,7 @@ export class PestleSystem {
 
     // Callbacks set by app
     this.onInkProduced = null;
+    this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
     // World physics constants
     this.gravity = 2600; // px/s^2
@@ -865,6 +866,11 @@ spawnInkDrop(x, y) {
 
     // Draw ink drops
     this.drawInkDrops(this.ctx, this.inkDrops);
+
+    // Draw overlay content like word chips after the tool
+    if (this.overlayRenderer) {
+      this.overlayRenderer();
+    }
   }
 
   /**
@@ -881,6 +887,13 @@ spawnInkDrop(x, y) {
     if (this.isRunning) {
       requestAnimationFrame(this.loop);
     }
+  }
+
+  /**
+   * Set a renderer to draw after the pestle (e.g., word chips)
+   */
+  setOverlayRenderer(renderer) {
+    this.overlayRenderer = renderer;
   }
 
   /**

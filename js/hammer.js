@@ -15,6 +15,7 @@ export class HammerSystem {
     this.onLetterForged = null;
     this.onLetterLanded = null;
     this.onForgeTriggered = null; // Called when red-hot hammer hits mold viewport
+    this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
     // World physics constants
     this.gravity = 2600; // px/s^2
@@ -1309,6 +1310,11 @@ drawHammer(ctx, hammer) {
 
     // Draw clank words (on top of everything)
     this.drawClankWords(this.ctx, this.clankWords);
+
+    // Draw overlay content like word chips after the tool
+    if (this.overlayRenderer) {
+      this.overlayRenderer();
+    }
   }
 
   /**
@@ -1325,6 +1331,13 @@ drawHammer(ctx, hammer) {
     if (this.isRunning) {
       requestAnimationFrame(this.loop);
     }
+  }
+
+  /**
+   * Set a renderer to draw after the hammer (e.g., word chips)
+   */
+  setOverlayRenderer(renderer) {
+    this.overlayRenderer = renderer;
   }
 
   /**
