@@ -1050,6 +1050,11 @@ button.secondary {
   transition: all 0.2s ease;
 }
 
+/* Ensure locked tools stay hidden even when sharing .tool-button styles */
+.tool-button.locked-hidden {
+  display: none;
+}
+
 .tool-button:hover {
   background: #374151;
   border-color: #4b5563;

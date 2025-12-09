@@ -230,7 +230,12 @@ function initializeCraftingSystems() {
 
   // Create pestle system with callbacks
   pestleSystem = new PestleSystem(craftingCanvas);
-  pestleSystem.setOverlayRenderer(renderChips);
+    if (typeof pestleSystem.setOverlayRenderer === 'function') {
+    pestleSystem.setOverlayRenderer(renderChips);
+  } else {
+    // Fallback for older PestleSystem implementations that don't expose a setter yet
+    pestleSystem.overlayRenderer = renderChips;
+  }
 
   // Callback when ink is produced
   pestleSystem.onInkProduced = (letter, canvasX, canvasY) => {
