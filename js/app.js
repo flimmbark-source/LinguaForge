@@ -435,6 +435,8 @@ function gameLoop(timestamp) {
   // Update chip physics
   if (chipSystem) {
     chipSystem.update(dt);
+  // Ensure chips stay visible even when no tool overlay is running
+    chipSystem.render();
   }
 
   // Update scribes
