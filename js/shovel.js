@@ -38,6 +38,7 @@ export class ShovelSystem {
     this.ctx = canvas.getContext('2d');
 
     this.collected = []; // array of letter chars
+    this.hasCenteredOnStart = false;
 
     // world physics constants (mirroring hammer semantics)
     this.gravity = 2600;      // px/s^2 (optional if you want sag)
@@ -188,23 +189,19 @@ resize() {
     if (!this.isRunning) return;
     this.input.isDown = false;
     // on release, drop collected letters into hearth if over hearth, else return to basket
-    const rect = this.canvas.getBoundingClientRect();
-    const clientX = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX) || 0;
-    const clientY = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY) || 0;
-    const releaseX = clientX;
-    const releaseY = clientY;
+    const { bounds: headBounds } = this.computeHeadGeometry();
 
     const hearthRect = getHearthBounds();
     const hearthEnabled = canPlaceInHearth();
 
-    if (
-      hearthEnabled &&
+    const overlapsHearth =
       hearthRect &&
-      releaseX >= hearthRect.left &&
-      releaseX <= hearthRect.right &&
-      releaseY >= hearthRect.top &&
-      releaseY <= hearthRect.bottom
-    ) {
+      headBounds.right >= hearthRect.left &&
+      headBounds.left <= hearthRect.right &&
+      headBounds.bottom >= hearthRect.top &&
+      headBounds.top <= hearthRect.bottom;
+
+    if (hearthEnabled && overlapsHearth) {
       // dump into hearth
       if (this.collected.length > 0) {
         heatHearth(this.collected.length);
@@ -234,6 +231,17 @@ resize() {
 
   start() {
     if (!this.isRunning) {
+      if (!this.hasCenteredOnStart) {
+        this.hasCenteredOnStart = true;
+        const s = this.shovel;
+        const headCenterOffset = s.length + 148 / 2 - 6;
+        s.pivotX = this.width / 2 + Math.sin(s.angle) * headCenterOffset;
+        s.pivotY = this.height / 2 - Math.cos(s.angle) * headCenterOffset;
+        s.headX = s.pivotX - Math.sin(s.angle) * s.length;
+        s.headY = s.pivotY + Math.cos(s.angle) * s.length;
+        this.prevHeadX = s.headX;
+        this.prevHeadY = s.headY;
+      }
       this.isRunning = true;
       this.lastTime = 0;
       // Keep the canvas non-interactive so it doesn't block UI buttons; we listen on document instead
@@ -263,19 +271,13 @@ resize() {
   }
 
   // simple helper to check proximity to letter tiles and pick them up
-  tryPickupLetterIfPassing() {
-    // prevent overfilling the shovel
-    if (this.collected.length >= 5) return;
-
-    const letterPool = document.getElementById('letterPool');
-    if (!letterPool) return;
-
-    const canvasRect = this.canvas.getBoundingClientRect();
+  computeHeadGeometry() {
 
     const headWidth = 48;
     const headHeight = 148;
     const halfHeadW = headWidth / 2;
     const halfHeadH = headHeight / 2;
+    const canvasRect = this.canvas.getBoundingClientRect();
     const cosA = Math.cos(this.shovel.angle);
     const sinA = Math.sin(this.shovel.angle);
 
@@ -284,14 +286,29 @@ resize() {
     // at y = headH / 2 - 6 relative to the top of the head, so add that offset
     // to the handle length to find the world position of the head center.
     const headCenterOffset = this.shovel.length + halfHeadH - 6;
-    const headWorldCenterX = canvasRect.left + this.shovel.pivotX - sinA * headCenterOffset;
-    const headWorldCenterY = canvasRect.top + this.shovel.pivotY + cosA * headCenterOffset;
-    const headBounds = {
-      left: headWorldCenterX - halfHeadW,
-      right: headWorldCenterX + halfHeadW,
-      top: headWorldCenterY - halfHeadH,
-      bottom: headWorldCenterY + halfHeadH,
+    const centerX = canvasRect.left + this.shovel.pivotX - sinA * headCenterOffset;
+    const centerY = canvasRect.top + this.shovel.pivotY + cosA * headCenterOffset;
+
+    return {
+      centerX,
+      centerY,
+      bounds: {
+        left: centerX - halfHeadW,
+        right: centerX + halfHeadW,
+        top: centerY - halfHeadH,
+        bottom: centerY + halfHeadH,
+      },
     };
+      }
+
+  tryPickupLetterIfPassing() {
+    // prevent overfilling the shovel
+    if (this.collected.length >= 5) return;
+
+    const letterPool = document.getElementById('letterPool');
+    if (!letterPool) return;
+
+    const { bounds: headBounds } = this.computeHeadGeometry();
 
     const tiles = Array.from(
       letterPool.querySelectorAll(
@@ -403,7 +420,7 @@ resize() {
     const handleW = 10;
     const handleL = s.length;
     const grad = ctx.createLinearGradient(0, 0, 0, handleL);
-    grad.addColorStop(0, '#2b2b2b');
+    grad.addColorStop(0, '#75533fff');
     grad.addColorStop(1, '#0b0b0b');
     ctx.fillStyle = grad;
     ctx.fillRect(-handleW / 2, 0, handleW, handleL);
@@ -412,12 +429,12 @@ resize() {
     ctx.translate(0, handleL);
     const headW = 48;
     const headH = 148;
-    ctx.fillStyle = '#111214';
+    ctx.fillStyle = '#131416ff';
     ctx.beginPath();
     ctx.ellipse(0, headH / 2 - 6, headW / 2, headH / 2, 0, Math.PI, 2 * Math.PI);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(52, 52, 52, 0.76)';
+    ctx.lineWidth = 2;
     ctx.stroke();
 
     // draw collected letters on head
