@@ -49,6 +49,7 @@ export const gameState = {
   hearthUnlocked: true, // Start unlocked for now - can be set to false if upgrade is needed
   scribesUnlocked: false,
   pestleUnlocked: false,
+  shovelUnlocked: false,
 
   // Upgrade-affected properties
   pestleCapacity: 10,

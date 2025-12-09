@@ -122,11 +122,11 @@ gripStrength: {
     costPerLevel: { renown: 0, ink: 0 },
     prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
     position: { x: 2, y: 1 },
-    connections: ['increasePestleCap'],
+    connections: ['increasePestleCap', 'unlockShovel'],
     nodeShape: NODE_SHAPES.SQUARE,
     nodeColor: NODE_COLORS.YELLOW,
     onPurchase: () => {
-      gameState.pestleUnlocked = true;
+    gameState.pestleUnlocked = true;
     }
   },
 
@@ -352,7 +352,7 @@ gripStrength: {
     baseCost: { renown: 25, ink: 20 },
     costPerLevel: { renown: 15, ink: 15 },
     prerequisites: [{ id: 'increasePestleCap', minLevel: 1 }],
-    position: { x: 3, y: 1.5 },
+    position: { x: 1.9, y: 3 },
     connections: [],
     nodeShape: NODE_SHAPES.SQUARE,
     nodeColor: NODE_COLORS.TEAL,
@@ -380,7 +380,29 @@ gripStrength: {
     onPurchase: () => {
       gameState.multiChurnChance = 0.25;
     }
-  }
+  },
+
+  // ===============================================
+  // TIER 2 - Shovel Branch
+  // ===============================================
+
+  unlockShovel: {
+    id: 'unlockShovel',
+    name: 'Unlock Shovel',
+    description: 'Unlock the Shovel to scoop up multiple letter blocks at once.',
+    icon: '🧰',
+    maxLevel: 1,
+    baseCost: { renown: 15, ink: 0 },
+    costPerLevel: { renown: 0, ink: 0 },
+    prerequisites: [{ id: 'unlockPestle', minLevel: 1 }],
+    position: { x: 3.5, y: 2 },
+    connections: [],
+    nodeShape: NODE_SHAPES.SQUARE,
+    nodeColor: NODE_COLORS.YELLOW,
+    onPurchase: () => {
+      gameState.shovelUnlocked = true;
+    }
+  },
 };
 
 /**

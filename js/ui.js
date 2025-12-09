@@ -39,6 +39,7 @@ export function initializeElements() {
   elements.grammarNaturalDiv = document.getElementById('grammarNatural');
   elements.grammarScoreDiv = document.getElementById('grammarScore');
   elements.pestle = document.getElementById('selectPestle');
+  elements.shovel = document.getElementById('selectShovel');
 }
 
 /**
@@ -61,6 +62,8 @@ export function updateStatsDisplay() {
   updateScribeVisibility();
   // Update pestle visibility based on unlock state
   updatePestleVisibility();
+  // Update shovel visibility based on unlock state
+  updateShovelVisibility();
 
 }
 
@@ -97,7 +100,7 @@ function updateScribeVisibility() {
  */
 function updatePestleVisibility() {
   if (!elements.pestle) return;
-
+  
   if (gameState.pestleUnlocked) {
     elements.pestle.style.display = 'inline-flex';
   } else {
@@ -105,6 +108,18 @@ function updatePestleVisibility() {
   }
 }
 
+/*
+ * Update pestle visibility based on unlock state
+ */
+function updateShovelVisibility() {
+  if (!elements.shovel) return;
+
+  if (gameState.shovelUnlocked) {
+    elements.shovel.style.display = 'inline-flex';
+  } else {
+    elements.shovel.style.display = 'none';
+  }
+}
 
 /**
  * Update scribe purchase button
