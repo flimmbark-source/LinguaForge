@@ -1095,14 +1095,16 @@ button.secondary {
 
 #craftingCanvas {
   cursor: grab;
+  z-index: 0;
 }
 
 #craftingCanvas:active {
   cursor: grabbing;
 }
 
-.chip-layer {
+#chipCanvas {
   z-index: 1;
+  pointer-events: none;
 }
 
 .crafting-hint {
