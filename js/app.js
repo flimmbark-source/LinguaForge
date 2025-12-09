@@ -207,8 +207,12 @@ function initializeCraftingSystems() {
   chipSystem = new ChipSystem(craftingCanvas);
   chipSystem.onUpdate = updateUI;
 
+  // Render chips after the active tool draws so they remain visible on the shared canvas
+  const renderChips = () => chipSystem.render();
+
   // Create pestle system with callbacks
   pestleSystem = new PestleSystem(craftingCanvas);
+  pestleSystem.setOverlayRenderer(renderChips);
 
   // Callback when ink is produced
   pestleSystem.onInkProduced = (letter, canvasX, canvasY) => {
@@ -229,9 +233,11 @@ function initializeCraftingSystems() {
   };
 
   // Start with hammer active
+  hammerSystem.setOverlayRenderer(renderChips);
   hammerSystem.start();
   // Create and start shovel (initialized but not active by default)
   shovelSystem = new ShovelSystem(craftingCanvas);
+  shovelSystem.setOverlayRenderer(renderChips);
   // do not start shovel until selected
   console.log('Crafting systems initialized');
 }
@@ -406,7 +412,6 @@ function gameLoop(timestamp) {
   // Update chip physics
   if (chipSystem) {
     chipSystem.update(dt);
-    chipSystem.render();
   }
 
   // Update scribes

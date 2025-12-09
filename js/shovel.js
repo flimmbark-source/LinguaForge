@@ -39,6 +39,7 @@ export class ShovelSystem {
 
     this.collected = []; // array of letter chars
     this.hasCenteredOnStart = false;
+    this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
     // world physics constants (mirroring hammer semantics)
     this.gravity = 2600;      // px/s^2 (optional if you want sag)
@@ -252,11 +253,16 @@ resize() {
   }
 
   stop() {
-  this.isRunning = false;
-  this.input.isDown = false;
-  this.shovel.isHeld = false;
-  this.collected = []; // clear shovel on tool switch
-  this.canvas.style.pointerEvents = 'none';
+    this.isRunning = false;
+    this.input.isDown = false;
+    this.shovel.isHeld = false;
+    this.collected = []; // clear shovel on tool switch
+    this.canvas.style.pointerEvents = 'none';
+  }
+
+  // Set a renderer to draw after the shovel (e.g., word chips)
+  setOverlayRenderer(renderer) {
+    this.overlayRenderer = renderer;
   }
 
   loop(timestamp) {
@@ -464,5 +470,10 @@ resize() {
   render() {
     this.ctx.clearRect(0, 0, this.width, this.height);
     this.drawShovel(this.ctx);
+
+    // Draw overlay content like word chips after the tool
+    if (this.overlayRenderer) {
+      this.overlayRenderer();
+    }
   }
 }
