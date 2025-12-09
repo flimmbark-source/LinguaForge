@@ -272,8 +272,21 @@ function setupToolSelection() {
   const hammerBtn = document.getElementById('selectHammer');
   const pestleBtn = document.getElementById('selectPestle');
   const shovelBtn = document.getElementById('selectShovel');
+  const craftingCanvas = document.getElementById('craftingCanvas');
   const craftingHint = document.getElementById('craftingHint');
   if (!hammerBtn || !pestleBtn || !shovelBtn) return;
+
+  const setCanvasInteraction = (tool) => {
+    if (!craftingCanvas) return;
+
+    // Enable pointer interaction for whichever tool is active so the canvas responds again
+    // after returning from the shovel.
+    craftingCanvas.style.pointerEvents = 'auto';
+
+    // Keep the grab cursor that cues players to drag tools like the hammer and shovel.
+    const wantsGrabCursor = tool === 'hammer' || tool === 'shovel';
+    craftingCanvas.style.cursor = wantsGrabCursor ? 'grab' : '';
+  };
 
   hammerBtn.addEventListener('click', () => {
     if (activeTool === 'hammer') return;
@@ -286,7 +299,10 @@ function setupToolSelection() {
     // Switch systems
     if (shovelSystem) shovelSystem.stop();
     if (pestleSystem) pestleSystem.stop();
+    if (shovelSystem) shovelSystem.stop();
     if (hammerSystem) hammerSystem.start();
+
+    setCanvasInteraction('hammer');
 
     // Update hint text
     if (craftingHint) {
@@ -304,11 +320,14 @@ function setupToolSelection() {
     shovelBtn.classList.remove('active');
     pestleBtn.classList.add('active');
     hammerBtn.classList.remove('active');
+    shovelBtn.classList.remove('active');
 
     // Switch systems
     if (hammerSystem) hammerSystem.stop();
     if (shovelSystem) shovelSystem.stop();
     if (pestleSystem) pestleSystem.start();
+
+    setCanvasInteraction('pestle');
 
     // Update hint text
     if (craftingHint) {
@@ -331,6 +350,8 @@ function setupToolSelection() {
     if (hammerSystem) hammerSystem.stop();
     if (pestleSystem) pestleSystem.stop();
     if (shovelSystem) shovelSystem.start();
+
+    setCanvasInteraction('shovel');
 
     // Update hint text
     if (craftingHint) {
