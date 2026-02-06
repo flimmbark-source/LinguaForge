@@ -468,25 +468,26 @@ export class PestleSystem {
     const pivotY = pestle.pivotY;
     const dx = pestle.headX - pivotX;
     const dy = pestle.headY - pivotY;
-    const angle = Math.atan2(dy, dx) + Math.PI / 2;
+    // Rotate so +y axis points from pivot toward head (grinding end)
+    const angle = Math.atan2(dy, dx) - Math.PI / 2;
     const length = pestle.constantLength;
 
     ctx.translate(pivotX, pivotY);
     ctx.rotate(angle);
 
-    // Handle (top part)
+    // Handle (near pivot / mouse - player holds this end)
     const handleWidth = pestle.handleThickness;
     const handleLength = length * 0.7;
-    const handleGradient = ctx.createLinearGradient(0, -length, 0, -handleLength);
+    const handleGradient = ctx.createLinearGradient(0, 0, 0, handleLength);
     handleGradient.addColorStop(0, '#fbbf24');
     handleGradient.addColorStop(1, '#92400e');
     ctx.fillStyle = handleGradient;
-    ctx.fillRect(-handleWidth / 2, -length, handleWidth, handleLength);
+    ctx.fillRect(-handleWidth / 2, 0, handleWidth, handleLength);
 
-    // Pestle head (bottom part - the grinding end)
+    // Pestle head (far end - the grinding end, toward physics head)
     const headWidth = pestle.width;
     const headHeight = length * 0.3;
-    ctx.translate(0, -length + handleLength);
+    ctx.translate(0, handleLength);
 
     const headGradient = ctx.createLinearGradient(-headWidth / 2, 0, headWidth / 2, headHeight);
     headGradient.addColorStop(0, '#d1d5db');
