@@ -258,6 +258,9 @@ resize() {
     this.shovel.isHeld = false;
     this.collected = []; // clear shovel on tool switch
     this.canvas.style.pointerEvents = 'none';
+    // Clear the canvas so the shovel doesn't remain visible when put away
+    const ctx = this.canvas.getContext('2d');
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
   // Set a renderer to draw after the shovel (e.g., word chips)

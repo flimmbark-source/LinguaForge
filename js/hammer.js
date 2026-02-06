@@ -210,6 +210,7 @@ export class HammerSystem {
    * Handle pointer down event
    */
 onPointerDown(e) {
+  if (!this.isRunning) return;
   const rect = this.canvas.getBoundingClientRect();
   const client = e.touches ? e.touches[0] : e;
   this.input.mouseX = client.clientX - rect.left;
@@ -1359,6 +1360,8 @@ drawHammer(ctx, hammer) {
    */
   stop() {
     this.isRunning = false;
+    // Clear the canvas so the hammer doesn't remain visible when put away
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
   /**

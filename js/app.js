@@ -28,7 +28,7 @@ let hammerSystem = null;
 let pestleSystem = null;
 let shovelSystem = null;
 let chipSystem = null;
-let activeTool = null; // null until player pulls a tool from the sidebar
+let activeTool = 'hammer'; // 'hammer' or 'pestle'
 
 /**
  * Handle mold slot being filled by a letter drop.
@@ -292,8 +292,9 @@ function initializeCraftingSystems() {
     console.log('Produced', inkAmount, 'ink from letter:', letter);
   };
 
-  // Set overlay renderer but don't start — player pulls hammer from sidebar
+  // Start with hammer active
   hammerSystem.setOverlayRenderer(renderChips);
+  hammerSystem.start();
   // Create and start shovel (initialized but not active by default)
   shovelSystem = new ShovelSystem(craftingCanvas);
   shovelSystem.setOverlayRenderer(renderChips);
