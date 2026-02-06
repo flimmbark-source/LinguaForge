@@ -31,7 +31,6 @@ export class PestleSystem {
       width: 30,
       handleThickness: 12,
       angle: 0,
-      isHeld: false,
       attachedLetters: [],
     };
 
@@ -187,53 +186,35 @@ export class PestleSystem {
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
-
-    if (this.isPointNearPestle(this.input.mouseX, this.input.mouseY)) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.input.isDown = true;
-      this.pestle.isHeld = true;
-    }
+    this.input.isDown = true;
   }
 
   onPointerMove(e) {
+    if (!this.isRunning) return;
     const rect = this.canvas.getBoundingClientRect();
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
-
-    if (this.pestle.isHeld && this.input.isDown) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
   }
 
   onPointerUp(e) {
-    const pestle = this.pestle;
+    if (!this.isRunning) return;
 
-    if (pestle.isHeld) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // If released near the right edge / sidebar, put the tool away
-      const client = e.changedTouches ? e.changedTouches[0] : e;
-      const sidebar = document.getElementById('toolsSidebar');
-      const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
-      const nearRightEdge = client.clientX >= (window.innerWidth - 100);
-      const inSidebar = sidebarRect &&
-        client.clientX >= sidebarRect.left &&
-        client.clientY >= sidebarRect.top &&
-        client.clientY <= sidebarRect.bottom;
-      if ((nearRightEdge || inSidebar) && this.onPutAway) {
-        this.input.isDown = false;
-        pestle.isHeld = false;
-        this.onPutAway();
-        return;
-      }
+    // If released near the right edge / sidebar, put the tool away
+    const client = e.changedTouches ? e.changedTouches[0] : e;
+    const sidebar = document.getElementById('toolsSidebar');
+    const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
+    const nearRightEdge = client.clientX >= (window.innerWidth - 100);
+    const inSidebar = sidebarRect &&
+      client.clientX >= sidebarRect.left &&
+      client.clientY >= sidebarRect.top &&
+      client.clientY <= sidebarRect.bottom;
+    if ((nearRightEdge || inSidebar) && this.onPutAway) {
+      this.onPutAway();
+      return;
     }
 
     this.input.isDown = false;
-    pestle.isHeld = false;
   }
 
   // ─── Physics ──────────────────────────────────────────
@@ -278,94 +259,42 @@ export class PestleSystem {
     const pestle = this.pestle;
     const m = this.mortar;
     const opening = this.getMortarOpening();
-    const safeDt = Math.max(dt, 0.0001);
 
-    if (pestle.isHeld) {
-      // ── Held: head follows the mouse ──
-      let targetX = this.input.mouseX;
-      let targetY = this.input.mouseY;
+    // Pestle always follows the mouse cursor
+    let targetX = this.input.mouseX;
+    let targetY = this.input.mouseY;
 
-      if (this.insideMortar) {
-        // Constrain to mortar interior
-        const result = this.constrainToMortarInterior(targetX, targetY);
-        targetX = result.x;
-        targetY = result.y;
+    if (this.insideMortar) {
+      // Constrain to mortar interior
+      const result = this.constrainToMortarInterior(targetX, targetY);
+      targetX = result.x;
+      targetY = result.y;
 
-        // Check if pulled out through the top
-        if (targetY <= m.y && targetX >= opening.left && targetX <= opening.right) {
-          this.insideMortar = false;
-        }
-      } else {
-        // Not inside - check if entering through the top opening
-        // Only check collision when actually near the mortar's x-range
-        const nearMortarX = targetX >= m.x && targetX <= m.x + m.width;
-        if (targetY >= m.y && nearMortarX) {
-          if (targetX >= opening.left && targetX <= opening.right) {
-            // Entering through the top opening
-            this.insideMortar = true;
-            const result = this.constrainToMortarInterior(targetX, targetY);
-            targetX = result.x;
-            targetY = result.y;
-          } else {
-            // Hitting a mortar wall from outside - slide along the rim
-            targetY = m.y - 1;
-          }
-        }
+      // Check if pulled out through the top
+      if (targetY <= m.y && targetX >= opening.left && targetX <= opening.right) {
+        this.insideMortar = false;
       }
-
-      pestle.prevHeadX = pestle.headX;
-      pestle.prevHeadY = pestle.headY;
-      pestle.headX = targetX;
-      pestle.headY = targetY;
-
     } else {
-      // ── Not held: physics (Verlet integration) ──
-      const x = pestle.headX;
-      const y = pestle.headY;
-      const prevX = pestle.prevHeadX;
-      const prevY = pestle.prevHeadY;
-
-      let vx = (x - prevX) / safeDt;
-      let vy = (y - prevY) / safeDt;
-
-      vx *= this.airFriction;
-      vy *= this.airFriction;
-      vy += this.gravity * safeDt;
-
-      pestle.prevHeadX = x;
-      pestle.prevHeadY = y;
-
-      let newX = x + vx * safeDt;
-      let newY = y + vy * safeDt;
-
-      // Mortar collision for free-falling pestle
-      if (this.insideMortar) {
-        const result = this.constrainToMortarInterior(newX, newY);
-        newX = result.x;
-        newY = result.y;
-
-        // Check if flew out the top
-        if (newY < m.y) {
-          this.insideMortar = false;
-        }
-      } else if (newY >= m.y && newX >= m.x && newX <= m.x + m.width) {
-        // Only check mortar collision when near the mortar's x-range
-        if (newX >= opening.left && newX <= opening.right) {
-          // Falling into the opening
+      // Not inside - check if entering through the top opening
+      const nearMortarX = targetX >= m.x && targetX <= m.x + m.width;
+      if (targetY >= m.y && nearMortarX) {
+        if (targetX >= opening.left && targetX <= opening.right) {
+          // Entering through the top opening
           this.insideMortar = true;
-          const result = this.constrainToMortarInterior(newX, newY);
-          newX = result.x;
-          newY = result.y;
+          const result = this.constrainToMortarInterior(targetX, targetY);
+          targetX = result.x;
+          targetY = result.y;
         } else {
-          // Bounce off mortar exterior rim
-          newY = m.y - 1;
-          pestle.prevHeadY = newY + 2;
+          // Hitting a mortar wall from outside - slide along the rim
+          targetY = m.y - 1;
         }
       }
-
-      pestle.headX = newX;
-      pestle.headY = newY;
     }
+
+    pestle.prevHeadX = pestle.headX;
+    pestle.prevHeadY = pestle.headY;
+    pestle.headX = targetX;
+    pestle.headY = targetY;
 
     // Maintain constant length: pivot above head
     const dx = pestle.pivotX - pestle.headX;
@@ -383,8 +312,8 @@ export class PestleSystem {
       pestle.pivotY = pestle.headY - pestle.constantLength;
     }
 
-    // If held, bias pivot to be above head (handle points up)
-    if (pestle.isHeld) {
+    // Bias pivot to be above head (handle points up)
+    {
       // Smoothly keep pivot above head
       const targetPivotX = pestle.headX;
       const targetPivotY = pestle.headY - pestle.constantLength;
@@ -423,7 +352,7 @@ export class PestleSystem {
     const mBottom = m.y + m.height;
     const nearBottom = pestle.headY >= mBottom - 6;
 
-    if (!pestle.isHeld || !this.insideMortar || !nearBottom) {
+    if (!this.insideMortar || !nearBottom) {
       gt.lastX = pestle.headX;
       gt.distance = 0;
       return;
