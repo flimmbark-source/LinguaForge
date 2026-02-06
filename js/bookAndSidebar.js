@@ -201,6 +201,18 @@ function onToolSlotMouseMove(e) {
   }
 }
 
+function putToolAway(tool, source, onToolPutAway) {
+  if (tool === 'book') {
+    const book = document.getElementById('magicBook');
+    if (book) {
+      book.style.display = 'none';
+    }
+  } else {
+    if (onToolPutAway) onToolPutAway(tool);
+    if (source) source.classList.remove('active');
+  }
+}
+
 function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
   if (!toolDragging) return;
   toolDragging = false;
@@ -237,22 +249,20 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
   toolDragSource.classList.remove('dragging-out');
 
   if (!wasDragged) {
-    // Click (no real drag) — activate the tool immediately
-    activateTool(tool, e, onToolSelected);
+    // Click (no real drag) — toggle: if already active, put it away; otherwise activate
+    const isActive = toolDragSource.classList.contains('active') ||
+      (tool === 'book' && document.getElementById('magicBook')?.style.display !== 'none');
+    if (isActive) {
+      putToolAway(tool, toolDragSource, onToolPutAway);
+    } else {
+      activateTool(tool, e, onToolSelected);
+    }
   } else if (!droppedInSidebar) {
     // Dragged out of sidebar — activate at drop location
     activateTool(tool, e, onToolSelected);
   } else {
     // Dragged back into sidebar — put it away
-    if (tool === 'book') {
-      const book = document.getElementById('magicBook');
-      if (book) {
-        book.style.display = 'none';
-      }
-    } else {
-      if (onToolPutAway) onToolPutAway(tool);
-      toolDragSource.classList.remove('active');
-    }
+    putToolAway(tool, toolDragSource, onToolPutAway);
   }
 
   toolDragSource = null;
