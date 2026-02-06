@@ -109,7 +109,7 @@ export class PestleSystem {
     this.pestle.headY = pivotY + this.pestle.constantLength;
     this.pestle.prevHeadX = this.pestle.headX;
     this.pestle.prevHeadY = this.pestle.headY;
-    this.pestle.angle = Math.PI / 2;
+    this.pestle.angle = -Math.PI / 2;
 
     this.insideMortar = false;
   }
@@ -332,7 +332,7 @@ export class PestleSystem {
     pestle.angle = Math.atan2(
       pestle.headY - pestle.pivotY,
       pestle.headX - pestle.pivotX
-    ) + Math.PI / 2;
+    ) - Math.PI / 2;
   }
 
   /**
