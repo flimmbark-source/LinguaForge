@@ -894,6 +894,7 @@ spawnInkDrop(x, y) {
    * Main game loop
    */
   loop(timestamp) {
+    if (!this.isRunning) return; // Don't render after stop()
     if (!this.lastTime) this.lastTime = timestamp;
     const dt = Math.min(0.04, (timestamp - this.lastTime) / 1000);
     this.lastTime = timestamp;
