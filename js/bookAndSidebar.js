@@ -37,8 +37,12 @@ export function initMagicBook() {
     }
   });
 
-  // Dragging - only on areas that aren't interactive content
-  book.addEventListener('mousedown', onBookMouseDown);
+  // Stop all mousedown events on the book from reaching document-level listeners
+  // (prevents canvas tools like hammer/pestle from activating through the book)
+  book.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    onBookMouseDown(e);
+  });
   document.addEventListener('mousemove', onBookMouseMove);
   document.addEventListener('mouseup', onBookMouseUp);
 }
@@ -114,6 +118,11 @@ export function initToolsSidebar(onToolSelected) {
   const sidebar = document.getElementById('toolsSidebar');
   if (!sidebar) return;
 
+  // Stop all mousedown on sidebar from reaching canvas tool listeners
+  sidebar.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+  });
+
   const slots = sidebar.querySelectorAll('.tool-slot');
   slots.forEach(slot => {
     slot.addEventListener('mousedown', (e) => onToolSlotMouseDown(e, slot, onToolSelected));
@@ -177,18 +186,16 @@ function onToolSlotMouseUp(e, onToolSelected) {
   if (!droppedInSidebar) {
     // Tool was pulled out - activate it
     if (tool === 'book') {
-      // Show the magic book and open it
+      // Show the magic book and open it at the drop location
       const book = document.getElementById('magicBook');
       if (book) {
         book.style.display = '';
         book.classList.remove('closed');
         book.classList.add('open');
-        // Position at center if not yet dragged
-        if (!book.dataset.wasDragged) {
-          book.style.left = '50%';
-          book.style.top = '80px';
-          book.style.transform = 'translateX(-50%)';
-        }
+        // Position at drop point (offset so the book centers roughly on cursor)
+        book.style.transform = 'none';
+        book.style.left = (e.clientX - 260) + 'px';
+        book.style.top = (e.clientY - 160) + 'px';
         const btn = document.getElementById('bookToggleBtn');
         if (btn) {
           btn.textContent = '📖';
