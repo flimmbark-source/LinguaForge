@@ -299,6 +299,33 @@ function initializeCraftingSystems() {
   shovelSystem = new ShovelSystem(craftingCanvas);
   shovelSystem.setOverlayRenderer(renderChips);
   // do not start shovel until selected
+
+  // Wire up put-away callbacks: when a tool is released near the sidebar, stow it
+  function makePutAwayHandler(toolName) {
+    return () => {
+      console.log('Tool put away via canvas drag:', toolName);
+      if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
+      if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
+      if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
+      if (activeTool === toolName) activeTool = null;
+      // Update sidebar slot
+      const slotId = toolName === 'hammer' ? 'toolSlotHammer' :
+                     toolName === 'pestle' ? 'toolSlotPestle' :
+                     toolName === 'shovel' ? 'toolSlotShovel' : '';
+      const slot = document.getElementById(slotId);
+      if (slot) slot.classList.remove('active');
+      // Update hidden button
+      const btnId = toolName === 'hammer' ? 'selectHammer' :
+                    toolName === 'pestle' ? 'selectPestle' :
+                    toolName === 'shovel' ? 'selectShovel' : '';
+      const btn = document.getElementById(btnId);
+      if (btn) btn.classList.remove('active');
+    };
+  }
+  hammerSystem.onPutAway = makePutAwayHandler('hammer');
+  pestleSystem.onPutAway = makePutAwayHandler('pestle');
+  shovelSystem.onPutAway = makePutAwayHandler('shovel');
+
   console.log('Crafting systems initialized');
 }
 

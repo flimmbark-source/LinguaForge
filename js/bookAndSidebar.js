@@ -202,6 +202,7 @@ function onToolSlotMouseMove(e) {
 }
 
 function putToolAway(tool, source, onToolPutAway) {
+  console.log('putToolAway called for:', tool);
   if (tool === 'book') {
     const book = document.getElementById('magicBook');
     if (book) {
@@ -252,6 +253,7 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
     // Click (no real drag) — toggle: if already active, put it away; otherwise activate
     const isActive = toolDragSource.classList.contains('active') ||
       (tool === 'book' && document.getElementById('magicBook')?.style.display !== 'none');
+    console.log('Sidebar click on', tool, '| isActive:', isActive, '| hasActiveClass:', toolDragSource.classList.contains('active'));
     if (isActive) {
       putToolAway(tool, toolDragSource, onToolPutAway);
     } else {
@@ -259,9 +261,11 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
     }
   } else if (!droppedInSidebar) {
     // Dragged out of sidebar — activate at drop location
+    console.log('Sidebar drag-out for', tool);
     activateTool(tool, e, onToolSelected);
   } else {
     // Dragged back into sidebar — put it away
+    console.log('Sidebar drag-back for', tool);
     putToolAway(tool, toolDragSource, onToolPutAway);
   }
 

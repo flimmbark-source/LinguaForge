@@ -318,6 +318,22 @@ onPointerMove(e) {
       e.preventDefault();
       e.stopPropagation();
 
+      // If released near the right edge / sidebar, put the tool away
+      const client = e.changedTouches ? e.changedTouches[0] : e;
+      const sidebar = document.getElementById('toolsSidebar');
+      const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
+      const nearRightEdge = client.clientX >= (window.innerWidth - 100);
+      const inSidebar = sidebarRect &&
+        client.clientX >= sidebarRect.left &&
+        client.clientY >= sidebarRect.top &&
+        client.clientY <= sidebarRect.bottom;
+      if ((nearRightEdge || inSidebar) && this.onPutAway) {
+        this.input.isDown = false;
+        pestle.isHeld = false;
+        this.onPutAway();
+        return;
+      }
+
       const clickDuration = Date.now() - pestle.clickStartTime;
 
       // If inserted and it was a quick click (< 200ms), separate pestle
