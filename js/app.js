@@ -79,7 +79,7 @@ function initializeGame() {
   initMagicBook();
   initToolsSidebar(
     // onToolSelected: pull a tool out to use it
-    (toolName) => {
+    (toolName, dropX, dropY) => {
       const btnMap = {
         hammer: document.getElementById('selectHammer'),
         pestle: document.getElementById('selectPestle'),
@@ -87,6 +87,37 @@ function initializeGame() {
       };
       const btn = btnMap[toolName];
       if (btn) btn.click();
+
+      // Position the tool at the drop location (convert screen coords to canvas coords)
+      const craftingCanvas = document.getElementById('craftingCanvas');
+      if (craftingCanvas && dropX != null && dropY != null) {
+        const rect = craftingCanvas.getBoundingClientRect();
+        const canvasX = dropX - rect.left;
+        const canvasY = dropY - rect.top;
+
+        if (toolName === 'hammer' && hammerSystem) {
+          hammerSystem.hammer.pivotX = canvasX;
+          hammerSystem.hammer.pivotY = canvasY;
+          hammerSystem.hammer.headX = canvasX;
+          hammerSystem.hammer.headY = canvasY + hammerSystem.hammer.length;
+          hammerSystem.hammer.prevHeadX = hammerSystem.hammer.headX;
+          hammerSystem.hammer.prevHeadY = hammerSystem.hammer.headY;
+        }
+        if (toolName === 'pestle' && pestleSystem) {
+          pestleSystem.pestle.pivotX = canvasX;
+          pestleSystem.pestle.pivotY = canvasY;
+          pestleSystem.pestle.headX = canvasX;
+          pestleSystem.pestle.headY = canvasY + pestleSystem.pestle.constantLength;
+          pestleSystem.pestle.prevHeadX = pestleSystem.pestle.headX;
+          pestleSystem.pestle.prevHeadY = pestleSystem.pestle.headY;
+        }
+        if (toolName === 'shovel' && shovelSystem) {
+          shovelSystem.shovel.pivotX = canvasX;
+          shovelSystem.shovel.pivotY = canvasY;
+          shovelSystem.shovel.headX = canvasX;
+          shovelSystem.shovel.headY = canvasY + (shovelSystem.shovel.length || 120);
+        }
+      }
     },
     // onToolPutAway: drop a tool back in the sidebar to stow it
     (toolName) => {

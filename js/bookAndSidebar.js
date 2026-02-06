@@ -292,7 +292,7 @@ function activateTool(tool, e, onToolSelected) {
       }
     }
   } else {
-    if (onToolSelected) onToolSelected(tool);
+    if (onToolSelected) onToolSelected(tool, e.clientX, e.clientY);
 
     // Update active states on sidebar slots
     const allSlots = document.querySelectorAll('.tool-slot[data-tool]');
