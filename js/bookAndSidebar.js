@@ -72,8 +72,9 @@ function onBookMouseDown(e) {
   bookOffsetX = e.clientX - rect.left;
   bookOffsetY = e.clientY - rect.top;
 
-  // Remove the centering transform on first drag
+  // Remove the centering transform on first drag and mark as dragged
   book.style.transform = 'none';
+  book.dataset.wasDragged = 'true';
 }
 
 function onBookMouseMove(e) {
@@ -126,18 +127,6 @@ function onToolSlotMouseDown(e, slot, onToolSelected) {
   if (slot.classList.contains('locked-hidden')) return;
   e.preventDefault();
 
-  const tool = slot.dataset.tool;
-
-  // If it's the book tool, toggle the book visibility
-  if (tool === 'book') {
-    const book = document.getElementById('magicBook');
-    if (book) {
-      if (book.style.display === 'none') {
-        book.style.display = '';
-      }
-    }
-  }
-
   toolDragging = true;
   toolDragSource = slot;
   slot.classList.add('dragging-out');
@@ -188,18 +177,22 @@ function onToolSlotMouseUp(e, onToolSelected) {
   if (!droppedInSidebar) {
     // Tool was pulled out - activate it
     if (tool === 'book') {
-      // Show/toggle the magic book
+      // Show the magic book and open it
       const book = document.getElementById('magicBook');
       if (book) {
         book.style.display = '';
-        if (book.classList.contains('closed')) {
-          book.classList.remove('closed');
-          book.classList.add('open');
-          const btn = document.getElementById('bookToggleBtn');
-          if (btn) {
-            btn.textContent = '📖';
-            btn.title = 'Close Book';
-          }
+        book.classList.remove('closed');
+        book.classList.add('open');
+        // Position at center if not yet dragged
+        if (!book.dataset.wasDragged) {
+          book.style.left = '50%';
+          book.style.top = '80px';
+          book.style.transform = 'translateX(-50%)';
+        }
+        const btn = document.getElementById('bookToggleBtn');
+        if (btn) {
+          btn.textContent = '📖';
+          btn.title = 'Close Book';
         }
       }
     } else {
@@ -216,8 +209,15 @@ function onToolSlotMouseUp(e, onToolSelected) {
         }
       });
     }
+  } else {
+    // Tool was dropped back in sidebar - put it away
+    if (tool === 'book') {
+      const book = document.getElementById('magicBook');
+      if (book) {
+        book.style.display = 'none';
+      }
+    }
   }
-  // If dropped back in sidebar, tool is "put away" (no action)
 
   toolDragSource = null;
 }
