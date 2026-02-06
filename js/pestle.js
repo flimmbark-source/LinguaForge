@@ -301,24 +301,35 @@ export class PestleSystem {
     }
 
     // ── Mortar collision on the head ──
-    // When the grinding end hits the mortar, the head is constrained
-    // to the mortar surface. Then the pivot is adjusted (instead of
-    // the head) to maintain constant length — this blocks the player's
-    // mouse movement in the collision direction while allowing all
-    // other directions. Entry through the top opening still works.
+    // When the grinding end hits the mortar, the head is pinned at the
+    // collision surface and the pivot is adjusted instead — this blocks
+    // mouse movement into the wall while allowing all other directions.
+    // The head can only exit the mortar through the top opening.
     let collided = false;
 
     if (this.insideMortar) {
-      const result = this.constrainToMortarInterior(newX, newY);
-      if (result.x !== newX || result.y !== newY) {
-        collided = true;
-        newX = result.x;
-        newY = result.y;
-      }
-
-      // Check if pulled out through the top
-      if (newY <= m.y && newX >= opening.left && newX <= opening.right) {
-        this.insideMortar = false;
+      if (newY < m.y) {
+        // Head is being pulled above the mortar top
+        if (newX >= opening.left && newX <= opening.right) {
+          // Exiting through the top opening — allow it
+          this.insideMortar = false;
+        } else {
+          // Being pulled through the wall by length constraint — block it
+          collided = true;
+          newY = m.y + 1;
+          const bounds = this.getMortarBoundsAtY(newY);
+          if (bounds) {
+            newX = Math.max(bounds.left, Math.min(bounds.right, newX));
+          }
+        }
+      } else {
+        // Inside mortar, constrain to walls and bottom
+        const result = this.constrainToMortarInterior(newX, newY);
+        if (result.x !== newX || result.y !== newY) {
+          collided = true;
+          newX = result.x;
+          newY = result.y;
+        }
       }
     } else {
       const nearMortarX = newX >= m.x && newX <= m.x + m.width;
