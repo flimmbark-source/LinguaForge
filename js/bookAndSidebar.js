@@ -27,12 +27,12 @@ export function initMagicBook() {
     if (isOpen) {
       book.classList.remove('open');
       book.classList.add('closed');
-      toggleBtn.textContent = '📕';
+      toggleBtn.textContent = '📖';
       toggleBtn.title = 'Open Book';
     } else {
       book.classList.remove('closed');
       book.classList.add('open');
-      toggleBtn.textContent = '📖';
+      toggleBtn.textContent = '📕';
       toggleBtn.title = 'Close Book';
     }
   });
