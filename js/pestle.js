@@ -297,7 +297,9 @@ export class PestleSystem {
         }
       } else {
         // Not inside - check if entering through the top opening
-        if (targetY >= m.y) {
+        // Only check collision when actually near the mortar's x-range
+        const nearMortarX = targetX >= m.x && targetX <= m.x + m.width;
+        if (targetY >= m.y && nearMortarX) {
           if (targetX >= opening.left && targetX <= opening.right) {
             // Entering through the top opening
             this.insideMortar = true;
@@ -305,19 +307,8 @@ export class PestleSystem {
             targetX = result.x;
             targetY = result.y;
           } else {
-            // Trying to enter through a wall - block by clamping to top of mortar
-            // Find nearest valid position: either above mortar or at the opening edge
-            const nearestOpeningX = Math.max(opening.left, Math.min(opening.right, targetX));
-            const distToOpening = Math.hypot(targetX - nearestOpeningX, targetY - m.y);
-            const distToAbove = targetY - m.y;
-
-            if (distToAbove < 20) {
-              // Close to top - slide along the rim
-              targetY = m.y - 1;
-            } else {
-              // Push out above mortar
-              targetY = m.y - 1;
-            }
+            // Hitting a mortar wall from outside - slide along the rim
+            targetY = m.y - 1;
           }
         }
       }
@@ -357,9 +348,10 @@ export class PestleSystem {
         if (newY < m.y) {
           this.insideMortar = false;
         }
-      } else if (newY >= m.y) {
-        // Check if falling into the opening
+      } else if (newY >= m.y && newX >= m.x && newX <= m.x + m.width) {
+        // Only check mortar collision when near the mortar's x-range
         if (newX >= opening.left && newX <= opening.right) {
+          // Falling into the opening
           this.insideMortar = true;
           const result = this.constrainToMortarInterior(newX, newY);
           newX = result.x;
@@ -367,7 +359,7 @@ export class PestleSystem {
         } else {
           // Bounce off mortar exterior rim
           newY = m.y - 1;
-          pestle.prevHeadY = newY + 2; // Small upward bounce
+          pestle.prevHeadY = newY + 2;
         }
       }
 
