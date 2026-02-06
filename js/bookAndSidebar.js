@@ -72,6 +72,10 @@ function onBookMouseDown(e) {
   bookDragging = true;
   book.classList.add('dragging');
 
+  // Pin the sidebar open so user can drag the book back into it
+  const sidebar = document.getElementById('toolsSidebar');
+  if (sidebar) sidebar.classList.add('pinned');
+
   const rect = book.getBoundingClientRect();
   bookOffsetX = e.clientX - rect.left;
   bookOffsetY = e.clientY - rect.top;
@@ -93,12 +97,30 @@ function onBookMouseMove(e) {
   book.style.top = newTop + 'px';
 }
 
-function onBookMouseUp() {
+function onBookMouseUp(e) {
   if (!bookDragging) return;
   bookDragging = false;
   const book = document.getElementById('magicBook');
-  if (book) {
-    book.classList.remove('dragging');
+  if (!book) return;
+
+  book.classList.remove('dragging');
+
+  // Check drop zone BEFORE unpinning (so bounding rect is still fully visible)
+  const sidebar = document.getElementById('toolsSidebar');
+  const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
+  const nearRightEdge = e.clientX >= (window.innerWidth - 100);
+  const inSidebarRect = sidebarRect &&
+    e.clientX >= sidebarRect.left &&
+    e.clientX <= sidebarRect.right &&
+    e.clientY >= sidebarRect.top &&
+    e.clientY <= sidebarRect.bottom;
+
+  // Unpin the sidebar
+  if (sidebar) sidebar.classList.remove('pinned');
+
+  // If the book was dropped near the right edge / sidebar, put it away
+  if (nearRightEdge || inSidebarRect) {
+    book.style.display = 'none';
   }
 }
 
@@ -140,6 +162,10 @@ function onToolSlotMouseDown(e, slot, onToolSelected) {
   toolDragSource = slot;
   slot.classList.add('dragging-out');
 
+  // Pin the sidebar open while dragging so the user can drop back into it
+  const sidebar = document.getElementById('toolsSidebar');
+  if (sidebar) sidebar.classList.add('pinned');
+
   // Create ghost element
   toolDragGhost = document.createElement('div');
   toolDragGhost.className = 'tool-drag-ghost';
@@ -162,6 +188,20 @@ function onToolSlotMouseUp(e, onToolSelected) {
   if (!toolDragging) return;
   toolDragging = false;
 
+  // Check drop zone BEFORE unpinning (so bounding rect is still fully visible)
+  const sidebar = document.getElementById('toolsSidebar');
+  const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
+  const nearRightEdge = e.clientX >= (window.innerWidth - 100);
+  const inSidebarRect = sidebarRect &&
+    e.clientX >= sidebarRect.left &&
+    e.clientX <= sidebarRect.right &&
+    e.clientY >= sidebarRect.top &&
+    e.clientY <= sidebarRect.bottom;
+  const droppedInSidebar = nearRightEdge || inSidebarRect;
+
+  // Unpin the sidebar
+  if (sidebar) sidebar.classList.remove('pinned');
+
   // Remove ghost
   if (toolDragGhost) {
     toolDragGhost.remove();
@@ -171,19 +211,6 @@ function onToolSlotMouseUp(e, onToolSelected) {
   if (!toolDragSource) return;
 
   const tool = toolDragSource.dataset.tool;
-  const sidebar = document.getElementById('toolsSidebar');
-
-  // Use the full sidebar area (including when it slides back in during drag).
-  // The sidebar content lives on the right edge, so check if dropped within
-  // the sidebar's bounding rect OR within 100px of the right screen edge.
-  const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
-  const nearRightEdge = e.clientX >= (window.innerWidth - 100);
-  const inSidebarRect = sidebarRect &&
-    e.clientX >= sidebarRect.left &&
-    e.clientX <= sidebarRect.right &&
-    e.clientY >= sidebarRect.top &&
-    e.clientY <= sidebarRect.bottom;
-  const droppedInSidebar = nearRightEdge || inSidebarRect;
 
   toolDragSource.classList.remove('dragging-out');
 
