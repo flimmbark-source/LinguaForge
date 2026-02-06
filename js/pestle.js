@@ -259,10 +259,32 @@ export class PestleSystem {
     const pestle = this.pestle;
     const m = this.mortar;
     const opening = this.getMortarOpening();
+    const safeDt = Math.max(dt, 0.0001);
 
-    // Pestle always follows the mouse cursor
-    let targetX = this.input.mouseX;
-    let targetY = this.input.mouseY;
+    // Mouse acts as an anchor point; gravity pulls the head downward
+    const anchorX = this.input.mouseX;
+    const anchorY = this.input.mouseY;
+
+    // Spring-like pull toward anchor + gravity on head
+    const springK = 12;  // how tightly the head follows the mouse
+    const damping = 0.85;
+
+    let vx = (pestle.headX - pestle.prevHeadX) / safeDt;
+    let vy = (pestle.headY - pestle.prevHeadY) / safeDt;
+
+    // Spring force toward mouse position
+    vx += (anchorX - pestle.headX) * springK * safeDt;
+    vy += (anchorY - pestle.headY) * springK * safeDt;
+
+    // Gravity pulls head down
+    vy += this.gravity * safeDt;
+
+    // Damping
+    vx *= damping;
+    vy *= damping;
+
+    let targetX = pestle.headX + vx * safeDt;
+    let targetY = pestle.headY + vy * safeDt;
 
     if (this.insideMortar) {
       // Constrain to mortar interior
