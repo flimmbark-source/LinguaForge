@@ -77,16 +77,39 @@ function initializeGame() {
 
   // Initialize magic book and tools sidebar
   initMagicBook();
-  initToolsSidebar((toolName) => {
-    // Delegate to existing tool button clicks
-    const btnMap = {
-      hammer: document.getElementById('selectHammer'),
-      pestle: document.getElementById('selectPestle'),
-      shovel: document.getElementById('selectShovel')
-    };
-    const btn = btnMap[toolName];
-    if (btn) btn.click();
-  });
+  initToolsSidebar(
+    // onToolSelected: pull a tool out to use it
+    (toolName) => {
+      const btnMap = {
+        hammer: document.getElementById('selectHammer'),
+        pestle: document.getElementById('selectPestle'),
+        shovel: document.getElementById('selectShovel')
+      };
+      const btn = btnMap[toolName];
+      if (btn) btn.click();
+    },
+    // onToolPutAway: drop a tool back in the sidebar to stow it
+    (toolName) => {
+      if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
+      if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
+      if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
+
+      // Clear the active tool if we just put away the one that was active
+      if (activeTool === toolName) {
+        activeTool = null;
+      }
+
+      // Also clear active state on hidden tool buttons
+      const btn = document.getElementById(
+        toolName === 'hammer' ? 'selectHammer' :
+        toolName === 'pestle' ? 'selectPestle' :
+        toolName === 'shovel' ? 'selectShovel' : ''
+      );
+      if (btn) btn.classList.remove('active');
+
+      console.log('Put away tool:', toolName);
+    }
+  );
 
   // Spawn starting letters
   for (let i = 0; i < STARTING_LETTERS; i++) {

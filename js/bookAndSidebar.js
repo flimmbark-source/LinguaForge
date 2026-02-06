@@ -134,9 +134,10 @@ let toolDragSource = null;
 
 /**
  * Initialize the tools sidebar: tool slots with drag behavior
- * @param {Function} onToolSelected - callback(toolName) when a tool is activated
+ * @param {Function} onToolSelected - callback(toolName) when a tool is pulled out
+ * @param {Function} onToolPutAway - callback(toolName) when a tool is dropped back
  */
-export function initToolsSidebar(onToolSelected) {
+export function initToolsSidebar(onToolSelected, onToolPutAway) {
   const sidebar = document.getElementById('toolsSidebar');
   if (!sidebar) return;
 
@@ -151,7 +152,7 @@ export function initToolsSidebar(onToolSelected) {
   });
 
   document.addEventListener('mousemove', onToolSlotMouseMove);
-  document.addEventListener('mouseup', (e) => onToolSlotMouseUp(e, onToolSelected));
+  document.addEventListener('mouseup', (e) => onToolSlotMouseUp(e, onToolSelected, onToolPutAway));
 }
 
 function onToolSlotMouseDown(e, slot, onToolSelected) {
@@ -184,7 +185,7 @@ function onToolSlotMouseMove(e) {
   toolDragGhost.style.top = e.clientY + 'px';
 }
 
-function onToolSlotMouseUp(e, onToolSelected) {
+function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
   if (!toolDragging) return;
   toolDragging = false;
 
@@ -254,6 +255,12 @@ function onToolSlotMouseUp(e, onToolSelected) {
       if (book) {
         book.style.display = 'none';
       }
+    } else {
+      // Put away a crafting tool (stop its system)
+      if (onToolPutAway) onToolPutAway(tool);
+
+      // Remove active state from the slot
+      toolDragSource.classList.remove('active');
     }
   }
 
