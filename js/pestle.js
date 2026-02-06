@@ -261,97 +261,72 @@ export class PestleSystem {
     const opening = this.getMortarOpening();
     const safeDt = Math.max(dt, 0.0001);
 
-    // Mouse acts as an anchor point; gravity pulls the head downward
-    const anchorX = this.input.mouseX;
-    const anchorY = this.input.mouseY;
+    // ── Pivot (handle end) snaps directly to mouse ──
+    pestle.pivotX = this.input.mouseX;
+    pestle.pivotY = this.input.mouseY;
 
-    // Spring-like pull toward anchor + gravity on head
-    const springK = 12;  // how tightly the head follows the mouse
-    const damping = 0.85;
+    // ── Head (grinding end) swings below pivot with gravity (Verlet) ──
+    const g = this.gravity;
+    const friction = this.airFriction;
 
-    let vx = (pestle.headX - pestle.prevHeadX) / safeDt;
-    let vy = (pestle.headY - pestle.prevHeadY) / safeDt;
+    const x = pestle.headX;
+    const y = pestle.headY;
+    const prevX = pestle.prevHeadX;
+    const prevY = pestle.prevHeadY;
 
-    // Spring force toward mouse position
-    vx += (anchorX - pestle.headX) * springK * safeDt;
-    vy += (anchorY - pestle.headY) * springK * safeDt;
+    let vx = (x - prevX) / safeDt;
+    let vy = (y - prevY) / safeDt;
 
-    // Gravity pulls head down
-    vy += this.gravity * safeDt;
+    vx *= friction;
+    vy *= friction;
+    vy += g * safeDt; // gravity pulls head down
 
-    // Damping
-    vx *= damping;
-    vy *= damping;
+    pestle.prevHeadX = x;
+    pestle.prevHeadY = y;
 
-    let targetX = pestle.headX + vx * safeDt;
-    let targetY = pestle.headY + vy * safeDt;
+    let newX = x + vx * safeDt;
+    let newY = y + vy * safeDt;
 
+    // ── Enforce constant length from pivot ──
+    const dx = newX - pestle.pivotX;
+    const dy = newY - pestle.pivotY;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 0) {
+      const scale = pestle.constantLength / dist;
+      newX = pestle.pivotX + dx * scale;
+      newY = pestle.pivotY + dy * scale;
+    } else {
+      newX = pestle.pivotX;
+      newY = pestle.pivotY + pestle.constantLength;
+    }
+
+    // ── Mortar collision on the head ──
     if (this.insideMortar) {
-      // Constrain to mortar interior
-      const result = this.constrainToMortarInterior(targetX, targetY);
-      targetX = result.x;
-      targetY = result.y;
+      const result = this.constrainToMortarInterior(newX, newY);
+      newX = result.x;
+      newY = result.y;
 
       // Check if pulled out through the top
-      if (targetY <= m.y && targetX >= opening.left && targetX <= opening.right) {
+      if (newY <= m.y && newX >= opening.left && newX <= opening.right) {
         this.insideMortar = false;
       }
     } else {
-      // Not inside - check if entering through the top opening
-      const nearMortarX = targetX >= m.x && targetX <= m.x + m.width;
-      if (targetY >= m.y && nearMortarX) {
-        if (targetX >= opening.left && targetX <= opening.right) {
-          // Entering through the top opening
+      const nearMortarX = newX >= m.x && newX <= m.x + m.width;
+      if (newY >= m.y && nearMortarX) {
+        if (newX >= opening.left && newX <= opening.right) {
           this.insideMortar = true;
-          const result = this.constrainToMortarInterior(targetX, targetY);
-          targetX = result.x;
-          targetY = result.y;
+          const result = this.constrainToMortarInterior(newX, newY);
+          newX = result.x;
+          newY = result.y;
         } else {
-          // Hitting a mortar wall from outside - slide along the rim
-          targetY = m.y - 1;
+          // Hitting mortar wall from outside - push head back up
+          newY = m.y - 1;
         }
       }
     }
 
-    pestle.prevHeadX = pestle.headX;
-    pestle.prevHeadY = pestle.headY;
-    pestle.headX = targetX;
-    pestle.headY = targetY;
-
-    // Maintain constant length: pivot above head
-    const dx = pestle.pivotX - pestle.headX;
-    const dy = pestle.pivotY - pestle.headY;
-    const dist = Math.hypot(dx, dy);
-    if (dist > 0) {
-      // Pivot hangs above the head - compute where it should be
-      // Direction from head to pivot, normalized, scaled to constant length
-      const scale = pestle.constantLength / dist;
-      pestle.pivotX = pestle.headX + dx * scale;
-      pestle.pivotY = pestle.headY + dy * scale;
-    } else {
-      // Fallback: pivot directly above
-      pestle.pivotX = pestle.headX;
-      pestle.pivotY = pestle.headY - pestle.constantLength;
-    }
-
-    // Bias pivot to be above head (handle points up)
-    {
-      // Smoothly keep pivot above head
-      const targetPivotX = pestle.headX;
-      const targetPivotY = pestle.headY - pestle.constantLength;
-      pestle.pivotX += (targetPivotX - pestle.pivotX) * 0.15;
-      pestle.pivotY += (targetPivotY - pestle.pivotY) * 0.15;
-
-      // Re-enforce constant length
-      const dx2 = pestle.pivotX - pestle.headX;
-      const dy2 = pestle.pivotY - pestle.headY;
-      const dist2 = Math.hypot(dx2, dy2);
-      if (dist2 > 0) {
-        const s = pestle.constantLength / dist2;
-        pestle.pivotX = pestle.headX + dx2 * s;
-        pestle.pivotY = pestle.headY + dy2 * s;
-      }
-    }
+    pestle.headX = newX;
+    pestle.headY = newY;
 
     // Update angle
     pestle.angle = Math.atan2(
