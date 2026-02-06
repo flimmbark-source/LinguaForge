@@ -279,7 +279,7 @@ export class PestleSystem {
 
     vx *= friction;
     vy *= friction;
-    vy += g * safeDt; // gravity pulls head down
+    vy += g * safeDt;
 
     pestle.prevHeadX = x;
     pestle.prevHeadY = y;
@@ -287,10 +287,10 @@ export class PestleSystem {
     let newX = x + vx * safeDt;
     let newY = y + vy * safeDt;
 
-    // ── Enforce constant length from pivot ──
-    const dx = newX - pestle.pivotX;
-    const dy = newY - pestle.pivotY;
-    const dist = Math.hypot(dx, dy);
+    // ── Enforce constant length from pivot (adjust head) ──
+    let dx = newX - pestle.pivotX;
+    let dy = newY - pestle.pivotY;
+    let dist = Math.hypot(dx, dy);
     if (dist > 0) {
       const scale = pestle.constantLength / dist;
       newX = pestle.pivotX + dx * scale;
@@ -301,10 +301,20 @@ export class PestleSystem {
     }
 
     // ── Mortar collision on the head ──
+    // When the grinding end hits the mortar, the head is constrained
+    // to the mortar surface. Then the pivot is adjusted (instead of
+    // the head) to maintain constant length — this blocks the player's
+    // mouse movement in the collision direction while allowing all
+    // other directions. Entry through the top opening still works.
+    let collided = false;
+
     if (this.insideMortar) {
       const result = this.constrainToMortarInterior(newX, newY);
-      newX = result.x;
-      newY = result.y;
+      if (result.x !== newX || result.y !== newY) {
+        collided = true;
+        newX = result.x;
+        newY = result.y;
+      }
 
       // Check if pulled out through the top
       if (newY <= m.y && newX >= opening.left && newX <= opening.right) {
@@ -314,12 +324,17 @@ export class PestleSystem {
       const nearMortarX = newX >= m.x && newX <= m.x + m.width;
       if (newY >= m.y && nearMortarX) {
         if (newX >= opening.left && newX <= opening.right) {
+          // Entering through the top opening — allowed
           this.insideMortar = true;
           const result = this.constrainToMortarInterior(newX, newY);
-          newX = result.x;
-          newY = result.y;
+          if (result.x !== newX || result.y !== newY) {
+            collided = true;
+            newX = result.x;
+            newY = result.y;
+          }
         } else {
-          // Hitting mortar wall from outside - push head back up
+          // Hitting mortar rim/wall from outside — block
+          collided = true;
           newY = m.y - 1;
         }
       }
@@ -327,6 +342,25 @@ export class PestleSystem {
 
     pestle.headX = newX;
     pestle.headY = newY;
+
+    if (collided) {
+      // Adjust pivot to maintain constant length from the constrained
+      // head. The pivot moves toward the mouse but stays at a fixed
+      // distance from the head. This blocks mouse movement into the
+      // wall while still allowing movement in other directions.
+      dx = pestle.pivotX - newX;
+      dy = pestle.pivotY - newY;
+      dist = Math.hypot(dx, dy);
+      if (dist > 0) {
+        const scale = pestle.constantLength / dist;
+        pestle.pivotX = newX + dx * scale;
+        pestle.pivotY = newY + dy * scale;
+      }
+
+      // Kill head velocity on collision to prevent bouncing
+      pestle.prevHeadX = newX;
+      pestle.prevHeadY = newY;
+    }
 
     // Update angle
     pestle.angle = Math.atan2(
