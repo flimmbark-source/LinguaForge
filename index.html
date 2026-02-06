@@ -8,59 +8,73 @@
 </head>
 <body>
   
-<!-- LEFT COLUMN: EMPTY PLACEHOLDER (NO CONTAINER) -->
-<div class="column left-column empty-column"></div>
-  
-  <!-- TOOL RACK -->
-  <div class="column">
-    <h3>Tools</h3>
-    <div class="tool-selector">
-      <button id="selectHammer" class="tool-button active" data-tool="hammer" title="Hammer & Anvil - Strike to forge letters">
-        <span class="tool-icon">🔨</span>
-        <span class="tool-label">Hammer</span>
-      </button>
-      <button
-        id="selectPestle"
-        class="tool-button locked-hidden"
-        data-tool="pestle"
-        title="Pestle & Mortar - Grind letters to produce ink"
-      >
-        <span class="tool-icon">🥄</span>
-        <span class="tool-label">Pestle</span>
-      </button>
-      <button
-        id="selectShovel"
-        class="tool-button locked-hidden"
-        data-tool="shovel"
-        title="Shovel - Scoop letters from the basket into the hearth"
-      >
-        <span class="tool-icon">🧰</span>
-        <span class="tool-label">Shovel</span>
-      </button>
+<!-- MAGIC BOOK: VERSE / GRAMMAR (draggable, toggleable) -->
+  <div id="magicBook" class="magic-book open">
+    <button id="bookToggleBtn" class="book-toggle-btn" title="Open/Close Book">📖</button>
+    <!-- Book cover (shown when closed) -->
+    <div class="book-cover">
+      <div class="book-cover-spine"></div>
+      <div class="book-cover-front">
+        <div class="book-cover-title">Verse</div>
+        <div class="book-cover-subtitle">Foundations of Magic</div>
+        <div class="book-cover-ornament">✦</div>
+      </div>
+    </div>
+    <!-- Book interior (shown when open) -->
+    <div class="book-interior">
+      <div class="book-spine"></div>
+      <div class="book-page book-page-left">
+        <div class="book-page-header">Verse: Foundations of Magic</div>
+        <div class="book-page-content">
+          <div style="font-size:12px; opacity:0.8;">Verse</div>
+          <div id="grammarNatural" style="font-size:14px; font-weight:600; min-height:20px;"></div>
+          <div style="font-size:12px; opacity:0.8; margin-top:8px;">Translation</div>
+          <div id="grammarLiteral" style="font-size:13px; min-height:18px; margin-bottom:4px;"></div>
+          <div id="grammarScore" style="font-size:11px; opacity:0.7; margin-top:4px;"></div>
+        </div>
+      </div>
+      <div class="book-page book-page-right">
+        <div class="book-page-header">Assembly</div>
+        <div class="book-page-content">
+          <div id="grammarHebrewLine" class="letter-board"></div>
+          <div id="grammarTranslit" style="font-size:13px; min-height:18px; margin:4px 0;"></div>
+          <div class="row" style="margin-top:10px;">
+            <button id="enscribeBtn" disabled>Enscribe Line</button>
+            <span class="pill">Lines completed: <span id="linesCompleted">0</span></span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- RIGHT COLUMN: VERSE / GRAMMAR -->
-  <div class="column">
-    <h2>Verse: Foundations of Magic</h2>
-    <div class="section">
-      <div id="grammarHebrewLine" class="letter-board"></div>
-
-      <div id="grammarTranslit" style="font-size:13px; min-height:18px; margin:4px 0;"></div>
-
-      <div style="font-size:12px; opacity:0.8; margin-top:4px;">Translation</div>
-      <div id="grammarLiteral" style="font-size:13px; min-height:18px; margin-bottom:4px;"></div>
-
-      <div style="font-size:12px; opacity:0.8;">Verse</div>
-      <div id="grammarNatural" style="font-size:14px; font-weight:600; min-height:20px;"></div>
-
-      <div id="grammarScore" style="font-size:11px; opacity:0.7; margin-top:4px;"></div>
-
-      <div class="row" style="margin-top:10px;">
-        <button id="enscribeBtn" disabled>Enscribe Line</button>
-        <span class="pill">Lines completed: <span id="linesCompleted">0</span></span>
+  <!-- RIGHT-SIDE TOOLS SIDEBAR -->
+  <div id="toolsSidebar" class="tools-sidebar">
+    <div class="tools-sidebar-tab">Tools</div>
+    <div class="tools-sidebar-content">
+      <div class="tool-slot" data-tool="book" id="toolSlotBook">
+        <div class="tool-slot-icon">📖</div>
+        <div class="tool-slot-label">Verse</div>
+      </div>
+      <div class="tool-slot active" data-tool="hammer" id="toolSlotHammer">
+        <div class="tool-slot-icon">🔨</div>
+        <div class="tool-slot-label">Hammer</div>
+      </div>
+      <div class="tool-slot locked-hidden" data-tool="pestle" id="toolSlotPestle">
+        <div class="tool-slot-icon">🥄</div>
+        <div class="tool-slot-label">Pestle</div>
+      </div>
+      <div class="tool-slot locked-hidden" data-tool="shovel" id="toolSlotShovel">
+        <div class="tool-slot-icon">🧰</div>
+        <div class="tool-slot-label">Shovel</div>
       </div>
     </div>
+  </div>
+
+  <!-- Hidden original tool buttons for JS compatibility -->
+  <div style="display:none;">
+    <button id="selectHammer" class="tool-button active" data-tool="hammer"></button>
+    <button id="selectPestle" class="tool-button locked-hidden" data-tool="pestle"></button>
+    <button id="selectShovel" class="tool-button locked-hidden" data-tool="shovel"></button>
   </div>
 
   <!-- WORKERS PANEL FIXED AT BOTTOM RIGHT -->

@@ -21,6 +21,7 @@ import { initializeHearth, updateHearth } from './hearth.js';
 import { addInk /*, whatever else you need */ } from './state.js';
 import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js';
+import { initMagicBook, initToolsSidebar, updateSidebarToolVisibility } from './bookAndSidebar.js';
 
 // Global crafting system references
 let hammerSystem = null;
@@ -73,6 +74,19 @@ function initializeGame() {
 
   // Setup tool selection
   setupToolSelection();
+
+  // Initialize magic book and tools sidebar
+  initMagicBook();
+  initToolsSidebar((toolName) => {
+    // Delegate to existing tool button clicks
+    const btnMap = {
+      hammer: document.getElementById('selectHammer'),
+      pestle: document.getElementById('selectPestle'),
+      shovel: document.getElementById('selectShovel')
+    };
+    const btn = btnMap[toolName];
+    if (btn) btn.click();
+  });
 
   // Spawn starting letters
   for (let i = 0; i < STARTING_LETTERS; i++) {

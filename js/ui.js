@@ -8,6 +8,7 @@ import { gameState } from './state.js';
 import { setupWordChipDrag, sellWord } from './molds.js';
 import { toggleScribePaused } from './scribes.js';
 import { evaluateVerse, setupVerseWordChipDrag, isVerseSolved } from './grammar.js';
+import { updateSidebarToolVisibility } from './bookAndSidebar.js';
 
 // DOM element cache
 const elements = {};
@@ -65,6 +66,8 @@ export function updateStatsDisplay() {
   // Update shovel visibility based on unlock state
   updateShovelVisibility();
 
+  // Update sidebar tool visibility
+  updateSidebarToolVisibility(gameState.pestleUnlocked, gameState.shovelUnlocked);
 }
 
 /**
