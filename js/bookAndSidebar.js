@@ -172,34 +172,38 @@ function onToolSlotMouseUp(e, onToolSelected) {
 
   const tool = toolDragSource.dataset.tool;
   const sidebar = document.getElementById('toolsSidebar');
-  const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
 
-  // Check if dropped outside the sidebar (pulled out to use)
-  const droppedInSidebar = sidebarRect &&
+  // Use the full sidebar area (including when it slides back in during drag).
+  // The sidebar content lives on the right edge, so check if dropped within
+  // the sidebar's bounding rect OR within 100px of the right screen edge.
+  const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
+  const nearRightEdge = e.clientX >= (window.innerWidth - 100);
+  const inSidebarRect = sidebarRect &&
     e.clientX >= sidebarRect.left &&
     e.clientX <= sidebarRect.right &&
     e.clientY >= sidebarRect.top &&
     e.clientY <= sidebarRect.bottom;
+  const droppedInSidebar = nearRightEdge || inSidebarRect;
 
   toolDragSource.classList.remove('dragging-out');
 
   if (!droppedInSidebar) {
     // Tool was pulled out - activate it
     if (tool === 'book') {
-      // Show the magic book and open it at the drop location
+      // Show the magic book closed at the drop location
       const book = document.getElementById('magicBook');
       if (book) {
         book.style.display = '';
-        book.classList.remove('closed');
-        book.classList.add('open');
+        book.classList.remove('open');
+        book.classList.add('closed');
         // Position at drop point (offset so the book centers roughly on cursor)
         book.style.transform = 'none';
-        book.style.left = (e.clientX - 260) + 'px';
-        book.style.top = (e.clientY - 160) + 'px';
+        book.style.left = (e.clientX - 90) + 'px';
+        book.style.top = (e.clientY - 120) + 'px';
         const btn = document.getElementById('bookToggleBtn');
         if (btn) {
           btn.textContent = '📖';
-          btn.title = 'Close Book';
+          btn.title = 'Open Book';
         }
       }
     } else {
