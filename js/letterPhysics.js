@@ -159,6 +159,7 @@ export class LetterPhysicsSystem {
       for (const slotEl of slots) {
         const moldId   = Number(slotEl.dataset.moldId);
         const slotIdx  = Number(slotEl.dataset.slotIndex);
+        if (!gameState.currentLine || !gameState.currentLine.molds) continue;
         const mold     = gameState.currentLine.molds.find(m => m.id === moldId);
         if (!mold) continue;
         if (mold.slots[slotIdx]) continue;                  // already filled
@@ -278,7 +279,6 @@ export class LetterPhysicsSystem {
 
       // Tile background
       const s = LETTER_SIZE;
-      ctx.beginPath();
       roundRect(ctx, -s / 2, -s / 2, s, s, 6);
       ctx.fillStyle = l.isHeld ? '#1e293b' : '#111827';
       ctx.fill();

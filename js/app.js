@@ -430,9 +430,15 @@ function initializeCraftingSystems() {
 
   // Overlay renderer: draw physics letters on the crafting canvas
   const renderPhysicsLetters = () => {
-    if (!letterPhysics || letterPhysics.count === 0) return;
-    const ctx = craftingCanvas.getContext('2d');
-    letterPhysics.render(ctx);
+    if (!letterPhysics || letterPhysics.letters.length === 0) return;
+    try {
+      const ctx = craftingCanvas.getContext('2d');
+      ctx.save();
+      letterPhysics.render(ctx);
+      ctx.restore();
+    } catch (e) {
+      console.warn('Physics letter render error:', e);
+    }
   };
 
   // Create pestle system with callbacks
@@ -672,26 +678,32 @@ function gameLoop(timestamp) {
 
   // Update physics letters
   if (letterPhysics) {
-    letterPhysics.update(dt, window.innerWidth, window.innerHeight);
-    letterPhysics.checkMoldSlots();
-    letterPhysics.checkHearth();
+    try {
+      letterPhysics.update(dt, window.innerWidth, window.innerHeight);
+      letterPhysics.checkMoldSlots();
+      letterPhysics.checkHearth();
 
-    // Hammer pushes nearby physics letters
-    if (hammerSystem && hammerSystem.isRunning && craftingCanvasRef) {
-      const cr = craftingCanvasRef.getBoundingClientRect();
-      const hx = cr.left + hammerSystem.hammer.headX;
-      const hy = cr.top + hammerSystem.hammer.headY;
-      letterPhysics.pushFrom(hx, hy, 45, hammerSystem.hammer.headVx || 0, hammerSystem.hammer.headVy || 0);
-    }
-
-    // Render physics letters when no tool is active
-    if (letterPhysics.count > 0 && craftingCanvasRef) {
-      const anyToolRunning = hammerSystem?.isRunning || pestleSystem?.isRunning || shovelSystem?.isRunning;
-      if (!anyToolRunning) {
-        const ctx = craftingCanvasRef.getContext('2d');
-        ctx.clearRect(0, 0, craftingCanvasRef.clientWidth, craftingCanvasRef.clientHeight);
-        letterPhysics.render(ctx);
+      // Hammer pushes nearby physics letters
+      if (hammerSystem && hammerSystem.isRunning && craftingCanvasRef) {
+        const cr = craftingCanvasRef.getBoundingClientRect();
+        const hx = cr.left + hammerSystem.hammer.headX;
+        const hy = cr.top + hammerSystem.hammer.headY;
+        letterPhysics.pushFrom(hx, hy, 45, hammerSystem.hammer.headVx || 0, hammerSystem.hammer.headVy || 0);
       }
+
+      // Render physics letters when no tool is active
+      if (letterPhysics.letters.length > 0 && craftingCanvasRef) {
+        const anyToolRunning = hammerSystem?.isRunning || pestleSystem?.isRunning || shovelSystem?.isRunning;
+        if (!anyToolRunning) {
+          const ctx = craftingCanvasRef.getContext('2d');
+          ctx.save();
+          ctx.clearRect(0, 0, craftingCanvasRef.clientWidth, craftingCanvasRef.clientHeight);
+          letterPhysics.render(ctx);
+          ctx.restore();
+        }
+      }
+    } catch (e) {
+      console.warn('Physics update error:', e);
     }
   }
 
