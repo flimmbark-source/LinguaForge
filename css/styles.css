@@ -190,7 +190,7 @@ button.secondary {
   flex-direction: column;
   gap: 6px;
   pointer-events: none;
-  z-index: 96;
+  z-index: 100;
 
   /* IMPORTANT for the weave pseudo-element */
   position: fixed;
@@ -354,7 +354,7 @@ button.secondary {
   left: 13px; /* match letter-basket or column edge */
   top: 290px;
   width: calc((100% - 32px) / 3); /* same as a column / basket width */
-  z-index: 440;
+  z-index: 95;
   pointer-events: auto;
 
   display: flex;
@@ -2069,7 +2069,7 @@ button.secondary {
     max-width: none;
     height: calc(var(--basket-height) - 4px);
     border-radius: 8px 8px 0 0;
-    z-index: 97;
+    z-index: 100;
   }
 
   .letter-basket .letter-board {
@@ -2098,7 +2098,7 @@ button.secondary {
     width: auto;
     min-width: unset;
     max-width: none;
-    z-index: 398;
+    z-index: 95;
     display: flex;
     flex-direction: row-reverse;
     justify-content: flex-start;
@@ -2199,7 +2199,7 @@ button.secondary {
     top: 50%;
     transform: translateY(-50%);
     flex-direction: row;
-    z-index: 98;
+    z-index: 90;
   }
 
   .tools-sidebar:hover {
@@ -2572,7 +2572,7 @@ button.secondary {
     max-width: none;
     height: var(--basket-height);
     border-radius: 12px 12px 0 0;
-    z-index: 97;
+    z-index: 100;
   }
 
   .letter-basket .letter-board {
@@ -2590,15 +2590,14 @@ button.secondary {
     position: fixed;
     left: 0;
     right: auto;
-    top: 40%;
+    top: 28%;
     transform: translateY(-50%);
     width: auto;
     min-width: unset;
     max-width: none;
-    right: 0;
-    /* Position well above the letter basket / hearth zone */
-    bottom: calc(50% + 100px);
-    z-index: 98;
+    /* Keep the viewport from being height-constrained in portrait */
+    bottom: auto;
+    z-index: 95;
     display: flex;
     flex-direction: row-reverse;
     justify-content: flex-start;
@@ -2699,7 +2698,7 @@ button.secondary {
     top: 50%;
     transform: translateY(-50%);
     flex-direction: row;
-    z-index: 98;
+    z-index: 90;
   }
 
   .tools-sidebar:hover {
@@ -3365,7 +3364,7 @@ body.book-overlay-active .magic-book {
   right: 0;
   top: 50%;
   transform: translateY(-50%) translateX(calc(100% - 18px));
-  z-index: 96;
+  z-index: 90;
   display: flex;
   flex-direction: row;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
