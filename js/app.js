@@ -291,6 +291,7 @@ function initializeGame() {
 
   // Initial UI update
   updateUI();
+  console.log('Lingua Forge initialization complete!');
 }
 
 /**
