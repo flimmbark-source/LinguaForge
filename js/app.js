@@ -4,23 +4,23 @@
  */
 
 
-import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD } from './config.js?v=8';
-import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=8';
-import { setMoldViewportWidth, navigatePreviousMold, navigateNextMold } from './molds.js?v=8';
-import { hireScribe, updateScribes } from './scribes.js?v=8';
-import { setupVerseAreaDrop, completeVerse } from './grammar.js?v=8';
-import { initializeElements, updateUI } from './ui.js?v=8';
-import { gameState } from './state.js?v=8';
-import { addLetters } from './state.js?v=8';
-import { HammerSystem } from './hammer.js?v=8';
-import { PestleSystem } from './pestle.js?v=8';
-import { ShovelSystem } from './shovel.js?v=8';
-import { initializeHearth, updateHearth } from './hearth.js?v=8';
-import { addInk, addVerseWord /*, whatever else you need */ } from './state.js?v=8';
-import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js?v=8';
-import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=8';
-import { initMagicBook, initToolsSidebar, initMoldSidebarTab, updateSidebarToolVisibility } from './bookAndSidebar.js?v=8';
-import { LetterPhysicsSystem } from './letterPhysics.js?v=8';
+import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD } from './config.js?v=9';
+import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
+import { setMoldViewportWidth, navigatePreviousMold, navigateNextMold } from './molds.js?v=9';
+import { hireScribe, updateScribes } from './scribes.js?v=9';
+import { setupVerseAreaDrop, completeVerse } from './grammar.js?v=9';
+import { initializeElements, updateUI } from './ui.js?v=9';
+import { gameState } from './state.js?v=9';
+import { addLetters } from './state.js?v=9';
+import { HammerSystem } from './hammer.js?v=9';
+import { PestleSystem } from './pestle.js?v=9';
+import { ShovelSystem } from './shovel.js?v=9';
+import { initializeHearth, updateHearth } from './hearth.js?v=9';
+import { addInk, addVerseWord /*, whatever else you need */ } from './state.js?v=9';
+import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from './upgrades.js?v=9';
+import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
+import { initMagicBook, initToolsSidebar, initMoldSidebarTab, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
+import { LetterPhysicsSystem } from './letterPhysics.js?v=9';
 
 // Global crafting system references
 let hammerSystem = null;
@@ -713,6 +713,7 @@ function gameLoop(timestamp) {
 
   // Update UI
   updateUI();
+  updateUpgradeHeaderStats();
 
   // Continue loop
   requestAnimationFrame(gameLoop);
