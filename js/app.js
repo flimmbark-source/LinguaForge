@@ -45,7 +45,36 @@ function handleMoldSlotFilled(slotEl) {
 }
 
 /**
- * Spawn a "Magical Text" element that pops up from the mold, sparkles and glitters,
+ * Ensure the magic book is visible and open so the verse area is ready.
+ * Handles all book states: hidden (stowed), closed, or already open.
+ */
+function ensureBookOpenAndVisible() {
+  const book = document.getElementById('magicBook');
+  if (!book) return;
+
+  // If the book was stowed (display:none), bring it back
+  if (book.style.display === 'none') {
+    book.style.display = '';
+    // If it was never dragged, re-centre it
+    if (book.dataset.wasDragged !== 'true') {
+      book.style.transform = '';
+    }
+  }
+
+  // If the book is closed, open it
+  if (book.classList.contains('closed')) {
+    book.classList.remove('closed');
+    book.classList.add('open');
+    const btn = document.getElementById('bookToggleBtn');
+    if (btn) {
+      btn.textContent = '📕';
+      btn.title = 'Close Book';
+    }
+  }
+}
+
+/**
+ * Spawn a "Magical Text" element that pops up above the mold, sparkles and glitters,
  * expands slightly, then shrinks and zooms into the verse book assembly area.
  * The word is placed directly into the verse upon arrival (bypasses inventory).
  * @param {Object} word - The forged word object { text, english, length }
@@ -57,8 +86,9 @@ function spawnMagicalText(word, moldBounds, delay) {
     // Create a wrapper to handle centering (so the animation transform doesn't fight it)
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'position:fixed;z-index:200;pointer-events:none;';
+    // Start above the mold viewport so the text pops up from it
     const startX = moldBounds.left + moldBounds.width / 2;
-    const startY = moldBounds.top + moldBounds.height / 2;
+    const startY = moldBounds.top - 10;
     wrapper.style.left = startX + 'px';
     wrapper.style.top = startY + 'px';
 
@@ -89,14 +119,28 @@ function spawnMagicalText(word, moldBounds, delay) {
     // Phase 2: After emerge animation ends, shrink and zoom to verse book
     const emergeTime = 800;
     setTimeout(() => {
+      // Ensure the book is visible and open before we fly to it
+      ensureBookOpenAndVisible();
+
+      // Now find the target — try the verse area first, fall back to book element
+      let targetX, targetY;
       const verseArea = document.getElementById('grammarHebrewLine');
-      if (!verseArea) {
-        wrapper.remove();
-        return;
+      if (verseArea && verseArea.offsetParent !== null) {
+        const verseBounds = verseArea.getBoundingClientRect();
+        targetX = verseBounds.left + verseBounds.width / 2;
+        targetY = verseBounds.top + verseBounds.height / 2;
+      } else {
+        // Fall back to the book element itself
+        const book = document.getElementById('magicBook');
+        if (book) {
+          const bookBounds = book.getBoundingClientRect();
+          targetX = bookBounds.left + bookBounds.width / 2;
+          targetY = bookBounds.top + bookBounds.height / 2;
+        } else {
+          wrapper.remove();
+          return;
+        }
       }
-      const verseBounds = verseArea.getBoundingClientRect();
-      const targetX = verseBounds.left + verseBounds.width / 2;
-      const targetY = verseBounds.top + verseBounds.height / 2;
 
       // Switch to zoom animation and move wrapper to target
       el.classList.remove('phase-emerge');
@@ -127,13 +171,16 @@ function spawnMagicalText(word, moldBounds, delay) {
         updateUI();
 
         // Add a flash effect to the newly added verse chip
-        const verseChips = verseArea.querySelectorAll('.line-word-chip');
-        const lastChip = verseChips[verseChips.length - 1];
-        if (lastChip) {
-          lastChip.classList.add('verse-arrival-flash');
-          lastChip.addEventListener('animationend', () => {
-            lastChip.classList.remove('verse-arrival-flash');
-          }, { once: true });
+        const freshVerseArea = document.getElementById('grammarHebrewLine');
+        if (freshVerseArea) {
+          const verseChips = freshVerseArea.querySelectorAll('.line-word-chip');
+          const lastChip = verseChips[verseChips.length - 1];
+          if (lastChip) {
+            lastChip.classList.add('verse-arrival-flash');
+            lastChip.addEventListener('animationend', () => {
+              lastChip.classList.remove('verse-arrival-flash');
+            }, { once: true });
+          }
         }
 
         wrapper.remove();
