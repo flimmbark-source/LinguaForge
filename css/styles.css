@@ -1971,7 +1971,7 @@ button.secondary {
     width: 100% !important;
     height: 100% !important;
     transform: none !important;
-    z-index: 400 !important;
+    z-index: 700 !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1984,7 +1984,7 @@ button.secondary {
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 220;
+    z-index: 720;
   }
 
   .magic-book .book-close-btn {
@@ -2481,7 +2481,7 @@ button.secondary {
     width: 100% !important;
     height: 100% !important;
     transform: none !important;
-    z-index: 200 !important;
+    z-index: 700 !important;
     display: flex;
     align-items: center;
     justify-content: center;
