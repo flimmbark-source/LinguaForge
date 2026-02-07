@@ -3,7 +3,7 @@
  * Centralized state management for all game data
  */
 
-import { CURRENT_LINE } from './config.js?v=3';
+import { CURRENT_LINE } from './config.js?v=5';
 
 /**
  * Game state object containing all game data

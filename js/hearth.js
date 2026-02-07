@@ -3,7 +3,7 @@
  * Manages the hearth state, heating mechanics, and fire animations
  */
 
-import { gameState } from './state.js?v=3';
+import { gameState } from './state.js?v=5';
 
 /**
  * Hearth state
