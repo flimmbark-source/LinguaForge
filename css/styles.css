@@ -1050,7 +1050,7 @@ button.secondary {
   position: fixed;
   top: 56px;
   right: 160px;
-  z-index: 110;
+  z-index: 220;
   display: flex;
   flex-direction: column;
   gap: 10px;
