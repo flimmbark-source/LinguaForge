@@ -6,6 +6,7 @@
  */
 
 import { playPestleGrind, playPestleSquelch } from './audio.js?v=9';
+import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 
 export class PestleSystem {
   constructor(canvas) {
@@ -210,24 +211,23 @@ export class PestleSystem {
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
+    // Open sidebar when dragging near the tab
+    if (this.input.isDown) {
+      handleToolDragNearSidebar(client.clientX);
+    }
   }
 
   onPointerUp(e) {
     if (!this.isRunning) return;
 
-    // If released near the right edge / sidebar, put the tool away
+    // Only put tool away if released over the open sidebar content
     const client = e.changedTouches ? e.changedTouches[0] : e;
-    const sidebar = document.getElementById('toolsSidebar');
-    const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
-    const nearRightEdge = client.clientX >= (window.innerWidth - 100);
-    const inSidebar = sidebarRect &&
-      client.clientX >= sidebarRect.left &&
-      client.clientY >= sidebarRect.top &&
-      client.clientY <= sidebarRect.bottom;
-    if ((nearRightEdge || inSidebar) && this.onPutAway) {
+    if (shouldPutToolAway(client.clientX, client.clientY) && this.onPutAway) {
+      cleanupToolDragSidebar();
       this.onPutAway();
       return;
     }
+    cleanupToolDragSidebar();
 
     this.input.isDown = false;
   }

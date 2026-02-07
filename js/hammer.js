@@ -6,6 +6,7 @@
 import { isHearthHeated, getHearthBounds, getHearthLevel } from './RuneHearth.js?v=9';
 import { gameState } from './state.js?v=9';
 import { playHammerClank } from './audio.js?v=9';
+import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 
 export class HammerSystem {
   constructor(canvas) {
@@ -289,15 +290,17 @@ onPointerDown(e) {
    * Handle pointer move event
    */
   onPointerMove(e) {
-     const rect = this.canvas.getBoundingClientRect(); 
-     const client = e.touches ? e.touches[0] : e; 
-      this.input.mouseX = client.clientX - rect.left; 
-      this.input.mouseY = client.clientY - rect.top; 
+     const rect = this.canvas.getBoundingClientRect();
+     const client = e.touches ? e.touches[0] : e;
+      this.input.mouseX = client.clientX - rect.left;
+      this.input.mouseY = client.clientY - rect.top;
     if (this.hammer.isHeld && this.input.isDown) {
-       e.preventDefault(); 
-       e.stopPropagation(); 
-       this.hammer.pivotX = this.input.mouseX; 
-       this.hammer.pivotY = this.input.mouseY; 
+       e.preventDefault();
+       e.stopPropagation();
+       this.hammer.pivotX = this.input.mouseX;
+       this.hammer.pivotY = this.input.mouseY;
+       // Open sidebar when dragging near the tab
+       handleToolDragNearSidebar(client.clientX);
       }
     }
 
@@ -310,21 +313,16 @@ onPointerDown(e) {
       e.preventDefault();
       e.stopPropagation();
 
-      // If released near the right edge / sidebar, put the tool away
+      // Only put tool away if released over the open sidebar content
       const client = e.changedTouches ? e.changedTouches[0] : e;
-      const sidebar = document.getElementById('toolsSidebar');
-      const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
-      const nearRightEdge = client.clientX >= (window.innerWidth - 100);
-      const inSidebar = sidebarRect &&
-        client.clientX >= sidebarRect.left &&
-        client.clientY >= sidebarRect.top &&
-        client.clientY <= sidebarRect.bottom;
-      if ((nearRightEdge || inSidebar) && this.onPutAway) {
+      if (shouldPutToolAway(client.clientX, client.clientY) && this.onPutAway) {
+        cleanupToolDragSidebar();
         this.input.isDown = false;
         this.hammer.isHeld = false;
         this.onPutAway();
         return;
       }
+      cleanupToolDragSidebar();
     }
     this.input.isDown = false;
     this.hammer.isHeld = false;

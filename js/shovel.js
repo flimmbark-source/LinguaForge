@@ -8,6 +8,7 @@ import { createLetterTile, consumeLetterTile } from './letters.js?v=9';
 import { spawnResourceGain } from './resourceGainFeedback.js?v=9';
 import { gameState } from './state.js?v=9';
 import { playShovelScoop, playShovelDump } from './audio.js?v=9';
+import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 
 function getLetterFromTile(tile) {
   if (!tile) return '';
@@ -185,22 +186,19 @@ resize() {
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
+    // Open sidebar when dragging near the tab
+    if (this.input.isDown) {
+      handleToolDragNearSidebar(client.clientX);
+    }
   }
 
   onPointerUp(e) {
     if (!this.isRunning) return;
     this.input.isDown = false;
 
-    // If released near the right edge / sidebar, put the tool away
+    // Only put tool away if released over the open sidebar content
     const client = e.changedTouches ? e.changedTouches[0] : e;
-    const sidebar = document.getElementById('toolsSidebar');
-    const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
-    const nearRightEdge = client.clientX >= (window.innerWidth - 100);
-    const inSidebar = sidebarRect &&
-      client.clientX >= sidebarRect.left &&
-      client.clientY >= sidebarRect.top &&
-      client.clientY <= sidebarRect.bottom;
-    if ((nearRightEdge || inSidebar) && this.onPutAway) {
+    if (shouldPutToolAway(client.clientX, client.clientY) && this.onPutAway) {
       // Return any collected letters before putting away
       const pool = document.getElementById('letterPool');
       if (pool) {
@@ -211,9 +209,11 @@ resize() {
       }
       this.collected = [];
       this.shovel.isHeld = false;
+      cleanupToolDragSidebar();
       this.onPutAway();
       return;
     }
+    cleanupToolDragSidebar();
 
     // on release, drop collected letters into hearth if over hearth, else return to basket
     const { bounds: headBounds } = this.computeHeadGeometry();
