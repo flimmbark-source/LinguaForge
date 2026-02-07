@@ -451,14 +451,6 @@ export function initMoldSidebarTab() {
   tab.addEventListener('click', toggle);
   tab.addEventListener('touchend', toggle);
 
-  // Close when tapping outside
-  document.addEventListener('touchstart', (e) => {
-    if (wrapper.dataset.dragHold === 'true') return;
-    if (wrapper.classList.contains('open') && !wrapper.contains(e.target)) {
-      wrapper.classList.remove('open');
-    }
-  }, { passive: true });
-
   // Stop mousedown from reaching canvas
   wrapper.addEventListener('mousedown', (e) => {
     e.stopPropagation();
