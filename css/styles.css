@@ -1024,7 +1024,7 @@ button.secondary {
   position: fixed;
   top: 16px;
   right: 160px;
-  z-index: 330;
+  z-index: 1000;
   background: rgba(15, 23, 42, 0.8);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 8px;
@@ -1050,7 +1050,7 @@ button.secondary {
   position: fixed;
   top: 56px;
   right: 160px;
-  z-index: 330;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   gap: 10px;
