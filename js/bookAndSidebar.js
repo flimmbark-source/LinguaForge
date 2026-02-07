@@ -37,10 +37,8 @@ export function initMagicBook() {
     }
   });
 
-  // Stop all mousedown events on the book from reaching document-level listeners
-  // (prevents canvas tools like hammer/pestle from activating through the book)
+  // Start book drag on mousedown (no stopPropagation so canvas tools still work)
   book.addEventListener('mousedown', (e) => {
-    e.stopPropagation();
     onBookMouseDown(e);
   });
   document.addEventListener('mousemove', onBookMouseMove);

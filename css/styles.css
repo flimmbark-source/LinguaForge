@@ -1155,6 +1155,59 @@ button.secondary {
 }
 
 /* ===============================================
+   UPGRADES BUTTON - Top Right Corner
+   =============================================== */
+
+.upgrades-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 97;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 2px solid #7c3aed;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #4c1d95, #6d28d9);
+  color: #f5f3ff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow:
+    0 4px 16px rgba(109, 40, 217, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.upgrades-btn:hover {
+  background: linear-gradient(145deg, #5b21b6, #7c3aed);
+  border-color: #a78bfa;
+  box-shadow:
+    0 6px 24px rgba(124, 58, 237, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.upgrades-btn:active {
+  transform: translateY(0px);
+  box-shadow:
+    0 2px 8px rgba(109, 40, 217, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.upgrades-btn-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.upgrades-btn-label {
+  line-height: 1;
+}
+
+/* ===============================================
    UPGRADE TREE - NODE-BASED SKILL TREE
    Inspired by roguelike skill trees with small nodes
    =============================================== */
