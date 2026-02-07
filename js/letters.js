@@ -5,7 +5,7 @@
 
 import { getAllowedLetters, INK_PER_LETTER } from './config.js?v=9';
 import { gameState, addLetters, addInk, getNextLetterId } from './state.js?v=9';
-import { canPlaceInHearth, heatHearth } from './hearth.js?v=9';
+import { canPlaceInHearth, heatHearth } from './RuneHearth.js?v=9';
 
 // ─── Physics-based letter throw ──────────────────────────────
 let _heldLetter = null;

@@ -3,8 +3,9 @@
  * Physics-based hammer striking mechanic for letter generation
  */
 
-import { isHearthHeated, getHearthBounds, getHearthLevel } from './hearth.js?v=9';
+import { isHearthHeated, getHearthBounds, getHearthLevel } from './RuneHearth.js?v=9';
 import { gameState } from './state.js?v=9';
+import { playHammerClank } from './audio.js?v=9';
 
 export class HammerSystem {
   constructor(canvas) {
@@ -819,6 +820,7 @@ updateFreeHammer(dt) {
           const impactY = anvil.y;
           this.spawnSparks(impactX, impactY, power, { isRip: true });
           this.spawnClankWord(impactX, impactY, power, { isRip: true, force: 'Clonk!' }); // Add clank word (ripped)
+          playHammerClank();
 
           if (this.onLetterForged) {
             this.onLetterForged(impactX, impactY, power, hammer.headVx, 1);
@@ -855,6 +857,7 @@ updateFreeHammer(dt) {
         const impactY = anvil.y;
         this.spawnSparks(impactX, impactY, power);
         this.spawnClankWord(impactX, impactY, power); // Add clank word
+        playHammerClank();
 
         // Calculate multiplier based on heat level
         // Heat level 0 = 1x, level 1 = 2x, level 2 = 3x, level 3 = 4x, etc.

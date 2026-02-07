@@ -1019,6 +1019,33 @@ button.secondary {
    FIXED UI ELEMENTS
    =============================================== */
 
+/* Audio toggle button */
+.audio-toggle-btn {
+  position: fixed;
+  top: 16px;
+  right: 160px;
+  z-index: 100;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: opacity 0.2s;
+}
+
+.audio-toggle-btn:hover {
+  opacity: 0.8;
+}
+
+.audio-toggle-icon {
+  font-size: 16px;
+}
+
+.audio-toggle-btn.muted .audio-toggle-icon {
+  opacity: 0.4;
+}
+
 /* Tool Rack */
 .tool-rack {
   position: fixed;
@@ -1814,6 +1841,16 @@ button.secondary {
     gap: 5px;
   }
 
+  .audio-toggle-btn {
+    top: 8px;
+    right: 110px;
+    padding: 4px 8px;
+  }
+
+  .audio-toggle-icon {
+    font-size: 14px;
+  }
+
   .upgrades-btn-icon {
     font-size: 14px;
   }
@@ -1985,8 +2022,8 @@ button.secondary {
     min-width: unset;
     max-width: none;
     right: 0;
-    /* Position above the tools sidebar: tools is at ~50%, mold sits above */
-    bottom: calc(50% + 80px);
+    /* Position well above the letter basket / hearth zone */
+    bottom: calc(50% + 100px);
     z-index: 98;
     display: flex;
     flex-direction: row;
@@ -2030,7 +2067,7 @@ button.secondary {
   }
 
   .mold-viewport-wrapper.open .mold-panel {
-    max-width: 280px;
+    max-width: 220px;
     padding: 8px;
     opacity: 1;
     border: 1px solid rgba(107, 96, 80, 0.3);
@@ -2038,7 +2075,7 @@ button.secondary {
   }
 
   .mold-viewport-wrapper .mold-viewport {
-    width: 240px;
+    width: 200px;
   }
 
   /* ─ Workers panel: top-right, below upgrades btn ─ */
@@ -2274,7 +2311,11 @@ button.secondary {
 
   /* Mold: tab panel, slightly smaller */
   .mold-viewport-wrapper .mold-viewport {
-    width: 210px;
+    width: 170px;
+  }
+
+  .mold-viewport-wrapper.open .mold-panel {
+    max-width: 190px;
   }
 
   /* Workers */

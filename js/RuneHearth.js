@@ -4,6 +4,7 @@
  */
 
 import { gameState } from './state.js?v=9';
+import { playHearthIgnite } from './audio.js?v=9';
 
 /**
  * Hearth state
@@ -52,6 +53,7 @@ export function heatHearth(letterCount = 1) {
   hearthState.heatTimer += additionalHeat;
   hearthState.maxHeatTime = Math.max(hearthState.maxHeatTime, hearthState.heatTimer);
   hearthState.isHeated = true;
+  playHearthIgnite();
 
   console.log(`Hearth heated! Level ${hearthState.hearthLevel} (${hearthState.totalLettersConsumed} letters consumed)`);
 
