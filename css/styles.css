@@ -1338,51 +1338,160 @@ button.secondary {
   text-align: center;
 }
 
-/* Filter buttons row */
-.upgrade-filters {
-  display: flex;
-  gap: 6px;
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
-  background: rgba(0, 0, 0, 0.15);
-  flex-wrap: wrap;
-}
+/* ===============================================
+   WORKSHOP TOOL BLOCKS (clickable filter blocks)
+   =============================================== */
 
-.upgrade-filter-btn {
+.workshop-tool-block {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.15);
-  background: rgba(30, 20, 50, 0.5);
-  color: #94a3b8;
-  font-size: 12px;
-  font-weight: 600;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(148, 163, 184, 0.12);
+  background: rgba(30, 25, 50, 0.5);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  position: relative;
 }
 
-.upgrade-filter-btn:hover {
-  background: rgba(60, 40, 100, 0.5);
-  border-color: rgba(148, 163, 184, 0.3);
+.workshop-tool-block:hover {
+  background: rgba(45, 35, 75, 0.6);
+  border-color: rgba(148, 163, 184, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Selected state (active filter) */
+.workshop-tool-block.tool-selected {
+  border-color: rgba(99, 102, 241, 0.6);
+  background: linear-gradient(135deg, rgba(40, 30, 80, 0.8), rgba(25, 20, 55, 0.8));
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.2);
+}
+
+/* Unlocked tool */
+.workshop-tool-block.tool-unlocked {
+  border-color: rgba(45, 212, 191, 0.25);
+}
+
+.workshop-tool-block.tool-unlocked:hover {
+  border-color: rgba(45, 212, 191, 0.5);
+}
+
+/* Permanent tool (Fist - always available) */
+.workshop-tool-block.tool-permanent {
+  border-color: rgba(45, 212, 191, 0.25);
+}
+
+/* Available for purchase */
+.workshop-tool-block.tool-available {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: linear-gradient(135deg, rgba(50, 35, 15, 0.6), rgba(30, 20, 10, 0.6));
+}
+
+.workshop-tool-block.tool-available:hover {
+  border-color: rgba(251, 191, 36, 0.6);
+  background: linear-gradient(135deg, rgba(60, 45, 20, 0.7), rgba(40, 28, 14, 0.7));
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.15);
+}
+
+/* Locked tool */
+.workshop-tool-block.tool-locked {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.workshop-tool-block.tool-locked:hover {
+  transform: none;
+  background: rgba(30, 25, 50, 0.5);
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+/* Tool icon */
+.workshop-tool-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.tool-selected .workshop-tool-icon {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.tool-unlocked .workshop-tool-icon,
+.tool-permanent .workshop-tool-icon {
+  background: rgba(45, 212, 191, 0.08);
+  border-color: rgba(45, 212, 191, 0.2);
+}
+
+.tool-available .workshop-tool-icon {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.25);
+}
+
+.tool-locked .workshop-tool-icon {
+  font-size: 18px;
+  color: #4a4a5f;
+}
+
+/* Tool info */
+.workshop-tool-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.workshop-tool-label {
+  font-size: 15px;
+  font-weight: 700;
   color: #e2e8f0;
 }
 
-.upgrade-filter-btn.active {
-  background: linear-gradient(145deg, #4c1d95, #6d28d9);
-  border-color: #7c3aed;
-  color: #f5f3ff;
-  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.3);
+.tool-locked .workshop-tool-label {
+  color: #64748b;
 }
 
-.filter-icon {
-  font-size: 14px;
-  line-height: 1;
+.tool-selected .workshop-tool-label {
+  color: #c4b5fd;
 }
 
-.filter-label {
-  line-height: 1;
+.workshop-tool-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Right side */
+.workshop-tool-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.workshop-tool-cost {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.workshop-tool-check {
+  font-size: 18px;
+  color: #2dd4bf;
+  font-weight: 700;
 }
 
 /* Scrollable block list */

@@ -8,50 +8,45 @@ import { updateHearthVisuals } from './hearth.js';
 
 // ===============================================
 // Column / tool classification for every upgrade
+// Workshop = tool unlocks, Forgecraft = stat upgrades
 // ===============================================
 const UPGRADE_META = {
-  // Workshop ─ Forge (hearth & heat)
+  // Workshop ─ tool unlocks
   activateHearth:    { column: 'workshop', tool: 'forge' },
-  heatLevel:         { column: 'workshop', tool: 'forge' },
-  redHotDurability:  { column: 'workshop', tool: 'forge' },
-  emberRetention:    { column: 'workshop', tool: 'forge' },
-  heatPerLetter:     { column: 'workshop', tool: 'forge' },
-  lettersPerRedHot:  { column: 'workshop', tool: 'forge' },
-  // Workshop ─ Fist (hammer strike)
-  gripStrength:      { column: 'workshop', tool: 'fist' },
-  // Workshop ─ Scribes
   hireScribes:       { column: 'workshop', tool: 'scribes' },
-  scribeUse:         { column: 'workshop', tool: 'scribes' },
-  scribeSpeed:       { column: 'workshop', tool: 'scribes' },
-  scribeCapacity:    { column: 'workshop', tool: 'scribes' },
-  masterScribe:      { column: 'workshop', tool: 'scribes' },
-  // Forgecraft ─ Pestle
-  unlockPestle:      { column: 'forgecraft', tool: 'pestle' },
+  unlockPestle:      { column: 'workshop', tool: 'pestle' },
+  unlockShovel:      { column: 'workshop', tool: 'shovel' },
+  // Forgecraft ─ Forge stats
+  heatLevel:         { column: 'forgecraft', tool: 'forge' },
+  redHotDurability:  { column: 'forgecraft', tool: 'forge' },
+  emberRetention:    { column: 'forgecraft', tool: 'forge' },
+  heatPerLetter:     { column: 'forgecraft', tool: 'forge' },
+  lettersPerRedHot:  { column: 'forgecraft', tool: 'forge' },
+  // Forgecraft ─ Fist stats
+  gripStrength:      { column: 'forgecraft', tool: 'fist' },
+  // Forgecraft ─ Scribes stats
+  scribeUse:         { column: 'forgecraft', tool: 'scribes' },
+  scribeSpeed:       { column: 'forgecraft', tool: 'scribes' },
+  scribeCapacity:    { column: 'forgecraft', tool: 'scribes' },
+  masterScribe:      { column: 'forgecraft', tool: 'scribes' },
+  // Forgecraft ─ Pestle stats
   increasePestleCap: { column: 'forgecraft', tool: 'pestle' },
   lettersPerChurn:   { column: 'forgecraft', tool: 'pestle' },
   churnSpeed:        { column: 'forgecraft', tool: 'pestle' },
   multiChurn:        { column: 'forgecraft', tool: 'pestle' },
-  // Forgecraft ─ Shovel
-  unlockShovel:      { column: 'forgecraft', tool: 'shovel' },
 };
 
-// Tool filter definitions per column
-const COLUMN_TOOLS = {
-  workshop: [
-    { id: 'all',     label: 'All',     icon: '📋', alwaysVisible: true },
-    { id: 'forge',   label: 'Forge',   icon: '🔥', alwaysVisible: true },
-    { id: 'fist',    label: 'Fist',    icon: '💪', alwaysVisible: true },
-    { id: 'scribes', label: 'Scribes', icon: '✍️', unlockedBy: 'hireScribes' },
-  ],
-  forgecraft: [
-    { id: 'all',     label: 'All',     icon: '📋', alwaysVisible: true },
-    { id: 'pestle',  label: 'Pestle',  icon: '🥄', unlockedBy: 'unlockPestle' },
-    { id: 'shovel',  label: 'Shovel',  icon: '🧰', unlockedBy: 'unlockShovel' },
-  ],
-};
+// Tool blocks shown in the Workshop column (clickable to filter Forgecraft)
+const WORKSHOP_TOOLS = [
+  { id: 'forge',   label: 'Anvil',   icon: '🔨', upgradeId: 'activateHearth', alwaysVisible: true },
+  { id: 'fist',    label: 'Fist',    icon: '💪', upgradeId: null,             alwaysVisible: true },
+  { id: 'scribes', label: 'Scribes', icon: '✍️', upgradeId: 'hireScribes',   visibleWhen: 'activateHearth' },
+  { id: 'pestle',  label: 'Pestle',  icon: '🥄', upgradeId: 'unlockPestle',  visibleWhen: 'activateHearth' },
+  { id: 'shovel',  label: 'Shovel',  icon: '🧰', upgradeId: 'unlockShovel',  visibleWhen: 'unlockPestle' },
+];
 
-// Current active filter per column
-let activeFilter = { workshop: 'all', forgecraft: 'all' };
+// Currently selected tool in Workshop (filters Forgecraft); null = show all
+let selectedTool = null;
 
 // Node shape and color constants (used by UPGRADE_TREE data)
 const NODE_SHAPES = { CIRCLE: 'circle', SQUARE: 'square' };
@@ -625,60 +620,165 @@ export function renderUpgradeTree() {
   const { visible, locked } = getVisibleUpgrades();
   const allShown = new Set([...visible, ...locked]);
 
-  renderColumn('workshop', allShown, visible, locked);
-  renderColumn('forgecraft', allShown, visible, locked);
+  renderWorkshop(allShown, visible, locked);
+  renderForgecraft(allShown, visible, locked);
   updateHeaderStats();
 }
 
 /**
- * Render a single column (Workshop or Forgecraft)
+ * Render the Workshop column (clickable tool blocks)
  */
-function renderColumn(columnId, allShown, visible, locked) {
-  const listEl = document.getElementById(columnId === 'workshop' ? 'workshopList' : 'forgecraftList');
-  const filtersEl = document.getElementById(columnId === 'workshop' ? 'workshopFilters' : 'forgecraftFilters');
-  if (!listEl || !filtersEl) return;
+function renderWorkshop(allShown, visible, locked) {
+  const listEl = document.getElementById('workshopList');
+  if (!listEl) return;
 
-  // Remember scroll position
   const prevScroll = listEl.scrollTop;
+  listEl.innerHTML = '';
 
-  // Render filter buttons
-  filtersEl.innerHTML = '';
-  const tools = COLUMN_TOOLS[columnId];
-  for (const tool of tools) {
-    // Tool filters appear if alwaysVisible, or if the unlock upgrade has been purchased
-    const isToolVisible = tool.alwaysVisible || (tool.unlockedBy && getUpgradeLevel(tool.unlockedBy) > 0);
-    if (!isToolVisible) continue;
+  for (const tool of WORKSHOP_TOOLS) {
+    // Visibility: always visible, or visible when a prerequisite upgrade is purchased/visible
+    if (!tool.alwaysVisible) {
+      if (tool.visibleWhen && getUpgradeLevel(tool.visibleWhen) === 0) {
+        // Also show if the upgrade itself is in the visible/locked set
+        if (tool.upgradeId && !allShown.has(tool.upgradeId)) continue;
+      }
+    }
 
-    const btn = document.createElement('button');
-    btn.className = 'upgrade-filter-btn';
-    if (activeFilter[columnId] === tool.id) btn.classList.add('active');
-    btn.innerHTML = `<span class="filter-icon">${tool.icon}</span><span class="filter-label">${tool.label}</span>`;
-    btn.addEventListener('click', () => {
-      activeFilter[columnId] = tool.id;
-      renderUpgradeTree();
-    });
-    filtersEl.appendChild(btn);
+    const block = createWorkshopToolBlock(tool, visible, locked);
+    listEl.appendChild(block);
   }
 
-  // Gather upgrades for this column
-  listEl.innerHTML = '';
-  const filter = activeFilter[columnId];
+  listEl.scrollTop = prevScroll;
+}
 
-  // Sort: purchased first, then available, then locked
+/**
+ * Create a Workshop tool block element
+ */
+function createWorkshopToolBlock(tool, visible, locked) {
+  const block = document.createElement('div');
+  block.className = 'workshop-tool-block';
+  block.dataset.toolId = tool.id;
+
+  const isSelected = selectedTool === tool.id;
+  if (isSelected) block.classList.add('tool-selected');
+
+  // Determine status
+  let status = 'permanent'; // Fist (no upgrade to buy)
+  if (tool.upgradeId) {
+    const level = getUpgradeLevel(tool.upgradeId);
+    const isLocked = locked.includes(tool.upgradeId);
+    const upgrade = UPGRADE_TREE[tool.upgradeId];
+    const isMaxed = level >= upgrade.maxLevel;
+
+    if (isLocked) {
+      status = 'locked';
+    } else if (isMaxed || level > 0) {
+      status = 'unlocked';
+    } else {
+      status = 'available';
+    }
+  }
+  block.classList.add('tool-' + status);
+
+  // Icon
+  const iconEl = document.createElement('div');
+  iconEl.className = 'workshop-tool-icon';
+  iconEl.textContent = status === 'locked' ? '?' : tool.icon;
+  block.appendChild(iconEl);
+
+  // Info section
+  const info = document.createElement('div');
+  info.className = 'workshop-tool-info';
+
+  const labelEl = document.createElement('div');
+  labelEl.className = 'workshop-tool-label';
+  labelEl.textContent = status === 'locked' ? '???' : tool.label;
+  info.appendChild(labelEl);
+
+  // Show description for purchasable tool unlocks
+  if (tool.upgradeId && status === 'available') {
+    const upgrade = UPGRADE_TREE[tool.upgradeId];
+    const descEl = document.createElement('div');
+    descEl.className = 'workshop-tool-desc';
+    descEl.textContent = upgrade.description;
+    info.appendChild(descEl);
+  }
+
+  block.appendChild(info);
+
+  // Right side: cost or status indicator
+  const rightEl = document.createElement('div');
+  rightEl.className = 'workshop-tool-right';
+
+  if (tool.upgradeId && status === 'available') {
+    const cost = getUpgradeCost(tool.upgradeId, 1);
+    const costEl = document.createElement('div');
+    costEl.className = 'workshop-tool-cost';
+    if (cost.renown > 0) {
+      const r = document.createElement('span');
+      r.className = gameState.letters >= cost.renown ? 'cost-affordable' : 'cost-unaffordable';
+      r.textContent = `⭐${cost.renown}`;
+      costEl.appendChild(r);
+    }
+    if (cost.ink > 0) {
+      const i = document.createElement('span');
+      i.className = gameState.ink >= cost.ink ? 'cost-affordable' : 'cost-unaffordable';
+      i.textContent = `💧${cost.ink}`;
+      costEl.appendChild(i);
+    }
+    rightEl.appendChild(costEl);
+  } else if (status === 'unlocked' || status === 'permanent') {
+    const checkEl = document.createElement('div');
+    checkEl.className = 'workshop-tool-check';
+    checkEl.textContent = '✓';
+    rightEl.appendChild(checkEl);
+  }
+
+  block.appendChild(rightEl);
+
+  // Click handler
+  if (status !== 'locked') {
+    block.addEventListener('click', () => {
+      // If purchasable, buy first
+      if (status === 'available' && tool.upgradeId) {
+        if (purchaseUpgrade(tool.upgradeId)) {
+          if (window.updateUI) window.updateUI();
+        }
+      }
+      // Toggle filter selection
+      selectedTool = (selectedTool === tool.id) ? null : tool.id;
+      renderUpgradeTree();
+    });
+  }
+
+  return block;
+}
+
+/**
+ * Render the Forgecraft column (stat upgrade blocks, filtered by selected tool)
+ */
+function renderForgecraft(allShown, visible, locked) {
+  const listEl = document.getElementById('forgecraftList');
+  if (!listEl) return;
+
+  const prevScroll = listEl.scrollTop;
+  listEl.innerHTML = '';
+
+  // Gather stat upgrades for Forgecraft column
   const columnUpgrades = [];
   for (const [id, meta] of Object.entries(UPGRADE_META)) {
-    if (meta.column !== columnId) continue;
-    if (filter !== 'all' && meta.tool !== filter) continue;
+    if (meta.column !== 'forgecraft') continue;
+    if (selectedTool && meta.tool !== selectedTool) continue;
     if (!allShown.has(id)) continue;
     columnUpgrades.push(id);
   }
 
+  // Sort: purchased first, then available, then locked
   columnUpgrades.sort((a, b) => {
     const aLevel = getUpgradeLevel(a);
     const bLevel = getUpgradeLevel(b);
     const aLocked = locked.includes(a);
     const bLocked = locked.includes(b);
-    // Purchased at top, then available, then locked
     if (aLevel > 0 && bLevel === 0) return -1;
     if (bLevel > 0 && aLevel === 0) return 1;
     if (!aLocked && bLocked) return -1;
@@ -695,11 +795,10 @@ function renderColumn(columnId, allShown, visible, locked) {
   if (columnUpgrades.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'upgrade-empty';
-    empty.textContent = 'No upgrades available yet';
+    empty.textContent = selectedTool ? 'No upgrades for this tool yet' : 'No upgrades available yet';
     listEl.appendChild(empty);
   }
 
-  // Restore scroll
   listEl.scrollTop = prevScroll;
 }
 
