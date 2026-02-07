@@ -120,8 +120,8 @@ export class HammerSystem {
     let anvilBottom;
     if (hearthEl) {
       const hearthRect = hearthEl.getBoundingClientRect();
-      // anvil bottom = hearth top in canvas coordinates, with a small gap
-      anvilBottom = hearthRect.top - canvasRect.top + 20;
+      // anvil bottom = hearth top in canvas coordinates
+      anvilBottom = hearthRect.top - canvasRect.top;
     } else {
       // fallback
       const letterPoolBarHeight = isMobile ? 110 : 160;
@@ -137,9 +137,13 @@ export class HammerSystem {
 
     // On mobile portrait (<=768px), sit the anvil directly on top of the hearth
     const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
+    const isMobileLandscape = window.innerWidth <= 768 && window.innerWidth > window.innerHeight;
     if (isMobilePortrait) {
       // Hearth top is at 100vh - 164px; overlap anvil base onto hearth mantle
       this.anvil.y = this.height - 164 - this.anvil.height + 4;
+    } else if (isMobileLandscape && typeof anvilBottom === 'number') {
+      // Sit the anvil directly on the hearth in landscape
+      this.anvil.y = anvilBottom - this.anvil.height;
     } else {
       this.anvil.y = this.height - letterPoolBarHeight - this.anvil.height - 10;
     }

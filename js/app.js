@@ -639,6 +639,10 @@ function setupEventHandlers() {
     const stopAudioPanelClick = (event) => {
       event.stopPropagation();
     };
+    const stopAudioPanelPointer = (event) => {
+      event.stopPropagation();
+      event.preventDefault();
+    };
     const updateVolumeDisplay = (slider, valueEl) => {
       if (!slider || !valueEl) return;
       valueEl.textContent = `${Math.round(parseFloat(slider.value) * 100)}%`;
@@ -653,6 +657,8 @@ function setupEventHandlers() {
 
     syncVolumeSliders();
 
+    audioToggleBtn.addEventListener('pointerdown', stopAudioPanelPointer);
+    audioToggleBtn.addEventListener('mousedown', stopAudioPanelPointer);
     audioToggleBtn.addEventListener('click', (event) => {
       event.stopPropagation();
       audioControls.classList.toggle('hidden');
@@ -661,7 +667,8 @@ function setupEventHandlers() {
       }
     });
 
-    audioControls.addEventListener('pointerdown', stopAudioPanelClick);
+    audioControls.addEventListener('pointerdown', stopAudioPanelPointer);
+    audioControls.addEventListener('mousedown', stopAudioPanelPointer);
     audioControls.addEventListener('click', stopAudioPanelClick);
 
     document.addEventListener('click', (event) => {
