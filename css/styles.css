@@ -2010,7 +2010,7 @@ button.secondary {
     position: fixed;
     left: 0;
     right: auto;
-    top: 50%;
+    top: 40%;
     transform: translateY(-50%);
     width: auto;
     min-width: unset;
@@ -2488,18 +2488,20 @@ button.secondary {
     font-size: 15px;
   }
 
-  /* ─ Mold viewport: right-edge tab, extends full height when open ─ */
+  /* ─ Mold viewport: left-edge tab, extends full height when open ─ */
   .mold-viewport-wrapper {
     position: fixed;
-    left: auto;
-    right: 0;
+    left: 0;
+    right: auto;
+    top: 40%;
+    transform: translateY(-50%);
     width: auto;
     min-width: unset;
     max-width: none;
     z-index: 98;
     display: flex;
-    flex-direction: row;
-    justify-content: flex-end;
+    flex-direction: row-reverse;
+    justify-content: flex-start;
     align-items: stretch;
     pointer-events: auto;
   }
@@ -2518,9 +2520,9 @@ button.secondary {
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    border-radius: 8px 0 0 8px;
+    border-radius: 0 8px 8px 0;
     border: 1px solid rgba(107, 96, 80, 0.4);
-    border-right: none;
+    border-left: none;
     cursor: pointer;
     backdrop-filter: blur(8px);
     flex-shrink: 0;
@@ -2534,8 +2536,8 @@ button.secondary {
     padding: 0;
     opacity: 0;
     transition: max-width 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
-    border-radius: 10px 0 0 10px;
-    border-right: none;
+    border-radius: 0 10px 10px 0;
+    border-left: none;
     min-width: 0;
     margin: 0;
     display: flex;
@@ -2547,7 +2549,7 @@ button.secondary {
     padding: 8px;
     opacity: 1;
     border: 1px solid rgba(107, 96, 80, 0.3);
-    border-right: none;
+    border-left: none;
   }
 
   .mold-viewport-wrapper .mold-viewport {
