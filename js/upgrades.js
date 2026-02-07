@@ -617,12 +617,21 @@ function updateHeaderStats() {
  * Render the two-column upgrade screen
  */
 export function renderUpgradeTree() {
-  const { visible, locked } = getVisibleUpgrades();
-  const allShown = new Set([...visible, ...locked]);
+  try {
+    const { visible, locked } = getVisibleUpgrades();
+    const allShown = new Set([...visible, ...locked]);
+    console.log('[Upgrades] visible:', visible, 'locked:', locked, 'allShown size:', allShown.size);
 
-  renderWorkshop(allShown, visible, locked);
-  renderForgecraft(allShown, visible, locked);
-  updateHeaderStats();
+    renderWorkshop(allShown, visible, locked);
+    renderForgecraft(allShown, visible, locked);
+    updateHeaderStats();
+
+    const wl = document.getElementById('workshopList');
+    const fl = document.getElementById('forgecraftList');
+    console.log('[Upgrades] workshop children:', wl?.children.length, 'forgecraft children:', fl?.children.length);
+  } catch (e) {
+    console.error('[Upgrades] renderUpgradeTree ERROR:', e);
+  }
 }
 
 /**
