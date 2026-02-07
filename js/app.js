@@ -636,6 +636,9 @@ function setupEventHandlers() {
   const musicVolumeValue = document.getElementById('musicVolumeValue');
   const sfxVolumeValue = document.getElementById('sfxVolumeValue');
   if (audioToggleBtn && audioControls) {
+    const stopAudioPanelClick = (event) => {
+      event.stopPropagation();
+    };
     const updateVolumeDisplay = (slider, valueEl) => {
       if (!slider || !valueEl) return;
       valueEl.textContent = `${Math.round(parseFloat(slider.value) * 100)}%`;
@@ -657,6 +660,9 @@ function setupEventHandlers() {
         syncVolumeSliders();
       }
     });
+
+    audioControls.addEventListener('pointerdown', stopAudioPanelClick);
+    audioControls.addEventListener('click', stopAudioPanelClick);
 
     document.addEventListener('click', (event) => {
       if (audioControls.classList.contains('hidden')) return;
