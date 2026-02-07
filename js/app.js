@@ -706,6 +706,29 @@ function gameLoop(timestamp) {
       letterPhysics.update(dt, window.innerWidth, window.innerHeight);
       letterPhysics.checkMoldSlots();
       letterPhysics.checkHearth();
+      letterPhysics.checkBasket((char) => {
+        // Return the letter to the basket DOM as a tile
+        addLetters(1);
+        const letterPoolDiv = document.getElementById('letterPool');
+        if (!letterPoolDiv) return;
+        const existing = Array.from(letterPoolDiv.children).find(
+          el => el.classList && el.classList.contains('letter-tile') && el.dataset.letterChar === char
+        );
+        if (existing) {
+          const current = parseInt(existing.dataset.count || '1', 10);
+          existing.dataset.count = String(current + 1);
+          existing.innerHTML = '<span>' + (existing.dataset.letterChar || '') + '</span>';
+          if (current + 1 > 1) {
+            const badge = document.createElement('span');
+            badge.className = 'letter-count';
+            badge.textContent = 'x' + (current + 1);
+            existing.appendChild(badge);
+          }
+        } else {
+          const tile = createLetterTile(char, handleMoldSlotFilled);
+          letterPoolDiv.appendChild(tile);
+        }
+      });
 
       // Hammer pushes nearby physics letters
       if (hammerSystem && hammerSystem.isRunning && craftingCanvasRef) {
@@ -752,6 +775,33 @@ function start() {
 
 // Expose updateUI globally for upgrade system
 window.updateUI = updateUI;
+
+// Expose a helper so the book drag can yield to active tools
+window.isPointOnActiveTool = function(clientX, clientY) {
+  const canvas = document.getElementById('craftingCanvas');
+  if (!canvas) return false;
+  const rect = canvas.getBoundingClientRect();
+  const cx = clientX - rect.left;
+  const cy = clientY - rect.top;
+
+  if (hammerSystem && hammerSystem.isRunning) {
+    if (hammerSystem.isPointNearHammer(cx, cy)) return true;
+  }
+  if (pestleSystem && pestleSystem.isRunning) {
+    if (pestleSystem.isPointNearPestle(cx, cy)) return true;
+  }
+  if (shovelSystem && shovelSystem.isRunning) {
+    // Use a simple distance check to the shovel pivot/head area
+    const s = shovelSystem.shovel;
+    const dx = cx - s.headX;
+    const dy = cy - s.headY;
+    if (Math.hypot(dx, dy) < 100) return true;
+    const dp = cx - s.pivotX;
+    const dq = cy - s.pivotY;
+    if (Math.hypot(dp, dq) < 100) return true;
+  }
+  return false;
+};
 
 // Start the game when DOM is ready
 if (document.readyState === 'loading') {

@@ -200,6 +200,59 @@ export class LetterPhysicsSystem {
     }
   }
 
+  // ─── Basket return ─────────────────────────────────────
+
+  /**
+   * Check if any non-held physics letters have entered the letter basket.
+   * If so, mark them consumed and call the callback to return them to inventory.
+   * @param {Function} onReturnToBasket - callback(char) when a letter returns to basket
+   */
+  checkBasket(onReturnToBasket) {
+    const letterPool = document.getElementById('letterPool');
+    if (!letterPool) return;
+
+    // If there are tiles in the pool, use the bounding box of the actual
+    // tiles so the hit area matches only the visible letter area.
+    // Otherwise fall back to the pool element itself with generous insets
+    // so a full-width mobile basket doesn't swallow every floor letter.
+    const tiles = letterPool.querySelectorAll('.letter-tile');
+    let left, top, right, bottom;
+
+    if (tiles.length > 0) {
+      // Compute tight bounding box around all visible tiles
+      left = Infinity; top = Infinity; right = -Infinity; bottom = -Infinity;
+      for (const t of tiles) {
+        const r = t.getBoundingClientRect();
+        if (r.left < left)   left   = r.left;
+        if (r.top  < top)    top    = r.top;
+        if (r.right > right) right  = r.right;
+        if (r.bottom > bottom) bottom = r.bottom;
+      }
+      // Add a small margin around the tiles so letters don't need pixel-perfect aim
+      const margin = 12;
+      left   -= margin;
+      top    -= margin;
+      right  += margin;
+      bottom += margin;
+    } else {
+      // No tiles yet — use the pool element with horizontal insets
+      const br = letterPool.getBoundingClientRect();
+      const insetX = br.width * 0.3;
+      left   = br.left + insetX;
+      top    = br.top;
+      right  = br.right - insetX;
+      bottom = br.bottom;
+    }
+
+    for (const l of this.letters) {
+      if (l.consumed || l.isHeld) continue;
+      if (l.x >= left && l.x <= right && l.y >= top && l.y <= bottom) {
+        l.consumed = true;
+        if (onReturnToBasket) onReturnToBasket(l.char);
+      }
+    }
+  }
+
   // ─── Tool interaction helpers ────────────────────────────
 
   /**

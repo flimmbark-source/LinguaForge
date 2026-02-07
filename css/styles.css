@@ -1787,29 +1787,499 @@ button.secondary {
   }
 }
 
-/* ── Portrait-only lock for mobile ── */
+/* ── Mobile landscape layout (≤768px) ── */
 @media (max-width: 768px) and (orientation: landscape) {
-  body::after {
-    content: 'Please rotate your device to portrait mode';
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: #111827;
-    color: #f9fafb;
+  :root {
+    --basket-height: 50px;
+  }
+
+  body {
+    padding: 0;
+  }
+
+  /* ─ Stats: top-left, compact ─ */
+  .stats-wrap {
+    left: 6px;
+    top: 6px;
+  }
+
+  .core-stats-float {
+    width: 110px;
+  }
+
+  .stat-row {
+    font-size: 10px;
+  }
+
+  /* ─ Upgrades button: compact top-right ─ */
+  .upgrades-btn {
+    top: 6px;
+    right: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 8px;
+    gap: 4px;
+  }
+
+  .upgrades-btn-icon {
+    font-size: 12px;
+  }
+
+  /* ─ Upgrade modal: full-screen ─ */
+  .upgrade-modal {
+    padding: 0;
+  }
+
+  .upgrade-modal-content {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+
+  .upgrade-modal-header {
+    padding: 6px 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .upgrade-modal-header h2 {
+    font-size: 14px;
+  }
+
+  .upgrade-header-stats {
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .upgrade-columns {
+    flex-direction: row;
+  }
+
+  .upgrade-column {
+    max-height: none;
+  }
+
+  .upgrade-block-list {
+    padding: 6px;
+    gap: 4px;
+  }
+
+  .upgrade-block {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .upgrade-block-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+
+  .upgrade-block-name {
+    font-size: 11px;
+  }
+
+  .upgrade-block-desc {
+    font-size: 9px;
+    -webkit-line-clamp: 1;
+  }
+
+  .workshop-tool-block {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .workshop-tool-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+
+  .workshop-tool-label {
+    font-size: 11px;
+  }
+
+  .upgrade-column-header {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  /* ─ Magic book: full-screen overlay on landscape mobile ─ */
+  .magic-book {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
+    z-index: 200 !important;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+  }
+
+  .magic-book .book-toggle-btn {
+    display: flex;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 220;
+  }
+
+  .magic-book .book-close-btn {
+    display: flex;
+    top: 12px;
+    right: 12px;
+    z-index: 220;
+  }
+
+  .book-interior {
+    width: min(70vw, 500px);
+    min-height: 50vh;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .book-page {
+    padding: 8px;
+  }
+
+  .book-page-header {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+
+  .book-page-content {
+    font-size: 11px;
+  }
+
+  .book-cover {
+    width: 100px;
+    height: 130px;
+  }
+
+  .book-spine {
+    width: 10px;
+  }
+
+  /* ─ Hearth: tight against basket ─ */
+  .hearth-wrapper {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: var(--basket-height);
+    top: auto;
+    width: 240px;
+    max-width: 240px;
+  }
+
+  .hearth-structure {
+    width: 100%;
+    max-width: 240px;
+  }
+
+  .hearth-opening {
+    min-height: 40px;
+  }
+
+  .hearth-instructions {
+    display: none;
+  }
+
+  .hearth-mantle {
+    height: 8px;
+  }
+
+  .hearth-base {
+    height: 10px;
+  }
+
+  .hearth-body {
+    padding: 4px;
+  }
+
+  /* ─ Letter basket: full width at bottom ─ */
+  .letter-basket {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    min-width: unset;
+    max-width: none;
+    height: calc(var(--basket-height) - 4px);
+    border-radius: 8px 8px 0 0;
+    z-index: 97;
+  }
+
+  .letter-basket .letter-board {
+    padding: 3px 6px 4px;
+  }
+
+  .letter-tile {
+    min-width: 20px;
+    height: 20px;
+    font-size: 13px;
+    border-radius: 4px;
+  }
+
+  .letter-board {
+    min-height: 36px;
+    gap: 3px;
+  }
+
+  /* ─ Mold viewport: left side, extends full height when open ─ */
+  .mold-viewport-wrapper {
+    position: fixed;
+    left: 0;
+    right: auto;
+    top: 32%;
+    transform: translateY(-50%);
+    width: auto;
+    min-width: unset;
+    max-width: none;
+    z-index: 98;
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+    align-items: stretch;
+    pointer-events: auto;
+  }
+
+  .mold-sidebar-tab {
+    display: flex;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    align-items: center;
+    justify-content: center;
+    background: rgba(58, 54, 50, 0.85);
+    color: #c9b58a;
+    padding: 10px 3px;
+    font-size: 9px;
     font-weight: 600;
-    text-align: center;
-    padding: 32px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 0 6px 6px 0;
+    border: 1px solid rgba(107, 96, 80, 0.4);
+    border-left: none;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    flex-shrink: 0;
+    align-self: center;
+  }
+
+  .mold-viewport-wrapper .mold-panel {
+    max-width: 0;
+    overflow: hidden;
+    padding: 0;
+    opacity: 0;
+    transition: max-width 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+    border-radius: 0 8px 8px 0;
+    border-left: none;
+    min-width: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mold-viewport-wrapper.open .mold-panel {
+    max-width: calc(100vw - 40px);
+    padding: 6px;
+    opacity: 1;
+    border: 1px solid rgba(107, 96, 80, 0.3);
+    border-left: none;
+  }
+
+  .mold-viewport-wrapper .mold-viewport {
+    width: 100%;
+    max-width: none;
+  }
+
+  /* ─ Workers panel: below stats on left ─ */
+  .workers-panel {
+    position: fixed;
+    left: 6px;
+    top: auto;
+    bottom: calc(var(--basket-height) + 8px);
+    right: auto;
+    width: 130px;
+    min-width: 110px;
+    max-width: 160px;
+  }
+
+  .workers-panel h2 {
+    font-size: 11px;
+    margin: 0 0 2px 0;
+  }
+
+  .workers-panel h3 {
+    font-size: 9px;
+    margin: 2px 0;
+  }
+
+  .workers-panel .row {
+    font-size: 9px;
+    gap: 3px;
+  }
+
+  .scribe-block {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+  }
+
+  .scribe-icon {
+    font-size: 11px;
+  }
+
+  /* ─ Tools sidebar: right edge ─ */
+  .tools-sidebar {
+    right: 0;
+    left: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    flex-direction: row;
+    z-index: 98;
+  }
+
+  .tools-sidebar:hover {
+    transform: translateY(-50%);
+  }
+
+  .tools-sidebar .tools-sidebar-content {
+    max-width: 0;
+    overflow: hidden;
+    padding: 0;
+    opacity: 0;
+    transition: max-width 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+    flex-direction: column;
+    border-radius: 10px 0 0 10px;
+    border: none;
+    border-right: none;
+    min-width: 0;
+  }
+
+  .tools-sidebar.open .tools-sidebar-content,
+  .tools-sidebar.pinned .tools-sidebar-content {
+    max-width: 64px;
+    padding: 6px 5px;
+    opacity: 1;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-right: none;
+  }
+
+  .tools-sidebar:hover .tools-sidebar-content {
+    max-width: 0;
+    padding: 0;
+    opacity: 0;
+    border: none;
+  }
+
+  .tools-sidebar.open:hover .tools-sidebar-content,
+  .tools-sidebar.pinned:hover .tools-sidebar-content {
+    max-width: 64px;
+    padding: 6px 5px;
+    opacity: 1;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-right: none;
+  }
+
+  .tools-sidebar-tab {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    border-radius: 8px 0 0 8px;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-right: none;
+    padding: 10px 3px;
+    font-size: 9px;
+    cursor: pointer;
+    background: rgba(15, 23, 42, 0.85);
+  }
+
+  .tools-sidebar-content {
+    background: rgba(15, 23, 42, 0.9);
+    gap: 4px;
+  }
+
+  .tool-slot {
+    width: 40px;
+    padding: 4px 3px;
+    gap: 1px;
+  }
+
+  .tool-slot-icon {
+    font-size: 15px;
+  }
+
+  .tool-slot-label {
+    font-size: 7px;
+  }
+
+  /* ─ Crafting hint ─ */
+  .crafting-hint {
+    bottom: auto;
+    top: 34px;
+    font-size: 9px;
+    padding: 3px 8px;
+  }
+
+  /* ─ Canvas ─ */
+  .crafting-forge {
+    pointer-events: none;
+  }
+}
+
+/* ── Small landscape (≤568px height or ≤568px width) ── */
+@media (max-width: 568px) and (orientation: landscape) {
+  .hearth-wrapper {
+    width: 200px;
+    max-width: 200px;
+  }
+
+  .hearth-opening {
+    min-height: 32px;
+  }
+
+  .workers-panel {
+    width: 110px;
+    min-width: 90px;
+  }
+
+  .workers-panel h2 {
+    font-size: 10px;
+  }
+
+  .workers-panel h3 {
+    font-size: 8px;
+  }
+
+  .scribe-block {
+    width: 20px;
+    height: 20px;
+  }
+
+  .book-interior {
+    width: min(55vw, 320px);
+    min-height: 140px;
+  }
+
+  .mold-viewport-wrapper .mold-viewport {
+    width: 160px;
+  }
+
+  .mold-viewport-wrapper.open .mold-panel {
+    max-width: 190px;
   }
 }
 
 /* ── Mobile portrait (≤768px) ── */
 @media (max-width: 768px) and (orientation: portrait) {
   :root {
-    --basket-height: 60px;  /* half of original 120px */
+    --basket-height: 70px;
   }
 
   body {
@@ -1817,28 +2287,29 @@ button.secondary {
     padding-bottom: 0;
   }
 
-  /* ─ Stats: top-left ─ */
+  /* ─ Top bar: stats left, upgrades right with clear separation ─ */
   .stats-wrap {
     left: 8px;
     top: 8px;
   }
 
   .core-stats-float {
-    width: 140px;
+    width: 120px;
+    padding: 6px;
   }
 
   .stat-row {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   /* ─ Upgrades button: top-right, compact ─ */
   .upgrades-btn {
     top: 8px;
     right: 8px;
-    padding: 6px 12px;
-    font-size: 13px;
+    padding: 5px 10px;
+    font-size: 12px;
     border-radius: 10px;
-    gap: 5px;
+    gap: 4px;
   }
 
   .audio-toggle-btn {
@@ -1852,7 +2323,11 @@ button.secondary {
   }
 
   .upgrades-btn-icon {
-    font-size: 14px;
+    font-size: 13px;
+  }
+
+  .upgrades-btn-label {
+    display: none;
   }
 
   /* ─ Upgrade modal: full-screen ─ */
@@ -1905,9 +2380,9 @@ button.secondary {
   }
 
   .workshop-tool-icon {
-    width: 38px;
-    height: 38px;
-    font-size: 20px;
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
   }
 
   .workshop-tool-label {
@@ -1920,41 +2395,77 @@ button.secondary {
   }
 
   .upgrade-block-icon {
-    width: 36px;
-    height: 36px;
-    font-size: 18px;
+    width: 34px;
+    height: 34px;
+    font-size: 17px;
   }
 
-  /* ─ Magic book: fits screen width ─ */
+  /* ─ Magic book: full-screen overlay on mobile ─ */
   .magic-book {
-    top: 50px;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
+    z-index: 200 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+  }
+
+  .magic-book .book-toggle-btn {
+    display: flex;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 220;
+  }
+
+  .magic-book .book-close-btn {
+    display: flex;
+    top: 12px;
+    right: 12px;
+    z-index: 220;
   }
 
   .book-interior {
-    width: calc(100vw - 32px);
+    width: calc(100vw - 24px);
     max-width: 440px;
-    min-height: 240px;
+    min-height: 60vh;
+    max-height: 85vh;
+    overflow-y: auto;
   }
 
   .book-page {
-    padding: 10px;
+    padding: 12px;
+    flex: 1;
   }
 
   .book-page-header {
-    font-size: 11px;
+    font-size: 12px;
     margin-bottom: 6px;
+    padding-bottom: 4px;
   }
 
   .book-page-content {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .book-cover {
-    width: 130px;
-    height: 180px;
+    width: 160px;
+    height: 220px;
   }
 
-  /* ─ Hearth: centered, just under the anvil area ─ */
+  .book-spine {
+    width: 14px;
+  }
+
+  /* ─ Hearth: tight against letter basket, no gap ─ */
   .hearth-wrapper {
     left: 50%;
     right: auto;
@@ -1987,9 +2498,7 @@ button.secondary {
     display: none;
   }
 
-  /* ─ Letter basket: full width, from bottom up to just under hearth ─ */
-  /* Hearth top is at calc(100vh - 160px), hearth is ~100px tall,
-     so hearth bottom is at calc(100vh - 60px). Basket fills below that. */
+  /* ─ Letter basket: full width at bottom, properly sized ─ */
   .letter-basket {
     left: 0;
     right: 0;
@@ -1998,7 +2507,7 @@ button.secondary {
     width: 100%;
     min-width: unset;
     max-width: none;
-    height: calc(var(--basket-height) - 6px);  /* from bottom to just under hearth, with gap */
+    height: var(--basket-height);
     border-radius: 12px 12px 0 0;
     z-index: 97;
   }
@@ -2013,11 +2522,13 @@ button.secondary {
     font-size: 15px;
   }
 
-  /* ─ Mold viewport: right-edge tab, above tools tab ─ */
+  /* ─ Mold viewport: left-edge tab, extends full height when open ─ */
   .mold-viewport-wrapper {
     position: fixed;
-    left: auto;
-    top: auto;
+    left: 0;
+    right: auto;
+    top: 40%;
+    transform: translateY(-50%);
     width: auto;
     min-width: unset;
     max-width: none;
@@ -2026,8 +2537,9 @@ button.secondary {
     bottom: calc(50% + 100px);
     z-index: 98;
     display: flex;
-    flex-direction: row;
-    justify-content: flex-end;
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+    align-items: stretch;
     pointer-events: auto;
   }
 
@@ -2045,12 +2557,13 @@ button.secondary {
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    border-radius: 8px 0 0 8px;
+    border-radius: 0 8px 8px 0;
     border: 1px solid rgba(107, 96, 80, 0.4);
-    border-right: none;
+    border-left: none;
     cursor: pointer;
     backdrop-filter: blur(8px);
     flex-shrink: 0;
+    align-self: center;
   }
 
   /* Mold panel content: hidden by default, slides out on tap */
@@ -2060,10 +2573,12 @@ button.secondary {
     padding: 0;
     opacity: 0;
     transition: max-width 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
-    border-radius: 10px 0 0 10px;
-    border-right: none;
+    border-radius: 0 10px 10px 0;
+    border-left: none;
     min-width: 0;
     margin: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .mold-viewport-wrapper.open .mold-panel {
@@ -2071,50 +2586,50 @@ button.secondary {
     padding: 8px;
     opacity: 1;
     border: 1px solid rgba(107, 96, 80, 0.3);
-    border-right: none;
+    border-left: none;
   }
 
   .mold-viewport-wrapper .mold-viewport {
     width: 200px;
   }
 
-  /* ─ Workers panel: top-right, below upgrades btn ─ */
+  /* ─ Workers panel: below upgrades btn with proper spacing ─ */
   .workers-panel {
     position: fixed;
     right: 8px;
-    top: 52px;
+    top: 48px;
     bottom: auto;
-    width: 160px;
-    min-width: 130px;
-    max-width: 200px;
+    width: 140px;
+    min-width: 120px;
+    max-width: 170px;
   }
 
   .workers-panel h2 {
-    font-size: 13px;
+    font-size: 12px;
     margin: 0 0 2px 0;
   }
 
   .workers-panel h3 {
-    font-size: 11px;
+    font-size: 10px;
     margin: 2px 0;
   }
 
   .workers-panel .row {
-    font-size: 11px;
+    font-size: 10px;
     gap: 4px;
   }
 
   .scribe-block {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     border-radius: 6px;
   }
 
   .scribe-icon {
-    font-size: 14px;
+    font-size: 13px;
   }
 
-  /* ─ Tools sidebar: right edge, tap-to-toggle ─ */
+  /* ─ Tools sidebar: right edge, centered vertically ─ */
   .tools-sidebar {
     right: 0;
     left: auto;
@@ -2124,12 +2639,10 @@ button.secondary {
     z-index: 98;
   }
 
-  /* Reset desktop hover/translateX to simple right-edge behavior */
   .tools-sidebar:hover {
     transform: translateY(-50%);
   }
 
-  /* Content hidden by default on mobile */
   .tools-sidebar .tools-sidebar-content {
     max-width: 0;
     overflow: hidden;
@@ -2143,17 +2656,15 @@ button.secondary {
     min-width: 0;
   }
 
-  /* Show content when .open or .pinned */
   .tools-sidebar.open .tools-sidebar-content,
   .tools-sidebar.pinned .tools-sidebar-content {
-    max-width: 80px;
-    padding: 10px 8px;
+    max-width: 72px;
+    padding: 8px 6px;
     opacity: 1;
     border: 1px solid rgba(148, 163, 184, 0.12);
     border-right: none;
   }
 
-  /* Prevent hover from expanding on mobile */
   .tools-sidebar:hover .tools-sidebar-content {
     max-width: 0;
     padding: 0;
@@ -2161,11 +2672,10 @@ button.secondary {
     border: none;
   }
 
-  /* Higher specificity: .open/.pinned still works on hover */
   .tools-sidebar.open:hover .tools-sidebar-content,
   .tools-sidebar.pinned:hover .tools-sidebar-content {
-    max-width: 80px;
-    padding: 10px 8px;
+    max-width: 72px;
+    padding: 8px 6px;
     opacity: 1;
     border: 1px solid rgba(148, 163, 184, 0.12);
     border-right: none;
@@ -2189,7 +2699,7 @@ button.secondary {
   }
 
   .tool-slot {
-    width: 48px;
+    width: 46px;
     padding: 5px 4px;
     gap: 2px;
   }
@@ -2205,66 +2715,89 @@ button.secondary {
   /* ─ Crafting hint ─ */
   .crafting-hint {
     bottom: auto;
-    top: 65px;
+    top: 38px;
     font-size: 10px;
     padding: 4px 10px;
+  }
+
+  /* ─ Mold card adjustments ─ */
+  .mold-card {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .mold-header {
+    margin-bottom: 4px;
+    font-size: 11px;
+  }
+
+  .slot {
+    flex: 0 0 28px;
+    height: 32px;
+    font-size: 17px;
   }
 }
 
 /* ── Small phones portrait (≤480px) ── */
 @media (max-width: 480px) and (orientation: portrait) {
   :root {
-    --basket-height: 50px;
+    --basket-height: 60px;
   }
 
   .core-stats-float {
-    width: 120px;
+    width: 105px;
+    padding: 5px;
   }
 
   .stat-row {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .upgrades-btn {
-    padding: 5px 10px;
-    font-size: 12px;
-    gap: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    gap: 3px;
   }
 
   .upgrades-btn-icon {
-    font-size: 12px;
+    font-size: 11px;
   }
 
-  /* Book: even smaller */
+  /* Book: tighter fit for small screens */
   .magic-book {
-    top: 44px;
+    top: 40px;
   }
 
   .book-interior {
     width: calc(100vw - 16px);
-    min-height: 200px;
+    max-width: 360px;
+    min-height: 170px;
   }
 
   .book-spine {
-    width: 10px;
+    width: 8px;
   }
 
   .book-page {
-    padding: 8px;
+    padding: 6px;
   }
 
   .book-page-header {
+    font-size: 9px;
+    padding-bottom: 3px;
+    margin-bottom: 4px;
+  }
+
+  .book-page-content {
     font-size: 10px;
-    padding-bottom: 4px;
-    margin-bottom: 6px;
   }
 
   .book-cover {
-    width: 110px;
-    height: 150px;
+    width: 100px;
+    height: 130px;
   }
 
-  /* Hearth */
+  /* Hearth: compact */
   .hearth-wrapper {
     left: 50%;
     right: auto;
@@ -2291,11 +2824,15 @@ button.secondary {
     margin-bottom: 0;
   }
 
-  /* Basket: fills from bottom to under hearth */
-  .letter-basket {
-    height: calc(var(--basket-height) - 6px);
+  .hearth-base {
+    height: 10px;
   }
 
+  .hearth-body {
+    padding: 5px;
+  }
+
+  /* Basket */
   .letter-tile {
     min-width: 20px;
     height: 22px;
@@ -2304,12 +2841,12 @@ button.secondary {
   }
 
   .letter-board {
-    min-height: 40px;
+    min-height: 36px;
     gap: 3px;
     padding: 3px;
   }
 
-  /* Mold: tab panel, slightly smaller */
+  /* Mold: smaller */
   .mold-viewport-wrapper .mold-viewport {
     width: 170px;
   }
@@ -2318,44 +2855,60 @@ button.secondary {
     max-width: 190px;
   }
 
-  /* Workers */
+  /* Workers: compact */
   .workers-panel {
     right: 4px;
-    top: 48px;
-    width: 140px;
-    min-width: 120px;
-    max-width: 160px;
+    top: 42px;
+    width: 120px;
+    min-width: 100px;
+    max-width: 140px;
   }
 
   .workers-panel h2 {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .workers-panel h3 {
-    font-size: 10px;
+    font-size: 9px;
+  }
+
+  .workers-panel .row {
+    font-size: 9px;
   }
 
   .scribe-block {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
   }
 
   .scribe-icon {
-    font-size: 12px;
+    font-size: 11px;
   }
 
-  /* Tools sidebar */
+  /* Tools sidebar: smaller */
   .tool-slot {
-    width: 40px;
+    width: 38px;
     padding: 4px 3px;
   }
 
   .tool-slot-icon {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .tool-slot-label {
     font-size: 7px;
+  }
+
+  .tools-sidebar.open .tools-sidebar-content,
+  .tools-sidebar.pinned .tools-sidebar-content {
+    max-width: 60px;
+    padding: 6px 4px;
+  }
+
+  .tools-sidebar.open:hover .tools-sidebar-content,
+  .tools-sidebar.pinned:hover .tools-sidebar-content {
+    max-width: 60px;
+    padding: 6px 4px;
   }
 
   /* Upgrade modal */
@@ -2382,34 +2935,106 @@ button.secondary {
     padding: 2px 6px;
   }
 
+  .workshop-tool-block {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
   .workshop-tool-icon {
-    width: 32px;
-    height: 32px;
-    font-size: 18px;
-  }
-
-  .workshop-tool-label {
-    font-size: 12px;
-  }
-
-  .workshop-tool-desc {
-    font-size: 10px;
-    -webkit-line-clamp: 1;
-  }
-
-  .upgrade-block-icon {
     width: 30px;
     height: 30px;
     font-size: 16px;
   }
 
+  .workshop-tool-label {
+    font-size: 11px;
+  }
+
+  .workshop-tool-desc {
+    font-size: 9px;
+    -webkit-line-clamp: 1;
+  }
+
+  .upgrade-block {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .upgrade-block-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
   .upgrade-block-name {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .upgrade-block-desc {
-    font-size: 10px;
+    font-size: 9px;
     -webkit-line-clamp: 1;
+  }
+
+  /* Mold cards */
+  .mold-card {
+    padding: 6px;
+    font-size: 11px;
+  }
+
+  .slot {
+    flex: 0 0 26px;
+    height: 30px;
+    font-size: 16px;
+  }
+
+  /* Crafting hint */
+  .crafting-hint {
+    top: 34px;
+    font-size: 9px;
+    padding: 3px 8px;
+  }
+}
+
+/* ── Very small phones portrait (≤360px) ── */
+@media (max-width: 360px) and (orientation: portrait) {
+  :root {
+    --basket-height: 52px;
+  }
+
+  .core-stats-float {
+    width: 95px;
+    padding: 4px;
+  }
+
+  .stat-row {
+    font-size: 9px;
+  }
+
+  .book-interior {
+    width: calc(100vw - 12px);
+    min-height: 150px;
+  }
+
+  .workers-panel {
+    width: 110px;
+    min-width: 90px;
+  }
+
+  .workers-panel h2 {
+    font-size: 10px;
+  }
+
+  .scribe-block {
+    width: 22px;
+    height: 22px;
+  }
+
+  .hearth-wrapper {
+    width: 200px;
+  }
+
+  .mold-viewport-wrapper .mold-viewport {
+    width: 170px;
   }
 }
 
@@ -2425,6 +3050,39 @@ button.secondary {
   z-index: 95;
   user-select: none;
   transition: width 0.4s ease, height 0.4s ease;
+}
+
+body.book-overlay-active {
+  overflow: hidden;
+}
+
+body.book-overlay-active > *:not(.magic-book) {
+  pointer-events: none;
+}
+
+body.book-overlay-active .magic-book {
+  pointer-events: auto;
+}
+
+/* Close button for mobile full-screen book (hidden on desktop) */
+.book-close-btn {
+  display: none;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #3d2a12;
+  border: 2px solid #8b6914;
+  color: #fcd34d;
+  font-size: 18px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 210;
+  padding: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 /* Toggle button - centered on left (spine) edge */

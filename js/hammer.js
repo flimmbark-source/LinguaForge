@@ -102,10 +102,27 @@ export class HammerSystem {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.width = rect.width;
     this.height = rect.height;
-    this.hammer.length = 180;
-    this.hammer.baseLength = 180; // keep original handle length for the static overlay
+
+    // Position anvil just above the hearth so they visually stack
+    const isMobile = this.width <= 768;
+    const baseHammerLength = isMobile ? 140 : 180;
+    this.hammer.length = baseHammerLength;
+    this.hammer.baseLength = baseHammerLength;
     this.refreshHandleCaps(true);
 
+    // Read the hearth's actual top position so the anvil sits right on it
+    const hearthEl = document.getElementById('hearth');
+    const canvasRect = this.canvas.getBoundingClientRect();
+    let anvilBottom;
+    if (hearthEl) {
+      const hearthRect = hearthEl.getBoundingClientRect();
+      // anvil bottom = hearth top in canvas coordinates, with a small gap
+      anvilBottom = hearthRect.top - canvasRect.top + 20;
+    } else {
+      // fallback
+      const letterPoolBarHeight = isMobile ? 110 : 160;
+      anvilBottom = this.height - letterPoolBarHeight;
+    }
 
     // Position anvil just above the hearth
     // Canvas now covers full viewport, so position relative to bottom
@@ -125,10 +142,12 @@ export class HammerSystem {
 
     // Position hammer pivot above anvil with enough clearance to swing
     const pivotX = this.width * 0.5;
-    const pivotY = this.anvil.y - 140; // More space for swinging
+    const hammerLength = isMobile ? 140 : 180;
+    const pivotClearance = isMobile ? 100 : 140;
+    const pivotY = this.anvil.y - pivotClearance;
     this.hammer.pivotX = pivotX;
     this.hammer.pivotY = pivotY;
-    this.hammer.length = 180; // Slightly longer hammer for better reach
+    this.hammer.length = hammerLength;
 
     // Start with hammer hanging down
     this.hammer.headX = pivotX;
