@@ -3,8 +3,9 @@
  * Physics-based hammer striking mechanic for letter generation
  */
 
-import { isHearthHeated, getHearthBounds, getHearthLevel } from './hearth.js?v=9';
+import { isHearthHeated, getHearthBounds, getHearthLevel } from './RuneHearth.js?v=9';
 import { gameState } from './state.js?v=9';
+import { playHammerClank } from './audio.js?v=9';
 
 export class HammerSystem {
   constructor(canvas) {
@@ -123,10 +124,21 @@ export class HammerSystem {
       anvilBottom = this.height - letterPoolBarHeight;
     }
 
-    this.anvil.width = Math.min(isMobile ? 200 : 260, this.width * 0.35);
-    this.anvil.height = isMobile ? 55 : 70;
+    // Position anvil just above the hearth
+    // Canvas now covers full viewport, so position relative to bottom
+    const letterPoolBarHeight = 160;
+    this.anvil.width = Math.min(260, this.width * 0.35);
+    this.anvil.height = 70;
     this.anvil.x = this.width * 0.5 - this.anvil.width / 2;
-    this.anvil.y = anvilBottom - this.anvil.height;
+
+    // On mobile portrait (<=768px), sit the anvil directly on top of the hearth
+    const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
+    if (isMobilePortrait) {
+      // Hearth top is at 100vh - 164px; overlap anvil base onto hearth mantle
+      this.anvil.y = this.height - 164 - this.anvil.height + 4;
+    } else {
+      this.anvil.y = this.height - letterPoolBarHeight - this.anvil.height - 10;
+    }
 
     // Position hammer pivot above anvil with enough clearance to swing
     const pivotX = this.width * 0.5;
@@ -827,6 +839,7 @@ updateFreeHammer(dt) {
           const impactY = anvil.y;
           this.spawnSparks(impactX, impactY, power, { isRip: true });
           this.spawnClankWord(impactX, impactY, power, { isRip: true, force: 'Clonk!' }); // Add clank word (ripped)
+          playHammerClank();
 
           if (this.onLetterForged) {
             this.onLetterForged(impactX, impactY, power, hammer.headVx, 1);
@@ -863,6 +876,7 @@ updateFreeHammer(dt) {
         const impactY = anvil.y;
         this.spawnSparks(impactX, impactY, power);
         this.spawnClankWord(impactX, impactY, power); // Add clank word
+        playHammerClank();
 
         // Calculate multiplier based on heat level
         // Heat level 0 = 1x, level 1 = 2x, level 2 = 3x, level 3 = 4x, etc.

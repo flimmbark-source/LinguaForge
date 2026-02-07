@@ -5,6 +5,8 @@
  * through the top opening, then grinds against the bottom to produce ink.
  */
 
+import { playPestleGrind, playPestleSquelch } from './audio.js?v=9';
+
 export class PestleSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -425,6 +427,7 @@ export class PestleSystem {
 
       const letter = pestle.attachedLetters.pop();
       this.spawnInkDrop(pestle.headX, pestle.headY);
+      if (Math.random() < 0.6) playPestleGrind(); else playPestleSquelch();
 
       if (this.onInkProduced) {
         this.onInkProduced(letter, pestle.headX, pestle.headY);

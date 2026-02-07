@@ -760,7 +760,7 @@ button.secondary {
 }
 
 .hearth-fire.disabled {
-  display: none;
+  visibility: hidden;
 }
 
 .hearth-fire-svg {
@@ -1018,6 +1018,33 @@ button.secondary {
 /* ===============================================
    FIXED UI ELEMENTS
    =============================================== */
+
+/* Audio toggle button */
+.audio-toggle-btn {
+  position: fixed;
+  top: 16px;
+  right: 160px;
+  z-index: 100;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: opacity 0.2s;
+}
+
+.audio-toggle-btn:hover {
+  opacity: 0.8;
+}
+
+.audio-toggle-icon {
+  font-size: 16px;
+}
+
+.audio-toggle-btn.muted .audio-toggle-icon {
+  opacity: 0.4;
+}
 
 /* Tool Rack */
 .tool-rack {
@@ -2285,6 +2312,16 @@ button.secondary {
     gap: 4px;
   }
 
+  .audio-toggle-btn {
+    top: 8px;
+    right: 110px;
+    padding: 4px 8px;
+  }
+
+  .audio-toggle-icon {
+    font-size: 14px;
+  }
+
   .upgrades-btn-icon {
     font-size: 13px;
   }
@@ -2433,31 +2470,28 @@ button.secondary {
     left: 50%;
     right: auto;
     transform: translateX(-50%);
-    bottom: var(--basket-height);
-    top: auto;
-    width: 280px;
-    max-width: 80vw;
+    /* Anvil bottom is ~160px from bottom; place hearth just below it */
+    bottom: auto;
+    top: calc(100vh - 164px);
+    width: calc(100% - 32px);
+    max-width: 320px;
   }
 
   .hearth-structure {
     width: 100%;
-    max-width: none;
+    max-width: 320px;
   }
 
   .hearth-opening {
-    min-height: 44px;
+    /* Fixed height so hearth doesn't change size when fire appears/disappears */
+    height: 50px;
+    min-height: unset;
   }
 
-  .hearth-mantle {
-    height: 8px;
-  }
-
-  .hearth-base {
-    height: 10px;
-  }
-
-  .hearth-body {
-    padding: 5px;
+  .hearth-fire {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 0;
   }
 
   .hearth-instructions {
@@ -2498,6 +2532,9 @@ button.secondary {
     width: auto;
     min-width: unset;
     max-width: none;
+    right: 0;
+    /* Position well above the letter basket / hearth zone */
+    bottom: calc(50% + 100px);
     z-index: 98;
     display: flex;
     flex-direction: row-reverse;
@@ -2545,7 +2582,7 @@ button.secondary {
   }
 
   .mold-viewport-wrapper.open .mold-panel {
-    max-width: calc(100vw - 40px);
+    max-width: 220px;
     padding: 8px;
     opacity: 1;
     border: 1px solid rgba(107, 96, 80, 0.3);
@@ -2553,8 +2590,7 @@ button.secondary {
   }
 
   .mold-viewport-wrapper .mold-viewport {
-    width: 100%;
-    max-width: none;
+    width: 200px;
   }
 
   /* ─ Workers panel: below upgrades btn with proper spacing ─ */
@@ -2763,16 +2799,29 @@ button.secondary {
 
   /* Hearth: compact */
   .hearth-wrapper {
-    width: 220px;
-    max-width: 70vw;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 280px;
+    top: calc(100vh - 164px);
+  }
+
+  .hearth-structure {
+    width: 100%;
+    max-width: 280px;
   }
 
   .hearth-opening {
-    min-height: 40px;
+    /* Fixed height so hearth doesn't change size when fire appears/disappears */
+    height: 45px;
+    min-height: unset;
   }
 
-  .hearth-mantle {
-    height: 8px;
+  .hearth-fire {
+    width: 45px;
+    height: 45px;
+    margin-bottom: 0;
   }
 
   .hearth-base {
@@ -2799,11 +2848,11 @@ button.secondary {
 
   /* Mold: smaller */
   .mold-viewport-wrapper .mold-viewport {
-    width: 190px;
+    width: 170px;
   }
 
   .mold-viewport-wrapper.open .mold-panel {
-    max-width: 220px;
+    max-width: 190px;
   }
 
   /* Workers: compact */

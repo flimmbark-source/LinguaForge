@@ -5,7 +5,7 @@
  */
 
 import { gameState } from './state.js?v=9';
-import { canPlaceInHearth, heatHearth } from './hearth.js?v=9';
+import { canPlaceInHearth, heatHearth } from './RuneHearth.js?v=9';
 
 // ─── Physics constants ───────────────────────────────────────
 const GRAVITY        = 2000;   // px/s²

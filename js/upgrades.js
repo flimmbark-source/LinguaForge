@@ -4,7 +4,7 @@
  */
 
 import { gameState, spendLetters, spendInk } from './state.js?v=9';
-import { updateHearthVisuals } from './hearth.js?v=9';
+import { updateHearthVisuals } from './RuneHearth.js?v=9';
 
 // ===============================================
 // Column / tool classification for every upgrade

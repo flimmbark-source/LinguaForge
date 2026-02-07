@@ -3,7 +3,7 @@
  * Physics-based word chips that pop out of molds and settle on screen
  */
 
-import { isHearthHeated, getHearthBounds } from './hearth.js?v=9';
+import { isHearthHeated, getHearthBounds } from './RuneHearth.js?v=9';
 import { gameState, addLetters } from './state.js?v=9';
 import { placeWordInVerse } from './grammar.js?v=9';
 import { spawnResourceGain } from './resourceGainFeedback.js?v=9';

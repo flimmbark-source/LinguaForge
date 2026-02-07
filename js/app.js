@@ -15,7 +15,8 @@ import { addLetters } from './state.js?v=9';
 import { HammerSystem } from './hammer.js?v=9';
 import { PestleSystem } from './pestle.js?v=9';
 import { ShovelSystem } from './shovel.js?v=9';
-import { initializeHearth, updateHearth } from './hearth.js?v=9';
+import { initializeHearth, updateHearth } from './RuneHearth.js?v=9';
+import { initAudio, startBackgroundMusic, toggleMute, isMuted } from './audio.js?v=9';
 import { addInk, addVerseWord /*, whatever else you need */ } from './state.js?v=9';
 import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from './upgrades.js?v=9';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
@@ -209,6 +210,18 @@ function initializeGame() {
 
   // Initialize hearth system
   initializeHearth();
+
+  // Initialize audio on first user gesture (Web Audio API requirement)
+  const startAudio = () => {
+    initAudio();
+    startBackgroundMusic();
+    document.removeEventListener('pointerdown', startAudio);
+    document.removeEventListener('touchstart', startAudio);
+    document.removeEventListener('keydown', startAudio);
+  };
+  document.addEventListener('pointerdown', startAudio, { once: true });
+  document.addEventListener('touchstart', startAudio, { once: true });
+  document.addEventListener('keydown', startAudio, { once: true });
 
   // Setup tool selection
   setupToolSelection();
@@ -609,6 +622,16 @@ function setupEventHandlers() {
     nextMoldBtn.addEventListener('click', () => {
       navigateNextMold();
       updateUI();
+    });
+  }
+
+  // Audio mute toggle
+  const audioToggleBtn = document.getElementById('audioToggleBtn');
+  if (audioToggleBtn) {
+    audioToggleBtn.addEventListener('click', () => {
+      toggleMute();
+      audioToggleBtn.classList.toggle('muted', isMuted());
+      audioToggleBtn.querySelector('.audio-toggle-icon').innerHTML = isMuted() ? '&#x1F507;' : '&#x1F50A;';
     });
   }
 
