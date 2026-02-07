@@ -1304,441 +1304,311 @@ button.secondary {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Upgrade Tree Container */
-.upgrade-tree-container {
-  flex: 1;
-  overflow: auto;
-  padding: 40px;
-  min-height: 550px;
-  position: relative;
-  background: radial-gradient(ellipse at center, rgba(30, 20, 50, 0.5) 0%, transparent 70%);
-}
-
-.upgrade-tree {
-  position: relative;
-  width: 100%;
-  min-height: 500px;
-}
-
-/* Upgrade Connections SVG */
-.upgrade-connections {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.upgrade-connection-line {
-  stroke: #3b4252;
-  stroke-width: 2;
-  stroke-linecap: round;
-  transition: stroke 0.3s ease;
-}
-
-.upgrade-connection-line.active {
-  stroke: #64748b;
-}
-
 /* ===============================================
-   NODE STYLES
+   TWO-COLUMN UPGRADE LAYOUT
    =============================================== */
 
-/* Base Node */
-.upgrade-node {
-  position: absolute;
-  width: 48px;
-  height: 48px;
+.upgrade-columns {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: translate(-50%, -50%);
-  z-index: 2;
+  flex: 1;
+  gap: 1px;
+  background: rgba(148, 163, 184, 0.08);
+  overflow: hidden;
+  min-height: 0;
 }
 
-.upgrade-node:hover {
-  z-index: 20;
-}
-
-/* Node Inner (the actual visible node) */
-.upgrade-node-inner {
-  width: 100%;
-  height: 100%;
+.upgrade-column {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  background: rgba(15, 10, 30, 0.6);
+  min-height: 0;
 }
 
-.upgrade-node:hover .upgrade-node-inner {
-  transform: scale(1.15);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-}
-
-/* ===============================================
-   NODE TYPE VARIANTS
-   =============================================== */
-
-/* Locked/Hidden Node (question mark) */
-.upgrade-node.locked .upgrade-node-inner {
-  background: #1e1e2e;
-  border: 2px solid #3b3b4f;
-  border-radius: 10px;
-}
-
-.upgrade-node.locked .upgrade-icon {
-  color: #4a4a5f;
-  font-size: 18px;
-}
-
-.upgrade-node.locked:hover .upgrade-node-inner {
-  border-color: #5a5a7f;
-  transform: scale(1.05);
-}
-
-/* Available Node (can be purchased) */
-.upgrade-node.available .upgrade-node-inner {
-  background: linear-gradient(145deg, #2d4a4a, #1a3535);
-  border: 2px solid #3d6a6a;
-  box-shadow: 0 4px 16px rgba(45, 100, 100, 0.3);
-}
-
-.upgrade-node.available:hover .upgrade-node-inner {
-  background: linear-gradient(145deg, #3d6a6a, #2d5555);
-  border-color: #5dabab;
-  box-shadow: 0 8px 24px rgba(45, 140, 140, 0.4);
-}
-
-/* Circular Node Variant */
-.upgrade-node.node-circle .upgrade-node-inner {
-  border-radius: 50%;
-}
-
-/* Teal/Green Nodes (primary upgrades) */
-.upgrade-node.node-teal .upgrade-node-inner {
-  background: linear-gradient(145deg, #2dd4bf, #14b8a6);
-  border: 2px solid #5eead4;
-  box-shadow: 0 4px 16px rgba(45, 212, 191, 0.35);
-}
-
-.upgrade-node.node-teal .upgrade-icon {
-  color: #042f2e;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
-}
-
-.upgrade-node.node-teal:hover .upgrade-node-inner {
-  box-shadow: 0 8px 28px rgba(45, 212, 191, 0.5);
-  border-color: #99f6e4;
-}
-
-/* Pink/Red Nodes (combat/offensive upgrades) */
-.upgrade-node.node-pink .upgrade-node-inner {
-  background: linear-gradient(145deg, #f472b6, #db2777);
-  border: 2px solid #f9a8d4;
-  box-shadow: 0 4px 16px rgba(244, 114, 182, 0.35);
-}
-
-.upgrade-node.node-pink .upgrade-icon {
-  color: #500724;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
-}
-
-.upgrade-node.node-pink:hover .upgrade-node-inner {
-  box-shadow: 0 8px 28px rgba(244, 114, 182, 0.5);
-  border-color: #fbcfe8;
-}
-
-/* Yellow/Gold Nodes (special/maxed upgrades) */
-.upgrade-node.node-yellow .upgrade-node-inner {
-  background: linear-gradient(145deg, #fbbf24, #d97706);
-  border: 2px solid #fcd34d;
-  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.35);
-}
-
-.upgrade-node.node-yellow .upgrade-icon {
-  color: #451a03;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
-}
-
-.upgrade-node.node-yellow:hover .upgrade-node-inner {
-  box-shadow: 0 8px 28px rgba(251, 191, 36, 0.5);
-  border-color: #fde68a;
-}
-
-/* ===============================================
-   NODE STATES
-   =============================================== */
-
-/* Purchased but not maxed */
-.upgrade-node.purchased:not(.max-level) .upgrade-node-inner {
-  /* Uses color variant classes above */
-}
-
-/* Max Level */
-.upgrade-node.max-level .upgrade-node-inner {
-  background: linear-gradient(145deg, #fbbf24, #b45309);
-  border: 2px solid #fcd34d;
-  box-shadow: 
-    0 4px 16px rgba(251, 191, 36, 0.4),
-    inset 0 0 20px rgba(255, 255, 255, 0.1);
-}
-
-.upgrade-node.max-level .upgrade-icon {
-  color: #451a03;
-}
-
-.upgrade-node.max-level::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: inherit;
-  background: conic-gradient(from 0deg, transparent, rgba(251, 191, 36, 0.3), transparent);
-  animation: nodeGlow 3s linear infinite;
-  z-index: -1;
-}
-
-@keyframes nodeGlow {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-/* ===============================================
-   NODE CONTENT
-   =============================================== */
-
-/* Node Icon */
-.upgrade-icon {
-  font-size: 20px;
-  line-height: 1;
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Level Badge */
-.upgrade-level-badge {
-  position: absolute;
-  bottom: -6px;
-  right: -6px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 9px;
-  background: #1e293b;
-  border: 2px solid #334155;
-  font-size: 10px;
+.upgrade-column-header {
+  padding: 12px 16px;
+  font-size: 15px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: #e2e8f0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+
+/* Filter buttons row */
+.upgrade-filters {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  background: rgba(0, 0, 0, 0.15);
+  flex-wrap: wrap;
+}
+
+.upgrade-filter-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 3;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(30, 20, 50, 0.5);
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.upgrade-node.max-level .upgrade-level-badge {
-  background: linear-gradient(145deg, #fbbf24, #d97706);
-  border-color: #fde68a;
-  color: #451a03;
+.upgrade-filter-btn:hover {
+  background: rgba(60, 40, 100, 0.5);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #e2e8f0;
 }
 
-/* ===============================================
-   TOOLTIP
-   =============================================== */
-
-.upgrade-tooltip {
-  position: absolute;
-  bottom: calc(100% + 12px);
-  left: 50%;
-  transform: translateX(-50%) translateY(8px);
-  background: linear-gradient(145deg, #1e293b, #0f172a);
-  border: 1px solid #475569;
-  border-radius: 10px;
-  padding: 14px 16px;
-  min-width: 200px;
-  max-width: 260px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.2s ease;
-  pointer-events: none;
-  z-index: 100;
+.upgrade-filter-btn.active {
+  background: linear-gradient(145deg, #4c1d95, #6d28d9);
+  border-color: #7c3aed;
+  color: #f5f3ff;
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.3);
 }
 
-.upgrade-node:hover .upgrade-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(0);
+.filter-icon {
+  font-size: 14px;
+  line-height: 1;
 }
 
-/* Tooltip Arrow */
-.upgrade-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 8px solid transparent;
-  border-top-color: #475569;
+.filter-label {
+  line-height: 1;
 }
 
-.upgrade-tooltip::before {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #0f172a;
-  z-index: 1;
-}
-
-/* Tooltip Header */
-.tooltip-header {
+/* Scrollable block list */
+.upgrade-block-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 8px;
+  flex-direction: column;
   gap: 8px;
 }
 
-.tooltip-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #f1f5f9;
-  line-height: 1.2;
+.upgrade-block-list::-webkit-scrollbar {
+  width: 6px;
 }
 
-.tooltip-level-pill {
+.upgrade-block-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.upgrade-block-list::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 3px;
+}
+
+.upgrade-block-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.upgrade-empty {
+  text-align: center;
+  color: #64748b;
+  padding: 32px 16px;
+  font-size: 13px;
+}
+
+/* ===============================================
+   UPGRADE BLOCK CARDS
+   =============================================== */
+
+.upgrade-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(30, 25, 50, 0.5);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+/* Available — can purchase */
+.upgrade-block.block-available {
+  border-color: rgba(45, 212, 191, 0.3);
+  background: linear-gradient(135deg, rgba(20, 40, 45, 0.7), rgba(15, 25, 35, 0.7));
+  cursor: pointer;
+}
+
+.upgrade-block.block-available:hover {
+  border-color: rgba(45, 212, 191, 0.6);
+  background: linear-gradient(135deg, rgba(25, 55, 60, 0.8), rgba(20, 35, 50, 0.8));
+  box-shadow: 0 4px 16px rgba(45, 212, 191, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Purchased (not maxed) */
+.upgrade-block.block-purchased {
+  border-color: rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(30, 25, 60, 0.7), rgba(20, 15, 40, 0.7));
+  cursor: pointer;
+}
+
+.upgrade-block.block-purchased:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: linear-gradient(135deg, rgba(40, 35, 80, 0.8), rgba(25, 20, 55, 0.8));
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Maxed */
+.upgrade-block.block-maxed {
+  border-color: rgba(251, 191, 36, 0.3);
+  background: linear-gradient(135deg, rgba(50, 35, 10, 0.5), rgba(30, 20, 5, 0.5));
+  cursor: default;
+}
+
+/* Locked (greyed out, ? marks) */
+.upgrade-block.block-locked {
+  border-color: rgba(148, 163, 184, 0.06);
+  background: rgba(20, 15, 30, 0.4);
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Icon */
+.upgrade-block-icon {
+  width: 42px;
+  height: 42px;
   flex-shrink: 0;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  background: rgba(0, 0, 0, 0.4);
-  color: #94a3b8;
-  border: 1px solid #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.1);
 }
 
-.tooltip-level-pill.maxed {
+.block-locked .upgrade-block-icon {
+  font-size: 18px;
+  color: #4a4a5f;
+}
+
+.block-maxed .upgrade-block-icon {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.block-available .upgrade-block-icon {
+  background: rgba(45, 212, 191, 0.1);
+  border-color: rgba(45, 212, 191, 0.25);
+}
+
+.block-purchased .upgrade-block-icon {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+/* Info section */
+.upgrade-block-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.upgrade-block-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 2px;
+}
+
+.block-locked .upgrade-block-name {
+  color: #64748b;
+}
+
+.block-maxed .upgrade-block-name {
+  color: #fbbf24;
+}
+
+.upgrade-block-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Right side: level + cost */
+.upgrade-block-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.upgrade-block-level {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.upgrade-block-level.level-max {
   background: linear-gradient(145deg, #fbbf24, #d97706);
   color: #451a03;
   border-color: #fde68a;
 }
 
-/* Tooltip Description */
-.tooltip-description {
-  font-size: 12px;
-  color: #cbd5e1;
-  line-height: 1.5;
-  margin-bottom: 10px;
+.upgrade-block-cost {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
-/* Tooltip Cost */
-.tooltip-cost {
-  display: flex;
-  gap: 10px;
-  padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
-  margin-bottom: 6px;
+.cost-affordable {
+  color: #a3e635;
 }
 
-.tooltip-cost-item {
-  display: flex;
+.cost-unaffordable {
+  color: #f87171;
+  opacity: 0.7;
+}
+
+/* Warning */
+.upgrade-block-warning {
+  position: absolute;
+  bottom: 4px;
+  right: 14px;
+  font-size: 10px;
+  color: #f87171;
+  opacity: 0.8;
+}
+
+/* Resource display in upgrade header */
+.upgrade-resource {
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  color: #cbd5e1;
 }
 
-.tooltip-cost-item.renown {
-  color: #fbbf24;
-}
-
-.tooltip-cost-item.ink {
-  color: #a78bfa;
-}
-
-.tooltip-cost-item.affordable {
-  opacity: 1;
-}
-
-.tooltip-cost-item.unaffordable {
-  opacity: 0.5;
-  color: #f87171;
-}
-
-/* Tooltip Warning */
-.tooltip-warning {
-  font-size: 11px;
-  color: #f87171;
-  padding: 6px 8px;
-  background: rgba(248, 113, 113, 0.1);
-  border-radius: 4px;
-  border-left: 2px solid #f87171;
-}
-
-/* Tooltip Max */
-.tooltip-max {
-  font-size: 12px;
+.upgrade-resource strong {
   color: #fbbf24;
   font-weight: 700;
-  text-align: center;
-  padding: 8px;
-  background: rgba(251, 191, 36, 0.1);
-  border-radius: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* ===============================================
-   PURCHASE BUTTON (in tooltip)
-   =============================================== */
-
-.tooltip-purchase-btn {
-  width: 100%;
-  padding: 8px 12px;
-  margin-top: 8px;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.tooltip-purchase-btn.can-afford {
-  background: linear-gradient(145deg, #2dd4bf, #14b8a6);
-  color: #042f2e;
-  box-shadow: 0 2px 8px rgba(45, 212, 191, 0.3);
-}
-
-.tooltip-purchase-btn.can-afford:hover {
-  background: linear-gradient(145deg, #5eead4, #2dd4bf);
-  box-shadow: 0 4px 12px rgba(45, 212, 191, 0.4);
-  transform: translateY(-1px);
-}
-
-.tooltip-purchase-btn.cannot-afford {
-  background: #374151;
-  color: #6b7280;
-  cursor: not-allowed;
-}
-
-.tooltip-purchase-btn.maxed {
-  background: linear-gradient(145deg, #fbbf24, #d97706);
-  color: #451a03;
-  cursor: default;
 }
 
 /* ===============================================
@@ -1746,23 +1616,12 @@ button.secondary {
    =============================================== */
 
 @media (max-width: 768px) {
-  .upgrade-tree-container {
-    padding: 20px;
+  .upgrade-columns {
+    flex-direction: column;
   }
-  
-  .upgrade-node {
-    width: 42px;
-    height: 42px;
-  }
-  
-  .upgrade-icon {
-    font-size: 18px;
-  }
-  
-  .upgrade-tooltip {
-    min-width: 180px;
-    max-width: 220px;
-    padding: 12px;
+
+  .upgrade-column {
+    max-height: 50%;
   }
 }
 

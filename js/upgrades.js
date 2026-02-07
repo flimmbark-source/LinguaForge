@@ -6,31 +6,52 @@
 import { gameState, spendLetters, spendInk } from './state.js';
 import { updateHearthVisuals } from './hearth.js';
 
-/**
- * Node type definitions for visual styling
- * - circle: round nodes (primary path upgrades)
- * - square: square nodes with rounded corners (secondary upgrades)
- */
-const NODE_SHAPES = {
-  CIRCLE: 'circle',
-  SQUARE: 'square'
+// ===============================================
+// Column / tool classification for every upgrade
+// ===============================================
+const UPGRADE_META = {
+  // Workshop ─ Forge (hearth & heat)
+  activateHearth:    { column: 'workshop', tool: 'forge' },
+  heatLevel:         { column: 'workshop', tool: 'forge' },
+  redHotDurability:  { column: 'workshop', tool: 'forge' },
+  emberRetention:    { column: 'workshop', tool: 'forge' },
+  heatPerLetter:     { column: 'workshop', tool: 'forge' },
+  lettersPerRedHot:  { column: 'workshop', tool: 'forge' },
+  // Workshop ─ Fist (hammer strike)
+  gripStrength:      { column: 'workshop', tool: 'fist' },
+  // Workshop ─ Scribes
+  hireScribes:       { column: 'workshop', tool: 'scribes' },
+  scribeUse:         { column: 'workshop', tool: 'scribes' },
+  scribeSpeed:       { column: 'workshop', tool: 'scribes' },
+  scribeCapacity:    { column: 'workshop', tool: 'scribes' },
+  masterScribe:      { column: 'workshop', tool: 'scribes' },
+  // Forgecraft ─ Pestle
+  unlockPestle:      { column: 'forgecraft', tool: 'pestle' },
+  increasePestleCap: { column: 'forgecraft', tool: 'pestle' },
+  lettersPerChurn:   { column: 'forgecraft', tool: 'pestle' },
+  churnSpeed:        { column: 'forgecraft', tool: 'pestle' },
+  multiChurn:        { column: 'forgecraft', tool: 'pestle' },
+  // Forgecraft ─ Shovel
+  unlockShovel:      { column: 'forgecraft', tool: 'shovel' },
 };
 
-/**
- * Node color types
- * - teal: primary/core upgrades
- * - pink: combat/offensive upgrades  
- * - yellow: special/utility upgrades
- */
-const NODE_COLORS = {
-  TEAL: 'teal',
-  PINK: 'pink',
-  YELLOW: 'yellow'
+// Tool filter definitions per column
+const COLUMN_TOOLS = {
+  workshop: [
+    { id: 'all',     label: 'All',     icon: '📋', alwaysVisible: true },
+    { id: 'forge',   label: 'Forge',   icon: '🔥', alwaysVisible: true },
+    { id: 'fist',    label: 'Fist',    icon: '💪', alwaysVisible: true },
+    { id: 'scribes', label: 'Scribes', icon: '✍️', unlockedBy: 'hireScribes' },
+  ],
+  forgecraft: [
+    { id: 'all',     label: 'All',     icon: '📋', alwaysVisible: true },
+    { id: 'pestle',  label: 'Pestle',  icon: '🥄', unlockedBy: 'unlockPestle' },
+    { id: 'shovel',  label: 'Shovel',  icon: '🧰', unlockedBy: 'unlockShovel' },
+  ],
 };
 
-// Big virtual canvas so we can scroll in all directions
-const VIRTUAL_TREE_SIZE = 3000; // pixels, square canvas
-let hasCenteredUpgradeTree = false;
+// Current active filter per column
+let activeFilter = { workshop: 'all', forgecraft: 'all' };
 
 /**
  * Upgrade tree data structure
@@ -582,356 +603,211 @@ export function hideUpgradeScreen() {
 }
 
 /**
- * Render the upgrade tree
- */
-export function renderUpgradeTree() {
-  const treeContainer = document.getElementById('upgradeTree');
-  if (!treeContainer) return;
-
-  const scrollContainer = treeContainer.parentElement; // .upgrade-tree-container
-
-  // Remember current scroll BEFORE clearing (only meaningful after first center)
-  let prevLeft = 0;
-  let prevTop = 0;
-  if (scrollContainer && hasCenteredUpgradeTree) {
-    prevLeft = scrollContainer.scrollLeft;
-    prevTop  = scrollContainer.scrollTop;
-  }
-
-  const { visible, locked } = getVisibleUpgrades();
-
-  // Clear and size the virtual canvas
-  treeContainer.innerHTML = '';
-  treeContainer.style.width = `${VIRTUAL_TREE_SIZE}px`;
-  treeContainer.style.height = `${VIRTUAL_TREE_SIZE}px`;
-
-  // Layout parameters: center of the virtual canvas
-  const gridSize = 100;
-  const layout = {
-    gridSize,
-    centerX: VIRTUAL_TREE_SIZE / 2,
-    centerY: VIRTUAL_TREE_SIZE / 2
-  };
-
-  // SVG for lines
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('class', 'upgrade-connections');
-  treeContainer.appendChild(svg);
-
-  const nodes = {};
-
-  // Visible (real) nodes
-  for (const upgradeId of visible) {
-    const upgrade = UPGRADE_TREE[upgradeId];
-    if (!upgrade) continue;
-
-    const node = createUpgradeNode(upgrade, false, layout);
-    nodes[upgradeId] = node;
-    treeContainer.appendChild(node);
-  }
-
-  // Locked placeholder nodes
-  for (const upgradeId of locked) {
-    const upgrade = UPGRADE_TREE[upgradeId];
-    if (!upgrade) continue;
-
-    const node = createUpgradeNode(upgrade, true, layout);
-    nodes[upgradeId] = node;
-    treeContainer.appendChild(node);
-  }
-
-  // Draw connection lines AFTER layout and then center
-  requestAnimationFrame(() => {
-    for (const upgradeId of visible) {
-      const upgrade = UPGRADE_TREE[upgradeId];
-      if (!upgrade) continue;
-
-      const isPurchased = getUpgradeLevel(upgradeId) > 0;
-
-      for (const connectedId of upgrade.connections) {
-        if (nodes[upgradeId] && nodes[connectedId]) {
-          drawConnection(svg, nodes[upgradeId], nodes[connectedId], isPurchased);
-        }
-      }
-    }
-
-    if (!scrollContainer) return;
-
-if (!hasCenteredUpgradeTree) {
-  const startNode = nodes['activateHearth'];
-
-  if (startNode) {
-    const nodeRect = startNode.getBoundingClientRect();
-    const treeRect = treeContainer.getBoundingClientRect();
-
-    // Center of node in tree content coordinates
-    const nodeCenterX =
-      (nodeRect.left - treeRect.left) + nodeRect.width / 2;
-    const nodeCenterY =
-      (nodeRect.top  - treeRect.top)  + nodeRect.height / 2;
-
-    // Read padding from the scroll container
-    const style = getComputedStyle(scrollContainer);
-    const padLeft   = parseFloat(style.paddingLeft)   || 0;
-    const padRight  = parseFloat(style.paddingRight)  || 0;
-    const padTop    = parseFloat(style.paddingTop)    || 0;
-    const padBottom = parseFloat(style.paddingBottom) || 0;
-
-    const usableWidth  = scrollContainer.clientWidth  - padLeft - padRight;
-    const usableHeight = scrollContainer.clientHeight - padTop  - padBottom;
-
-    scrollContainer.scrollLeft = nodeCenterX - usableWidth  / 2;
-    scrollContainer.scrollTop  = nodeCenterY - usableHeight / 2;
-  }
-
-  hasCenteredUpgradeTree = true;
-} else {
-  scrollContainer.scrollLeft = prevLeft;
-  scrollContainer.scrollTop  = prevTop;
-}
-  });
-
-  updateHeaderStats();
-}
-
-function nudgeUpgradeTreeDown(offset = 120, duration = 800) {
-  const treeContainer = document.getElementById('upgradeTree');
-  if (!treeContainer) return;
-  const scrollContainer = treeContainer.parentElement; // .upgrade-tree-container
-  if (!scrollContainer) return;
-
-  const startTop = scrollContainer.scrollTop;
-  const targetTop = startTop + offset;
-  const startTime = performance.now();
-
-  function step(now) {
-    const elapsed = now - startTime;
-    const t = Math.min(1, elapsed / duration);
-
-    // Smoothstep easing
-    const eased = t * t * (3 - 2 * t);
-
-    scrollContainer.scrollTop = startTop + (targetTop - startTop) * eased;
-
-    if (t < 1) {
-      requestAnimationFrame(step);
-    }
-  }
-
-  requestAnimationFrame(step);
-}
-
-
-
-/**
  * Update resource display in header
  */
 function updateHeaderStats() {
   const renownDisplay = document.getElementById('upgradeRenown');
   const inkDisplay = document.getElementById('upgradeInk');
-  
-  if (renownDisplay) {
-    renownDisplay.textContent = Math.floor(gameState.letters);
-  }
-  if (inkDisplay) {
-    inkDisplay.textContent = Math.floor(gameState.ink);
-  }
+  if (renownDisplay) renownDisplay.textContent = Math.floor(gameState.letters);
+  if (inkDisplay) inkDisplay.textContent = Math.floor(gameState.ink);
 }
 
 /**
- * Create an upgrade node element
+ * Render the two-column upgrade screen
  */
-function createUpgradeNode(upgrade, isLocked, layout) {
-  const node = document.createElement('div');
-  node.className = 'upgrade-node';
-  node.dataset.upgradeId = upgrade.id;
+export function renderUpgradeTree() {
+  const { visible, locked } = getVisibleUpgrades();
+  const allShown = new Set([...visible, ...locked]);
 
-  const currentLevel = getUpgradeLevel(upgrade.id);
+  renderColumn('workshop', allShown, visible, locked);
+  renderColumn('forgecraft', allShown, visible, locked);
+  updateHeaderStats();
+}
+
+/**
+ * Render a single column (Workshop or Forgecraft)
+ */
+function renderColumn(columnId, allShown, visible, locked) {
+  const listEl = document.getElementById(columnId === 'workshop' ? 'workshopList' : 'forgecraftList');
+  const filtersEl = document.getElementById(columnId === 'workshop' ? 'workshopFilters' : 'forgecraftFilters');
+  if (!listEl || !filtersEl) return;
+
+  // Remember scroll position
+  const prevScroll = listEl.scrollTop;
+
+  // Render filter buttons
+  filtersEl.innerHTML = '';
+  const tools = COLUMN_TOOLS[columnId];
+  for (const tool of tools) {
+    // Tool filters appear if alwaysVisible, or if the unlock upgrade has been purchased
+    const isToolVisible = tool.alwaysVisible || (tool.unlockedBy && getUpgradeLevel(tool.unlockedBy) > 0);
+    if (!isToolVisible) continue;
+
+    const btn = document.createElement('button');
+    btn.className = 'upgrade-filter-btn';
+    if (activeFilter[columnId] === tool.id) btn.classList.add('active');
+    btn.innerHTML = `<span class="filter-icon">${tool.icon}</span><span class="filter-label">${tool.label}</span>`;
+    btn.addEventListener('click', () => {
+      activeFilter[columnId] = tool.id;
+      renderUpgradeTree();
+    });
+    filtersEl.appendChild(btn);
+  }
+
+  // Gather upgrades for this column
+  listEl.innerHTML = '';
+  const filter = activeFilter[columnId];
+
+  // Sort: purchased first, then available, then locked
+  const columnUpgrades = [];
+  for (const [id, meta] of Object.entries(UPGRADE_META)) {
+    if (meta.column !== columnId) continue;
+    if (filter !== 'all' && meta.tool !== filter) continue;
+    if (!allShown.has(id)) continue;
+    columnUpgrades.push(id);
+  }
+
+  columnUpgrades.sort((a, b) => {
+    const aLevel = getUpgradeLevel(a);
+    const bLevel = getUpgradeLevel(b);
+    const aLocked = locked.includes(a);
+    const bLocked = locked.includes(b);
+    // Purchased at top, then available, then locked
+    if (aLevel > 0 && bLevel === 0) return -1;
+    if (bLevel > 0 && aLevel === 0) return 1;
+    if (!aLocked && bLocked) return -1;
+    if (aLocked && !bLocked) return 1;
+    return 0;
+  });
+
+  for (const upgradeId of columnUpgrades) {
+    const isLocked = locked.includes(upgradeId);
+    const block = createUpgradeBlock(upgradeId, isLocked);
+    listEl.appendChild(block);
+  }
+
+  if (columnUpgrades.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'upgrade-empty';
+    empty.textContent = 'No upgrades available yet';
+    listEl.appendChild(empty);
+  }
+
+  // Restore scroll
+  listEl.scrollTop = prevScroll;
+}
+
+/**
+ * Create an upgrade block element
+ */
+function createUpgradeBlock(upgradeId, isLocked) {
+  const upgrade = UPGRADE_TREE[upgradeId];
+  const block = document.createElement('div');
+  block.className = 'upgrade-block';
+  block.dataset.upgradeId = upgradeId;
+
+  const currentLevel = getUpgradeLevel(upgradeId);
   const maxLevel = upgrade.maxLevel;
-  const prereqsMet = arePrerequisitesMet(upgrade.id);
+  const isMaxed = currentLevel >= maxLevel;
+  const prereqsMet = arePrerequisitesMet(upgradeId);
 
-  // Use virtual grid centered in VIRTUAL_TREE_SIZE
-  const { gridSize, centerX, centerY } = layout;
-  node.style.left = `${centerX + upgrade.position.x * gridSize}px`;
-  node.style.top  = `${centerY + upgrade.position.y * gridSize}px`;
-
-  // Shape
-  node.classList.add(`node-${upgrade.nodeShape}`);
-
-  // Color/state
   if (isLocked) {
-    node.classList.add('locked');
-  } else if (currentLevel >= maxLevel) {
-    node.classList.add('purchased', 'max-level', `node-${upgrade.nodeColor}`);
+    block.classList.add('block-locked');
+  } else if (isMaxed) {
+    block.classList.add('block-maxed');
   } else if (currentLevel > 0) {
-    node.classList.add('purchased', `node-${upgrade.nodeColor}`);
+    block.classList.add('block-purchased');
   } else if (prereqsMet) {
-    node.classList.add('available', `node-${upgrade.nodeColor}`);
+    block.classList.add('block-available');
   } else {
-    node.classList.add('locked');
+    block.classList.add('block-locked');
   }
 
-  // Inner content
-  const inner = document.createElement('div');
-  inner.className = 'upgrade-node-inner';
+  // Icon
+  const iconEl = document.createElement('div');
+  iconEl.className = 'upgrade-block-icon';
+  iconEl.textContent = isLocked ? '?' : upgrade.icon;
+  block.appendChild(iconEl);
 
-  const icon = document.createElement('div');
-  icon.className = 'upgrade-icon';
-  icon.textContent = isLocked ? '?' : upgrade.icon;
-  inner.appendChild(icon);
+  // Info section
+  const info = document.createElement('div');
+  info.className = 'upgrade-block-info';
 
-  node.appendChild(inner);
+  const nameEl = document.createElement('div');
+  nameEl.className = 'upgrade-block-name';
+  nameEl.textContent = isLocked ? '???' : upgrade.name;
+  info.appendChild(nameEl);
 
-  // Level badge
-  if (!isLocked && maxLevel > 1 && currentLevel > 0) {
-    const badge = document.createElement('div');
-    badge.className = 'upgrade-level-badge';
-    badge.textContent = `${currentLevel}`;
-    node.appendChild(badge);
-  }
-
-  // Tooltip + click only for real nodes
   if (!isLocked) {
-    const tooltip = createUpgradeTooltip(upgrade);
-    node.appendChild(tooltip);
-
-node.addEventListener('click', (e) => {
-  e.stopPropagation();
-
-  // 1. Snapshot what’s visible BEFORE purchase
-  const before = getVisibleUpgrades();
-  const beforeSet = new Set([
-    ...before.visible,
-    ...before.locked
-  ]);
-
-  // 2. Try to purchase
-  if (purchaseUpgrade(upgrade.id)) {
-    // 3. Compute visibility AFTER purchase (state has changed now)
-    const after = getVisibleUpgrades();
-    const afterIds = [...after.visible, ...after.locked];
-
-    const revealedNewNodes = afterIds.some(id => !beforeSet.has(id));
-
-    // 4. Re-render tree
-    renderUpgradeTree();
-
-    // 5. Only slide down if new nodes were revealed
-    if (revealedNewNodes) {
-      // Let renderUpgradeTree restore scroll, then animate
-      requestAnimationFrame(() => {
-        nudgeUpgradeTreeDown(120, 800); // tweak offset/duration to taste
-      });
-    }
-
-    if (window.updateUI) window.updateUI();
+    const descEl = document.createElement('div');
+    descEl.className = 'upgrade-block-desc';
+    descEl.textContent = upgrade.description;
+    info.appendChild(descEl);
   }
-});
+
+  block.appendChild(info);
+
+  // Right side: level + cost
+  const rightEl = document.createElement('div');
+  rightEl.className = 'upgrade-block-right';
+
+  if (!isLocked) {
+    // Level indicator
+    const levelEl = document.createElement('div');
+    levelEl.className = 'upgrade-block-level';
+    if (isMaxed) {
+      levelEl.textContent = 'MAX';
+      levelEl.classList.add('level-max');
+    } else {
+      levelEl.textContent = `${currentLevel}/${maxLevel}`;
+    }
+    rightEl.appendChild(levelEl);
+
+    // Cost (only if not maxed)
+    if (!isMaxed) {
+      const cost = getUpgradeCost(upgradeId, currentLevel + 1);
+      const costEl = document.createElement('div');
+      costEl.className = 'upgrade-block-cost';
+      if (cost.renown > 0) {
+        const r = document.createElement('span');
+        r.className = gameState.letters >= cost.renown ? 'cost-affordable' : 'cost-unaffordable';
+        r.textContent = `⭐${cost.renown}`;
+        costEl.appendChild(r);
+      }
+      if (cost.ink > 0) {
+        const i = document.createElement('span');
+        i.className = gameState.ink >= cost.ink ? 'cost-affordable' : 'cost-unaffordable';
+        i.textContent = `💧${cost.ink}`;
+        costEl.appendChild(i);
+      }
+      rightEl.appendChild(costEl);
+    }
   }
-  return node;
-}
 
+  block.appendChild(rightEl);
 
-/**
- * Create tooltip for an upgrade
- */
-function createUpgradeTooltip(upgrade) {
-  const tooltip = document.createElement('div');
-  tooltip.className = 'upgrade-tooltip';
+  // Click to purchase (only for non-locked, non-maxed blocks)
+  if (!isLocked && !isMaxed) {
+    block.addEventListener('click', () => {
+      if (purchaseUpgrade(upgradeId)) {
+        renderUpgradeTree();
+        if (window.updateUI) window.updateUI();
+      }
+    });
+  }
 
-  const currentLevel = getUpgradeLevel(upgrade.id);
-  const nextLevel = currentLevel + 1;
-  const isMaxed = currentLevel >= upgrade.maxLevel;
-
-  // Header with title and level pill
-  const header = document.createElement('div');
-  header.className = 'tooltip-header';
-
-  const title = document.createElement('div');
-  title.className = 'tooltip-title';
-  title.textContent = upgrade.name;
-  header.appendChild(title);
-
-  const levelPill = document.createElement('div');
-  levelPill.className = 'tooltip-level-pill' + (isMaxed ? ' maxed' : '');
-  levelPill.textContent = `${currentLevel}/${upgrade.maxLevel}`;
-  header.appendChild(levelPill);
-
-  tooltip.appendChild(header);
-
-  // Description
-  const desc = document.createElement('div');
-  desc.className = 'tooltip-description';
-  desc.textContent = upgrade.description;
-  tooltip.appendChild(desc);
-
-  if (isMaxed) {
-    // Max level indicator
-    const maxText = document.createElement('div');
-    maxText.className = 'tooltip-max';
-    maxText.textContent = '✦ MAX LEVEL ✦';
-    tooltip.appendChild(maxText);
-  } else {
-    // Cost display
-    const cost = getUpgradeCost(upgrade.id, nextLevel);
-    const costDiv = document.createElement('div');
-    costDiv.className = 'tooltip-cost';
-
-    if (cost.renown > 0) {
-      const renownCost = document.createElement('div');
-      renownCost.className = 'tooltip-cost-item renown';
-      renownCost.classList.add(gameState.letters >= cost.renown ? 'affordable' : 'unaffordable');
-      renownCost.innerHTML = `<span>⭐</span> ${cost.renown}`;
-      costDiv.appendChild(renownCost);
-    }
-
-    if (cost.ink > 0) {
-      const inkCost = document.createElement('div');
-      inkCost.className = 'tooltip-cost-item ink';
-      inkCost.classList.add(gameState.ink >= cost.ink ? 'affordable' : 'unaffordable');
-      inkCost.innerHTML = `<span>💧</span> ${cost.ink}`;
-      costDiv.appendChild(inkCost);
-    }
-
-    if (cost.renown > 0 || cost.ink > 0) {
-      tooltip.appendChild(costDiv);
-    }
-
-    // Warning/requirement
-    const check = canPurchaseUpgrade(upgrade.id);
+  // Requirement warning
+  if (!isLocked && !isMaxed) {
+    const check = canPurchaseUpgrade(upgradeId);
     if (!check.canPurchase && check.reason !== 'Max level reached') {
-      const warning = document.createElement('div');
-      warning.className = 'tooltip-warning';
-      warning.textContent = check.reason;
-      tooltip.appendChild(warning);
+      const warn = document.createElement('div');
+      warn.className = 'upgrade-block-warning';
+      warn.textContent = check.reason;
+      block.appendChild(warn);
     }
   }
 
-  return tooltip;
-}
-
-/**
- * Draw a connection line between two nodes
- */
-function drawConnection(svg, fromNode, toNode, isActive) {
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-
-  const fromRect = fromNode.getBoundingClientRect();
-  const toRect = toNode.getBoundingClientRect();
-  const containerRect = svg.parentElement.getBoundingClientRect();
-
-  const x1 = fromRect.left + fromRect.width / 2 - containerRect.left;
-  const y1 = fromRect.top + fromRect.height / 2 - containerRect.top;
-  const x2 = toRect.left + toRect.width / 2 - containerRect.left;
-  const y2 = toRect.top + toRect.height / 2 - containerRect.top;
-
-  line.setAttribute('x1', x1);
-  line.setAttribute('y1', y1);
-  line.setAttribute('x2', x2);
-  line.setAttribute('y2', y2);
-  line.setAttribute('class', 'upgrade-connection-line' + (isActive ? ' active' : ''));
-
-  svg.appendChild(line);
+  return block;
 }
 
 // Export for global access
