@@ -10,6 +10,26 @@ import { canPlaceInHearth, heatHearth } from './RuneHearth.js?v=9';
 // ─── Physics-based letter throw ──────────────────────────────
 let _heldLetter = null;
 let _mouseHist = [];
+let _moldHoldState = null;
+
+function setMoldViewportHold(shouldHold) {
+  const wrapper = document.querySelector('.mold-viewport-wrapper');
+  if (!wrapper) return;
+  if (shouldHold) {
+    if (_moldHoldState) return;
+    _moldHoldState = {
+      wasOpen: wrapper.classList.contains('open'),
+    };
+    wrapper.classList.add('open');
+    wrapper.dataset.dragHold = 'true';
+  } else if (_moldHoldState) {
+    if (!_moldHoldState.wasOpen) {
+      wrapper.classList.remove('open');
+    }
+    delete wrapper.dataset.dragHold;
+    _moldHoldState = null;
+  }
+}
 
 // Pick up physics letters from the canvas by clicking/tapping on them
 document.addEventListener('pointerdown', e => {
@@ -40,6 +60,7 @@ document.addEventListener('pointerdown', e => {
     _heldLetter = letter;
     _mouseHist = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
     gameState.activeLetterDrag = { isPhysics: true };
+    setMoldViewportHold(true);
   }
 });
 
@@ -76,6 +97,16 @@ document.addEventListener('pointerup', e => {
   _heldLetter = null;
   _mouseHist = [];
   gameState.activeLetterDrag = null;
+  setMoldViewportHold(false);
+});
+
+document.addEventListener('pointercancel', () => {
+  if (!_heldLetter) return;
+  _heldLetter.isHeld = false;
+  _heldLetter = null;
+  _mouseHist = [];
+  gameState.activeLetterDrag = null;
+  setMoldViewportHold(false);
 });
 
 function getLetterDragOverlay() {
@@ -283,6 +314,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
       _heldLetter.isHeld = true;
       _mouseHist = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
       gameState.activeLetterDrag = { isPhysics: true };
+      setMoldViewportHold(true);
       return;
     }
 
@@ -302,6 +334,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
     tile.style.top = rect.top + 'px';
     tile.style.zIndex = '1000';
     tile.setPointerCapture(e.pointerId);
+    setMoldViewportHold(true);
   });
 
   tile.addEventListener('pointermove', e => {
@@ -321,6 +354,19 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
     const dragState = gameState.activeLetterDrag;
     gameState.activeLetterDrag = null;
     handleLetterDrop(e.clientX, e.clientY, tile, dragState, onDrop);
+    setMoldViewportHold(false);
+  });
+
+  tile.addEventListener('pointercancel', () => {
+    if (!gameState.activeLetterDrag || gameState.activeLetterDrag.isPhysics) return;
+    if (gameState.activeLetterDrag.tile !== tile) return;
+    const dragState = gameState.activeLetterDrag;
+    gameState.activeLetterDrag = null;
+    if (dragState.originalParent && dragState.originalParent.isConnected) {
+      dragState.originalParent.appendChild(tile);
+    }
+    resetLetterTilePosition(tile);
+    setMoldViewportHold(false);
   });
 }
 
