@@ -3,8 +3,8 @@
  * Physics-based hammer striking mechanic for letter generation
  */
 
-import { isHearthHeated, getHearthBounds, getHearthLevel } from './hearth.js?v=6';
-import { gameState } from './state.js?v=6';
+import { isHearthHeated, getHearthBounds, getHearthLevel } from './hearth.js?v=7';
+import { gameState } from './state.js?v=7';
 
 export class HammerSystem {
   constructor(canvas) {

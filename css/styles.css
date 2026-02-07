@@ -1755,35 +1755,51 @@ button.secondary {
   }
 }
 
-/* ── Mobile (≤768px) ── */
-@media (max-width: 768px) {
+/* ── Portrait-only lock for mobile ── */
+@media (max-width: 768px) and (orientation: landscape) {
+  body::after {
+    content: 'Please rotate your device to portrait mode';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #111827;
+    color: #f9fafb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 600;
+    text-align: center;
+    padding: 32px;
+  }
+}
+
+/* ── Mobile portrait (≤768px) ── */
+@media (max-width: 768px) and (orientation: portrait) {
   :root {
-    --letter-basket-height: 120px;
-    --bottom-row-height: 150px;  /* height of basket/hearth row */
-    --mold-row-height: 70px;     /* approx mold height */
-    --bottom-gap: 8px;           /* gap between bottom elements */
+    --basket-height: 60px;  /* half of original 120px */
   }
 
   body {
-    padding: 8px;
-    padding-bottom: 180px;
+    padding: 0;
+    padding-bottom: 0;
   }
 
-  /* ─ Stats: smaller, top-left ─ */
+  /* ─ Stats: top-left ─ */
   .stats-wrap {
     left: 8px;
     top: 8px;
   }
 
   .core-stats-float {
-    width: 160px;
+    width: 140px;
   }
 
   .stat-row {
     font-size: 12px;
   }
 
-  /* ─ Upgrades button: smaller ─ */
+  /* ─ Upgrades button: top-right, compact ─ */
   .upgrades-btn {
     top: 8px;
     right: 8px;
@@ -1797,7 +1813,7 @@ button.secondary {
     font-size: 14px;
   }
 
-  /* ─ Upgrade modal: full-screen on mobile ─ */
+  /* ─ Upgrade modal: full-screen ─ */
   .upgrade-modal {
     padding: 0;
   }
@@ -1867,15 +1883,15 @@ button.secondary {
     font-size: 18px;
   }
 
-  /* ─ Magic book: narrower, repositioned ─ */
+  /* ─ Magic book: fits screen width ─ */
   .magic-book {
-    top: 56px;
+    top: 50px;
   }
 
   .book-interior {
     width: calc(100vw - 32px);
     max-width: 440px;
-    min-height: 260px;
+    min-height: 240px;
   }
 
   .book-page {
@@ -1892,64 +1908,76 @@ button.secondary {
   }
 
   .book-cover {
-    width: 140px;
-    height: 190px;
+    width: 130px;
+    height: 180px;
   }
 
-  /* ─ Mold viewport: full width, sits above basket/hearth row ─ */
+  /* ─ Hearth: centered, just under the anvil area ─ */
+  .hearth-wrapper {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    /* Anvil sits ~240px from bottom; place hearth just below it */
+    bottom: auto;
+    top: calc(100vh - 240px);
+    width: 200px;
+    max-width: 220px;
+  }
+
+  .hearth-structure {
+    max-width: 200px;
+  }
+
+  .hearth-opening {
+    min-height: 50px;
+  }
+
+  .hearth-instructions {
+    display: none;
+  }
+
+  /* ─ Letter basket: full width, bottom, half height ─ */
+  .letter-basket {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    min-width: unset;
+    max-width: none;
+    height: var(--basket-height);
+    border-radius: 12px 12px 0 0;
+    z-index: 97;
+  }
+
+  .letter-basket .letter-board {
+    padding: 4px 8px 6px;
+  }
+
+  .letter-tile {
+    min-width: 22px;
+    height: 24px;
+    font-size: 15px;
+  }
+
+  /* ─ Mold viewport: full width, above basket ─ */
   .mold-viewport-wrapper {
     width: calc(100% - 16px);
     min-width: unset;
     max-width: none;
     left: 8px;
     top: auto;
-    bottom: calc(var(--bottom-row-height) + var(--bottom-gap) + var(--bottom-gap));
+    bottom: calc(var(--basket-height) + 8px);
   }
 
-  /* ─ Letter basket: bottom-left ─ */
-  .letter-basket {
-    left: 8px;
-    bottom: var(--bottom-gap);
-    width: calc(50% - 12px);
-    min-width: 150px;
-    max-width: 280px;
-    height: var(--letter-basket-height);
-  }
-
-  .letter-tile {
-    min-width: 22px;
-    height: 26px;
-    font-size: 16px;
-  }
-
-  /* ─ Hearth: bottom-right, same row as basket ─ */
-  .hearth-wrapper {
-    left: auto;
-    right: 8px;
-    bottom: var(--bottom-gap);
-    transform: none;
-    width: calc(50% - 12px);
-    max-width: 260px;
-  }
-
-  .hearth-instructions {
-    font-size: 10px;
-    margin-top: 4px;
-  }
-
-  .hearth-opening {
-    min-height: 65px;
-  }
-
-  /* ─ Workers panel: top-right area, below upgrades button ─ */
+  /* ─ Workers panel: top-right, below upgrades btn ─ */
   .workers-panel {
     position: fixed;
     right: 8px;
-    top: 56px;
+    top: 52px;
     bottom: auto;
-    width: 180px;
-    min-width: 150px;
-    max-width: 220px;
+    width: 160px;
+    min-width: 130px;
+    max-width: 200px;
   }
 
   .workers-panel h2 {
@@ -1968,8 +1996,8 @@ button.secondary {
   }
 
   .scribe-block {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     border-radius: 6px;
   }
 
@@ -1977,75 +2005,78 @@ button.secondary {
     font-size: 14px;
   }
 
-  /* ─ Tools sidebar: horizontal dropdown from top center ─ */
+  /* ─ Tools sidebar: right edge, tap-to-toggle ─ */
   .tools-sidebar {
-    top: 0;
-    right: auto;
-    left: 50%;
-    transform: translateX(-50%);
-    flex-direction: column;
+    right: 0;
+    left: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    flex-direction: row;
     z-index: 98;
   }
 
-  /* On mobile, hide content by default, show tab handle always */
-  .tools-sidebar .tools-sidebar-content {
-    max-height: 0;
-    overflow: hidden;
-    padding: 0 8px;
-    opacity: 0;
-    transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+  /* Reset desktop hover/translateX to simple right-edge behavior */
+  .tools-sidebar:hover {
+    transform: translateY(-50%);
   }
 
-  /* Expand when .open or .pinned */
+  /* Content hidden by default on mobile */
+  .tools-sidebar .tools-sidebar-content {
+    max-width: 0;
+    overflow: hidden;
+    padding: 0;
+    opacity: 0;
+    transition: max-width 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+    flex-direction: column;
+    border-radius: 10px 0 0 10px;
+    border: none;
+    border-right: none;
+    min-width: 0;
+  }
+
+  /* Show content when .open or .pinned */
   .tools-sidebar.open .tools-sidebar-content,
   .tools-sidebar.pinned .tools-sidebar-content {
-    max-height: 80px;
-    padding: 6px 8px;
+    max-width: 80px;
+    padding: 10px 8px;
     opacity: 1;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-right: none;
   }
 
-  /* Disable hover behavior on mobile */
-  .tools-sidebar:hover {
-    transform: translateX(-50%);
-  }
-
+  /* Prevent hover from expanding on mobile */
   .tools-sidebar:hover .tools-sidebar-content {
-    max-height: 0;
-    padding: 0 8px;
+    max-width: 0;
+    padding: 0;
     opacity: 0;
+    border: none;
   }
 
-  /* Re-enable for .open and .pinned (higher specificity) */
+  /* Higher specificity: .open/.pinned still works on hover */
   .tools-sidebar.open:hover .tools-sidebar-content,
   .tools-sidebar.pinned:hover .tools-sidebar-content {
-    max-height: 80px;
-    padding: 6px 8px;
+    max-width: 80px;
+    padding: 10px 8px;
     opacity: 1;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-right: none;
   }
 
   .tools-sidebar-tab {
-    writing-mode: horizontal-tb;
-    text-orientation: initial;
-    border-radius: 0 0 8px 8px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    border-radius: 8px 0 0 8px;
     border: 1px solid rgba(148, 163, 184, 0.15);
-    border-top: none;
-    padding: 4px 16px;
+    border-right: none;
+    padding: 12px 4px;
     font-size: 10px;
     cursor: pointer;
-    text-align: center;
-    order: 1; /* tab below content */
     background: rgba(15, 23, 42, 0.85);
   }
 
   .tools-sidebar-content {
-    flex-direction: row;
-    border-radius: 0 0 10px 10px;
-    border: 1px solid rgba(148, 163, 184, 0.12);
-    border-top: none;
-    min-width: auto;
-    gap: 6px;
-    order: 0; /* content above tab */
     background: rgba(15, 23, 42, 0.9);
+    gap: 6px;
   }
 
   .tool-slot {
@@ -2062,22 +2093,19 @@ button.secondary {
     font-size: 8px;
   }
 
-  /* ─ Crafting hint: below tools area ─ */
+  /* ─ Crafting hint ─ */
   .crafting-hint {
     bottom: auto;
-    top: 70px;
+    top: 65px;
     font-size: 10px;
     padding: 4px 10px;
   }
 }
 
-/* ── Small phones (≤480px) ── */
-@media (max-width: 480px) {
+/* ── Small phones portrait (≤480px) ── */
+@media (max-width: 480px) and (orientation: portrait) {
   :root {
-    --letter-basket-height: 100px;
-    --bottom-row-height: 130px;
-    --mold-row-height: 60px;
-    --bottom-gap: 6px;
+    --basket-height: 50px;
   }
 
   .core-stats-float {
@@ -2100,12 +2128,12 @@ button.secondary {
 
   /* Book: even smaller */
   .magic-book {
-    top: 48px;
+    top: 44px;
   }
 
   .book-interior {
     width: calc(100vw - 16px);
-    min-height: 220px;
+    min-height: 200px;
   }
 
   .book-spine {
@@ -2123,51 +2151,53 @@ button.secondary {
   }
 
   .book-cover {
-    width: 120px;
-    height: 160px;
+    width: 110px;
+    height: 150px;
   }
 
-  /* Letter basket: bottom-left */
-  .letter-basket {
-    left: 4px;
-    right: auto;
-    bottom: var(--bottom-gap);
-    width: calc(50% - 6px);
-    min-width: 140px;
-  }
-
-  /* Hearth: bottom-right */
+  /* Hearth */
   .hearth-wrapper {
-    right: 4px;
-    bottom: var(--bottom-gap);
-    width: calc(50% - 6px);
-    max-width: 200px;
+    width: 180px;
+    max-width: 180px;
+    top: calc(100vh - 220px);
   }
 
   .hearth-opening {
-    min-height: 55px;
+    min-height: 45px;
   }
 
-  .hearth-instructions {
-    display: none;
+  /* Basket */
+  .letter-basket {
+    height: var(--basket-height);
   }
 
-  /* Mold viewport: full width above bottom row */
+  .letter-tile {
+    min-width: 20px;
+    height: 22px;
+    font-size: 14px;
+    border-radius: 4px;
+  }
+
+  .letter-board {
+    min-height: 40px;
+    gap: 3px;
+    padding: 3px;
+  }
+
+  /* Mold */
   .mold-viewport-wrapper {
     left: 4px;
     width: calc(100% - 8px);
-    max-width: none;
-    bottom: calc(var(--bottom-row-height) + var(--bottom-gap) + var(--bottom-gap));
+    bottom: calc(var(--basket-height) + 6px);
   }
 
-  /* Workers panel: compact, top-right */
+  /* Workers */
   .workers-panel {
     right: 4px;
-    top: 52px;
-    bottom: auto;
-    width: 160px;
-    min-width: 130px;
-    max-width: 180px;
+    top: 48px;
+    width: 140px;
+    min-width: 120px;
+    max-width: 160px;
   }
 
   .workers-panel h2 {
@@ -2179,8 +2209,8 @@ button.secondary {
   }
 
   .scribe-block {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
   }
 
   .scribe-icon {
@@ -2199,20 +2229,6 @@ button.secondary {
 
   .tool-slot-label {
     font-size: 7px;
-  }
-
-  /* Letter tiles */
-  .letter-tile {
-    min-width: 20px;
-    height: 24px;
-    font-size: 14px;
-    border-radius: 4px;
-  }
-
-  .letter-board {
-    min-height: 60px;
-    gap: 4px;
-    padding: 4px;
   }
 
   /* Upgrade modal */

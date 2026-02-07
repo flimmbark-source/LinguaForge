@@ -3,8 +3,8 @@
  * Handles mold display, word forging, and inventory management
  */
 
-import { computeWordPower, INK_PER_WORD_LETTER } from './config.js?v=6';
-import { gameState, addWord, removeWord, findWord, addInk, getNextWordId } from './state.js?v=6';
+import { computeWordPower, INK_PER_WORD_LETTER } from './config.js?v=7';
+import { gameState, addWord, removeWord, findWord, addInk, getNextWordId } from './state.js?v=7';
 
 /**
  * Set mold viewport width based on longest mold pattern
