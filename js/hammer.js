@@ -102,18 +102,31 @@ export class HammerSystem {
     this.width = rect.width;
     this.height = rect.height;
 
-    // Position anvil just above the hearth+basket area
-    // On mobile (<=768px), hearth+basket are shorter and tighter together
+    // Position anvil just above the hearth so they visually stack
     const isMobile = this.width <= 768;
     const baseHammerLength = isMobile ? 140 : 180;
     this.hammer.length = baseHammerLength;
     this.hammer.baseLength = baseHammerLength;
     this.refreshHandleCaps(true);
-    const letterPoolBarHeight = isMobile ? 110 : 160;
+
+    // Read the hearth's actual top position so the anvil sits right on it
+    const hearthEl = document.getElementById('hearth');
+    const canvasRect = this.canvas.getBoundingClientRect();
+    let anvilBottom;
+    if (hearthEl) {
+      const hearthRect = hearthEl.getBoundingClientRect();
+      // anvil bottom = hearth top in canvas coordinates, with a small gap
+      anvilBottom = hearthRect.top - canvasRect.top - 4;
+    } else {
+      // fallback
+      const letterPoolBarHeight = isMobile ? 110 : 160;
+      anvilBottom = this.height - letterPoolBarHeight;
+    }
+
     this.anvil.width = Math.min(isMobile ? 200 : 260, this.width * 0.35);
     this.anvil.height = isMobile ? 55 : 70;
     this.anvil.x = this.width * 0.5 - this.anvil.width / 2;
-    this.anvil.y = this.height - letterPoolBarHeight - this.anvil.height;
+    this.anvil.y = anvilBottom - this.anvil.height;
 
     // Position hammer pivot above anvil with enough clearance to swing
     const pivotX = this.width * 0.5;
