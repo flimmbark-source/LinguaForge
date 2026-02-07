@@ -31,7 +31,16 @@ function showBookMobile() {
   // Clear any leftover drag positioning
   book.style.left = '';
   book.style.top = '';
+  book.style.right = '';
+  book.style.bottom = '';
+  book.style.width = '';
+  book.style.height = '';
+  book.style.maxWidth = '';
+  book.style.maxHeight = '';
+  book.style.minWidth = '';
+  book.style.minHeight = '';
   book.style.transform = '';
+  delete book.dataset.wasDragged;
 }
 
 /** Hide the book on mobile (dismiss the overlay) */
@@ -130,6 +139,7 @@ function isInteractiveElement(el) {
 }
 
 function onBookMouseDown(e) {
+  if (isMobileScreen()) return;
   // Don't drag from interactive elements
   if (isInteractiveElement(e.target)) return;
   // If an active tool (hammer/pestle/shovel) is under the pointer, let the
