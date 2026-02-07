@@ -2010,7 +2010,7 @@ button.secondary {
     position: fixed;
     left: 0;
     right: auto;
-    top: 40%;
+    top: 32%;
     transform: translateY(-50%);
     width: auto;
     min-width: unset;
