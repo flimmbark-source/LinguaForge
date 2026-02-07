@@ -3,10 +3,10 @@
  * Physics-based word chips that pop out of molds and settle on screen
  */
 
-import { isHearthHeated, getHearthBounds } from './hearth.js?v=7';
-import { gameState, addLetters } from './state.js?v=7';
-import { placeWordInVerse } from './grammar.js?v=7';
-import { spawnResourceGain } from './resourceGainFeedback.js?v=7';
+import { isHearthHeated, getHearthBounds } from './hearth.js?v=8';
+import { gameState, addLetters } from './state.js?v=8';
+import { placeWordInVerse } from './grammar.js?v=8';
+import { spawnResourceGain } from './resourceGainFeedback.js?v=8';
 
 export class ChipSystem {
   constructor(canvas) {

@@ -43,6 +43,22 @@ export function initMagicBook() {
   });
   document.addEventListener('mousemove', onBookMouseMove);
   document.addEventListener('mouseup', onBookMouseUp);
+
+  // Touch support for mobile book dragging
+  book.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    onBookMouseDown({ target: e.target, clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => e.preventDefault() });
+  }, { passive: false });
+  document.addEventListener('touchmove', (e) => {
+    if (!bookDragging) return;
+    const touch = e.touches[0];
+    onBookMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+  }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (!bookDragging) return;
+    const touch = e.changedTouches[0];
+    onBookMouseUp({ clientX: touch.clientX, clientY: touch.clientY });
+  });
 }
 
 function isInteractiveElement(el) {
@@ -340,6 +356,38 @@ function activateTool(tool, e, onToolSelected) {
       }
     });
   }
+}
+
+/**
+ * Initialize the mold viewport tab for mobile: tap to toggle open/closed
+ */
+export function initMoldSidebarTab() {
+  const wrapper = document.querySelector('.mold-viewport-wrapper');
+  if (!wrapper) return;
+
+  const tab = wrapper.querySelector('.mold-sidebar-tab');
+  if (!tab) return;
+
+  const toggle = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    wrapper.classList.toggle('open');
+  };
+
+  tab.addEventListener('click', toggle);
+  tab.addEventListener('touchend', toggle);
+
+  // Close when tapping outside
+  document.addEventListener('touchstart', (e) => {
+    if (wrapper.classList.contains('open') && !wrapper.contains(e.target)) {
+      wrapper.classList.remove('open');
+    }
+  }, { passive: true });
+
+  // Stop mousedown from reaching canvas
+  wrapper.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+  });
 }
 
 /**

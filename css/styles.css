@@ -361,6 +361,11 @@ button.secondary {
   justify-content: center;
 }
 
+/* Mold tab: hidden on desktop, shown on mobile */
+.mold-sidebar-tab {
+  display: none;
+}
+
 .mold-viewport {
   max-width: 100%;
   margin: 0 auto;
@@ -1936,15 +1941,18 @@ button.secondary {
     display: none;
   }
 
-  /* ─ Letter basket: full width, bottom, half height ─ */
+  /* ─ Letter basket: full width, from bottom up to just under hearth ─ */
+  /* Hearth top is at calc(100vh - 240px), hearth is ~130px tall,
+     so hearth bottom is at calc(100vh - 110px). Basket fills below that. */
   .letter-basket {
     left: 0;
     right: 0;
     bottom: 0;
+    top: auto;
     width: 100%;
     min-width: unset;
     max-width: none;
-    height: var(--basket-height);
+    height: calc(110px - 6px);  /* from bottom to just under hearth, with gap */
     border-radius: 12px 12px 0 0;
     z-index: 97;
   }
@@ -1959,14 +1967,69 @@ button.secondary {
     font-size: 15px;
   }
 
-  /* ─ Mold viewport: full width, above basket ─ */
+  /* ─ Mold viewport: right-edge tab, above tools tab ─ */
   .mold-viewport-wrapper {
-    width: calc(100% - 16px);
+    position: fixed;
+    left: auto;
+    top: auto;
+    width: auto;
     min-width: unset;
     max-width: none;
-    left: 8px;
-    top: auto;
-    bottom: calc(var(--basket-height) + 8px);
+    right: 0;
+    /* Position above the tools sidebar: tools is at ~50%, mold sits above */
+    bottom: calc(50% + 80px);
+    z-index: 98;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    pointer-events: auto;
+  }
+
+  /* Mold tab visible on mobile */
+  .mold-sidebar-tab {
+    display: flex;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    align-items: center;
+    justify-content: center;
+    background: rgba(58, 54, 50, 0.85);
+    color: #c9b58a;
+    padding: 12px 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 8px 0 0 8px;
+    border: 1px solid rgba(107, 96, 80, 0.4);
+    border-right: none;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    flex-shrink: 0;
+  }
+
+  /* Mold panel content: hidden by default, slides out on tap */
+  .mold-viewport-wrapper .mold-panel {
+    max-width: 0;
+    overflow: hidden;
+    padding: 0;
+    opacity: 0;
+    transition: max-width 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+    border-radius: 10px 0 0 10px;
+    border-right: none;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .mold-viewport-wrapper.open .mold-panel {
+    max-width: 280px;
+    padding: 8px;
+    opacity: 1;
+    border: 1px solid rgba(107, 96, 80, 0.3);
+    border-right: none;
+  }
+
+  .mold-viewport-wrapper .mold-viewport {
+    width: 240px;
   }
 
   /* ─ Workers panel: top-right, below upgrades btn ─ */
@@ -2166,9 +2229,9 @@ button.secondary {
     min-height: 45px;
   }
 
-  /* Basket */
+  /* Basket: fills from bottom to under hearth */
   .letter-basket {
-    height: var(--basket-height);
+    height: calc(90px - 6px);
   }
 
   .letter-tile {
@@ -2184,11 +2247,9 @@ button.secondary {
     padding: 3px;
   }
 
-  /* Mold */
-  .mold-viewport-wrapper {
-    left: 4px;
-    width: calc(100% - 8px);
-    bottom: calc(var(--basket-height) + 6px);
+  /* Mold: tab panel, slightly smaller */
+  .mold-viewport-wrapper .mold-viewport {
+    width: 210px;
   }
 
   /* Workers */
