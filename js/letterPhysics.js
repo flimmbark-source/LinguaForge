@@ -215,17 +215,31 @@ export class LetterPhysicsSystem {
    * @param {Function} onReturnToBasket - callback(char) when a letter returns to basket
    */
   checkBasket(onReturnToBasket) {
+    const basket = document.querySelector('.letter-basket');
     const letterPool = document.getElementById('letterPool');
     if (!letterPool) return;
 
-    // Use the pool element rect with modest insets (avoids per-tile rect reads)
-    const br = letterPool.getBoundingClientRect();
-    const insetX = br.width * 0.2;
-    const margin = 12;
-    const left   = br.left + insetX - margin;
-    const top    = br.top - margin;
-    const right  = br.right - insetX + margin;
-    const bottom = br.bottom + margin;
+    // Use the pool element rect, clamped to the basket's inner padding.
+    const poolRect = letterPool.getBoundingClientRect();
+    const margin = 6;
+    let left = poolRect.left - margin;
+    let top = poolRect.top - margin;
+    let right = poolRect.right + margin;
+    let bottom = poolRect.bottom + margin;
+
+    if (basket) {
+      const basketRect = basket.getBoundingClientRect();
+      const basketStyles = getComputedStyle(basket);
+      const padLeft = parseFloat(basketStyles.paddingLeft) || 0;
+      const padRight = parseFloat(basketStyles.paddingRight) || 0;
+      const padTop = parseFloat(basketStyles.paddingTop) || 0;
+      const padBottom = parseFloat(basketStyles.paddingBottom) || 0;
+
+      left = Math.max(left, basketRect.left + padLeft - margin);
+      right = Math.min(right, basketRect.right - padRight + margin);
+      top = Math.max(top, basketRect.top + padTop - margin);
+      bottom = Math.min(bottom, basketRect.bottom - padBottom + margin);
+    }
 
     for (const l of this.letters) {
       if (l.consumed || l.isHeld) continue;
