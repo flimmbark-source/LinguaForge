@@ -93,16 +93,18 @@ export class PestleSystem {
     this.width = rect.width;
     this.height = rect.height;
 
-    // Position mortar in same place as anvil (160px from bottom)
-    const letterPoolBarHeight = 160;
-    this.mortar.width = Math.min(200, this.width * 0.3);
-    this.mortar.height = 80;
+    // Position mortar in same place as anvil
+    // On mobile (<=768px), hearth+basket are shorter and tighter together
+    const isMobile = this.width <= 768;
+    const letterPoolBarHeight = isMobile ? 110 : 160;
+    this.mortar.width = Math.min(isMobile ? 160 : 200, this.width * 0.3);
+    this.mortar.height = isMobile ? 60 : 80;
     this.mortar.x = this.width * 0.5 - this.mortar.width / 2;
-    this.mortar.y = this.height - letterPoolBarHeight - this.mortar.height - 10;
+    this.mortar.y = this.height - letterPoolBarHeight - this.mortar.height;
 
     // Position pestle above mortar
     const pivotX = this.width * 0.5;
-    const pivotY = this.mortar.y - 100;
+    const pivotY = this.mortar.y - (isMobile ? 70 : 100);
     this.pestle.pivotX = pivotX;
     this.pestle.pivotY = pivotY;
     this.pestle.headX = pivotX;

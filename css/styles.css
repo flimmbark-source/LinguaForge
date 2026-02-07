@@ -1909,12 +1909,12 @@ button.secondary {
     width: 10px;
   }
 
-  /* ─ Hearth: centered bottom ─ */
+  /* ─ Hearth: tight against basket ─ */
   .hearth-wrapper {
     left: 50%;
     right: auto;
     transform: translateX(-50%);
-    bottom: calc(var(--basket-height) + 4px);
+    bottom: var(--basket-height);
     top: auto;
     width: 240px;
     max-width: 240px;
@@ -2362,12 +2362,12 @@ button.secondary {
     width: 12px;
   }
 
-  /* ─ Hearth: anchored above letter basket ─ */
+  /* ─ Hearth: tight against letter basket, no gap ─ */
   .hearth-wrapper {
     left: 50%;
     right: auto;
     transform: translateX(-50%);
-    bottom: calc(var(--basket-height) + 4px);
+    bottom: var(--basket-height);
     top: auto;
     width: 280px;
     max-width: 80vw;
@@ -2379,7 +2379,19 @@ button.secondary {
   }
 
   .hearth-opening {
-    min-height: 50px;
+    min-height: 44px;
+  }
+
+  .hearth-mantle {
+    height: 8px;
+  }
+
+  .hearth-base {
+    height: 10px;
+  }
+
+  .hearth-body {
+    padding: 5px;
   }
 
   .hearth-instructions {

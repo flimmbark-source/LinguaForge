@@ -101,25 +101,28 @@ export class HammerSystem {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.width = rect.width;
     this.height = rect.height;
-    this.hammer.length = 180;
-    this.hammer.baseLength = 180; // keep original handle length for the static overlay
+
+    // Position anvil just above the hearth+basket area
+    // On mobile (<=768px), hearth+basket are shorter and tighter together
+    const isMobile = this.width <= 768;
+    const baseHammerLength = isMobile ? 140 : 180;
+    this.hammer.length = baseHammerLength;
+    this.hammer.baseLength = baseHammerLength;
     this.refreshHandleCaps(true);
-
-
-    // Position anvil just above the letter pool bar (160px from bottom)
-    // Canvas now covers full viewport, so position relative to bottom
-    const letterPoolBarHeight = 160;
-    this.anvil.width = Math.min(260, this.width * 0.35);
-    this.anvil.height = 70;
+    const letterPoolBarHeight = isMobile ? 110 : 160;
+    this.anvil.width = Math.min(isMobile ? 200 : 260, this.width * 0.35);
+    this.anvil.height = isMobile ? 55 : 70;
     this.anvil.x = this.width * 0.5 - this.anvil.width / 2;
-    this.anvil.y = this.height - letterPoolBarHeight - this.anvil.height - 10;
+    this.anvil.y = this.height - letterPoolBarHeight - this.anvil.height;
 
     // Position hammer pivot above anvil with enough clearance to swing
     const pivotX = this.width * 0.5;
-    const pivotY = this.anvil.y - 140; // More space for swinging
+    const hammerLength = isMobile ? 140 : 180;
+    const pivotClearance = isMobile ? 100 : 140;
+    const pivotY = this.anvil.y - pivotClearance;
     this.hammer.pivotX = pivotX;
     this.hammer.pivotY = pivotY;
-    this.hammer.length = 180; // Slightly longer hammer for better reach
+    this.hammer.length = hammerLength;
 
     // Start with hammer hanging down
     this.hammer.headX = pivotX;
