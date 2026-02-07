@@ -49,8 +49,8 @@ const bufferCache = {};
 const loadPromises = {};
 
 // ─── Public volume controls (0-1) ───────────────────────────
-let musicVolume = 0.3;
-let sfxVolume = 0.5;
+let musicVolume = 0.15;
+let sfxVolume = 0.15;
 
 // ─── Initialise on first user gesture ───────────────────────
 export function initAudio() {
