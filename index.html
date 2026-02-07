@@ -111,9 +111,22 @@
   </button>
 
   <!-- AUDIO MUTE TOGGLE -->
-  <button id="audioToggleBtn" class="audio-toggle-btn" title="Toggle sound">
+  <button id="audioToggleBtn" class="audio-toggle-btn" title="Audio controls">
     <span class="audio-toggle-icon">&#x1F50A;</span>
   </button>
+  <div id="audioControls" class="audio-controls-panel hidden" aria-label="Audio controls">
+    <div class="audio-controls-title">Audio</div>
+    <label class="audio-controls-row">
+      <span class="audio-controls-label">Music</span>
+      <input id="musicVolumeSlider" class="audio-controls-slider" type="range" min="0" max="1" step="0.01" />
+      <span id="musicVolumeValue" class="audio-controls-value">30%</span>
+    </label>
+    <label class="audio-controls-row">
+      <span class="audio-controls-label">SFX</span>
+      <input id="sfxVolumeSlider" class="audio-controls-slider" type="range" min="0" max="1" step="0.01" />
+      <span id="sfxVolumeValue" class="audio-controls-value">50%</span>
+    </label>
+  </div>
 
   <!-- HEARTH (FIXED AT BOTTOM CENTER) -->
   <div class="hearth-wrapper">

@@ -42,9 +42,11 @@ let musicGain = null;
 let sfxGain = null;
 let bgSource = null;
 let isInitialized = false;
+let pendingMusicStart = false;
 
 // Pre-decoded audio buffers keyed by SOUND_FILES key
 const bufferCache = {};
+const loadPromises = {};
 
 // ─── Public volume controls (0-1) ───────────────────────────
 let musicVolume = 0.3;
@@ -70,7 +72,9 @@ export function initAudio() {
 
   // Pre-load any real audio files
   Object.entries(SOUND_FILES).forEach(([key, path]) => {
-    if (path) preloadSound(key, path);
+    if (path) {
+      loadPromises[key] = preloadSound(key, path);
+    }
   });
 }
 
@@ -86,7 +90,21 @@ async function preloadSound(key, path) {
 
 function ensureCtx() {
   if (!isInitialized) initAudio();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+}
+
+export async function unlockAudio() {
+  if (!isInitialized) initAudio();
+  if (audioCtx.state === 'suspended') {
+    try {
+      await audioCtx.resume();
+    } catch (err) {
+      console.warn('Audio: unable to resume AudioContext', err);
+    }
+  }
+  return audioCtx.state === 'running';
 }
 
 // ─── Play a cached buffer ────────────────────────────────────
@@ -323,7 +341,8 @@ const BG_MUSIC_KEYS = ['bgMusic1', 'bgMusic2', 'bgMusic3', 'bgMusic4'];
 
 /** Start looping background ambient track */
 export function startBackgroundMusic() {
-  ensureCtx();
+  if (!isInitialized) initAudio();
+  if (audioCtx.state === 'suspended') return;
   if (bgSource) return; // already playing
 
   const availableTracks = BG_MUSIC_KEYS.filter((key) => bufferCache[key]);
@@ -337,7 +356,22 @@ export function startBackgroundMusic() {
     return;
   }
 
-  // Procedural placeholder: gentle ambient drone
+  const hasConfiguredMusicFiles = BG_MUSIC_KEYS.some((key) => SOUND_FILES[key]);
+  if (hasConfiguredMusicFiles) {
+    if (pendingMusicStart) return;
+    pendingMusicStart = true;
+    Promise.all(
+      BG_MUSIC_KEYS.filter((key) => loadPromises[key]).map((key) => loadPromises[key])
+    ).finally(() => {
+      pendingMusicStart = false;
+      if (!bgSource && audioCtx.state === 'running') {
+        startBackgroundMusic();
+      }
+    });
+    return;
+  }
+
+  // Procedural placeholder: gentle ambient drone (only when no music files exist)
   startProceduralAmbient();
 }
 
