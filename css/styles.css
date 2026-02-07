@@ -354,7 +354,7 @@ button.secondary {
   left: 13px; /* match letter-basket or column edge */
   top: 290px;
   width: calc((100% - 32px) / 3); /* same as a column / basket width */
-  z-index: 95;
+  z-index: 440;
   pointer-events: auto;
 
   display: flex;
@@ -1024,7 +1024,7 @@ button.secondary {
   position: fixed;
   top: 16px;
   right: 160px;
-  z-index: 100;
+  z-index: 330;
   background: rgba(15, 23, 42, 0.8);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 8px;
@@ -1050,7 +1050,7 @@ button.secondary {
   position: fixed;
   top: 56px;
   right: 160px;
-  z-index: 220;
+  z-index: 330;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2098,7 +2098,7 @@ button.secondary {
     width: auto;
     min-width: unset;
     max-width: none;
-    z-index: 98;
+    z-index: 398;
     display: flex;
     flex-direction: row-reverse;
     justify-content: flex-start;
