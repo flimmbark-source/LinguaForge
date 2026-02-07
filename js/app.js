@@ -7,7 +7,7 @@ console.log('Lingua Forge app.js loading...');
 
 import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD } from './config.js';
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js';
-import { setMoldViewportWidth, navigatePreviousMold, navigateNextMold, forgeWords } from './molds.js';
+import { setMoldViewportWidth, navigatePreviousMold, navigateNextMold } from './molds.js';
 import { hireScribe, updateScribes } from './scribes.js';
 import { setupVerseAreaDrop, completeVerse } from './grammar.js';
 import { initializeElements, updateUI } from './ui.js';
@@ -16,7 +16,6 @@ import { addLetters } from './state.js';
 import { HammerSystem } from './hammer.js';
 import { PestleSystem } from './pestle.js';
 import { ShovelSystem } from './shovel.js';
-import { ChipSystem } from './chips.js';
 import { initializeHearth, updateHearth } from './hearth.js';
 import { addInk, addVerseWord /*, whatever else you need */ } from './state.js';
 import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
@@ -27,7 +26,6 @@ import { initMagicBook, initToolsSidebar, updateSidebarToolVisibility } from './
 let hammerSystem = null;
 let pestleSystem = null;
 let shovelSystem = null;
-let chipSystem = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
 
 /**
@@ -257,29 +255,10 @@ function initializeGame() {
  */
 function initializeCraftingSystems() {
   const craftingCanvas = document.getElementById('craftingCanvas');
-  const chipCanvas = document.getElementById('chipCanvas');
-
   if (!craftingCanvas) {
     console.warn('Crafting canvas not found');
     return;
   }
-
-  const chipLayer = chipCanvas || craftingCanvas;
-  const syncChipCanvasSize = () => {
-    const rect = craftingCanvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-
-    chipLayer.width = rect.width * dpr;
-    chipLayer.height = rect.height * dpr;
-    chipLayer.style.width = `${rect.width}px`;
-    chipLayer.style.height = `${rect.height}px`;
-
-    const chipCtx = chipLayer.getContext('2d');
-    chipCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  };
-
-  syncChipCanvasSize();
-  window.addEventListener('resize', syncChipCanvasSize);
 
   // Create hammer system with callbacks
   hammerSystem = new HammerSystem(craftingCanvas);
@@ -400,12 +379,8 @@ function initializeCraftingSystems() {
     updateUI();
   };
 
-  // Create chip system
-  chipSystem = new ChipSystem(chipLayer);
-  chipSystem.onUpdate = updateUI;
-
-  // Render chips after the active tool draws so they remain visible on the shared canvas
-  const renderChips = () => chipSystem.render();
+  // No-op overlay renderer (chip system removed in favour of magical text)
+  const renderChips = () => {};
 
   // Create pestle system with callbacks
   pestleSystem = new PestleSystem(craftingCanvas);
@@ -637,13 +612,6 @@ function gameLoop(timestamp) {
 
   // Update hearth
   updateHearth(dt);
-
-  // Update chip physics
-  if (chipSystem) {
-    chipSystem.update(dt);
-  // Ensure chips stay visible even when no tool overlay is running
-    chipSystem.render();
-  }
 
   // Update scribes
   if (gameState.scribeList.length > 0) {
