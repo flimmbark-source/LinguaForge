@@ -1919,18 +1919,19 @@ button.secondary {
 
   /* ─ Hearth: centered, just under the anvil area ─ */
   .hearth-wrapper {
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
-    /* Anvil sits ~240px from bottom; place hearth just below it */
+    left: 0;
+    right: 0;
+    transform: none;
+    /* Anvil bottom is ~170px from bottom; place hearth just below it */
     bottom: auto;
-    top: calc(100vh - 240px);
-    width: 200px;
-    max-width: 220px;
+    top: calc(100vh - 160px);
+    width: 100%;
+    max-width: none;
   }
 
   .hearth-structure {
-    max-width: 200px;
+    width: 100%;
+    max-width: none;
   }
 
   .hearth-opening {
@@ -1942,8 +1943,8 @@ button.secondary {
   }
 
   /* ─ Letter basket: full width, from bottom up to just under hearth ─ */
-  /* Hearth top is at calc(100vh - 240px), hearth is ~130px tall,
-     so hearth bottom is at calc(100vh - 110px). Basket fills below that. */
+  /* Hearth top is at calc(100vh - 160px), hearth is ~100px tall,
+     so hearth bottom is at calc(100vh - 60px). Basket fills below that. */
   .letter-basket {
     left: 0;
     right: 0;
@@ -1952,7 +1953,7 @@ button.secondary {
     width: 100%;
     min-width: unset;
     max-width: none;
-    height: calc(110px - 6px);  /* from bottom to just under hearth, with gap */
+    height: calc(var(--basket-height) - 6px);  /* from bottom to just under hearth, with gap */
     border-radius: 12px 12px 0 0;
     z-index: 97;
   }
@@ -2220,9 +2221,17 @@ button.secondary {
 
   /* Hearth */
   .hearth-wrapper {
-    width: 180px;
-    max-width: 180px;
-    top: calc(100vh - 220px);
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    top: calc(100vh - 160px);
+  }
+
+  .hearth-structure {
+    width: 100%;
+    max-width: none;
   }
 
   .hearth-opening {
@@ -2231,7 +2240,7 @@ button.secondary {
 
   /* Basket: fills from bottom to under hearth */
   .letter-basket {
-    height: calc(90px - 6px);
+    height: calc(var(--basket-height) - 6px);
   }
 
   .letter-tile {
