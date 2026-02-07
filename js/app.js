@@ -16,7 +16,7 @@ import { HammerSystem } from './hammer.js?v=9';
 import { PestleSystem } from './pestle.js?v=9';
 import { ShovelSystem } from './shovel.js?v=9';
 import { initializeHearth, updateHearth } from './RuneHearth.js?v=9';
-import { initAudio, startBackgroundMusic, toggleMute, isMuted } from './audio.js?v=9';
+import { initAudio, startBackgroundMusic, getMusicVolume, getSfxVolume, setMusicVolume, setSfxVolume, unlockAudio } from './audio.js?v=9';
 import { addInk, addVerseWord /*, whatever else you need */ } from './state.js?v=9';
 import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from './upgrades.js?v=9';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
@@ -212,9 +212,12 @@ function initializeGame() {
   initializeHearth();
 
   // Initialize audio on first user gesture (Web Audio API requirement)
-  const startAudio = () => {
+  const startAudio = async () => {
     initAudio();
-    startBackgroundMusic();
+    const unlocked = await unlockAudio();
+    if (unlocked) {
+      startBackgroundMusic();
+    }
     document.removeEventListener('pointerdown', startAudio);
     document.removeEventListener('touchstart', startAudio);
     document.removeEventListener('keydown', startAudio);
@@ -625,14 +628,58 @@ function setupEventHandlers() {
     });
   }
 
-  // Audio mute toggle
+  // Audio controls
   const audioToggleBtn = document.getElementById('audioToggleBtn');
-  if (audioToggleBtn) {
-    audioToggleBtn.addEventListener('click', () => {
-      toggleMute();
-      audioToggleBtn.classList.toggle('muted', isMuted());
-      audioToggleBtn.querySelector('.audio-toggle-icon').innerHTML = isMuted() ? '&#x1F507;' : '&#x1F50A;';
+  const audioControls = document.getElementById('audioControls');
+  const musicVolumeSlider = document.getElementById('musicVolumeSlider');
+  const sfxVolumeSlider = document.getElementById('sfxVolumeSlider');
+  const musicVolumeValue = document.getElementById('musicVolumeValue');
+  const sfxVolumeValue = document.getElementById('sfxVolumeValue');
+  if (audioToggleBtn && audioControls) {
+    const updateVolumeDisplay = (slider, valueEl) => {
+      if (!slider || !valueEl) return;
+      valueEl.textContent = `${Math.round(parseFloat(slider.value) * 100)}%`;
+    };
+
+    const syncVolumeSliders = () => {
+      if (musicVolumeSlider) musicVolumeSlider.value = getMusicVolume();
+      if (sfxVolumeSlider) sfxVolumeSlider.value = getSfxVolume();
+      updateVolumeDisplay(musicVolumeSlider, musicVolumeValue);
+      updateVolumeDisplay(sfxVolumeSlider, sfxVolumeValue);
+    };
+
+    syncVolumeSliders();
+
+    audioToggleBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      audioControls.classList.toggle('hidden');
+      if (!audioControls.classList.contains('hidden')) {
+        syncVolumeSliders();
+      }
     });
+
+    document.addEventListener('click', (event) => {
+      if (audioControls.classList.contains('hidden')) return;
+      if (!audioControls.contains(event.target) && !audioToggleBtn.contains(event.target)) {
+        audioControls.classList.add('hidden');
+      }
+    });
+
+    if (musicVolumeSlider) {
+      musicVolumeSlider.addEventListener('input', () => {
+        const value = parseFloat(musicVolumeSlider.value);
+        setMusicVolume(value);
+        updateVolumeDisplay(musicVolumeSlider, musicVolumeValue);
+      });
+    }
+
+    if (sfxVolumeSlider) {
+      sfxVolumeSlider.addEventListener('input', () => {
+        const value = parseFloat(sfxVolumeSlider.value);
+        setSfxVolume(value);
+        updateVolumeDisplay(sfxVolumeSlider, sfxVolumeValue);
+      });
+    }
   }
 
   // Forge words button removed - now triggered by red-hot hammer hitting mold viewport
@@ -823,4 +870,3 @@ if (document.readyState === 'loading') {
 } else {
   start();
 }
-
