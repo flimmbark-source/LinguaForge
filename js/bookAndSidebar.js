@@ -78,6 +78,9 @@ function isInteractiveElement(el) {
 function onBookMouseDown(e) {
   // Don't drag from interactive elements
   if (isInteractiveElement(e.target)) return;
+  // If an active tool (hammer/pestle/shovel) is under the pointer, let the
+  // tool handle the click instead of starting a book drag.
+  if (window.isPointOnActiveTool && window.isPointOnActiveTool(e.clientX, e.clientY)) return;
   // Only drag from book headers, pages background, or cover
   const book = document.getElementById('magicBook');
   if (!book) return;
