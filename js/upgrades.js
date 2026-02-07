@@ -518,7 +518,9 @@ export function purchaseUpgrade(upgradeId) {
  * An upgrade is visible if:
  * 1. It's the starting node (activateHearth)
  * 2. It's been purchased
- * 3. Any of its prerequisites have been purchased
+ * 3. Any of its prerequisites have been purchased (shown as available)
+ * A locked placeholder is shown for connections of visible-but-unpurchased nodes
+ * (giving a preview of the next tier).
  */
 export function getVisibleUpgrades() {
   const visible = new Set();
@@ -531,32 +533,32 @@ export function getVisibleUpgrades() {
   for (const [upgradeId, upgrade] of Object.entries(UPGRADE_TREE)) {
     if (getUpgradeLevel(upgradeId) > 0) {
       visible.add(upgradeId);
-      
-      // Show connected nodes
+
+      // Show connected nodes as available
       for (const connectedId of upgrade.connections) {
         visible.add(connectedId);
       }
     }
   }
 
-  // Second pass: add locked placeholders for nodes connected to visible nodes
-  for (const upgradeId of visible) {
+  // Second pass: for every visible node, show its connections as locked previews
+  // (so the player always sees what's coming next in the chain)
+  const snapshot = Array.from(visible);
+  for (const upgradeId of snapshot) {
     const upgrade = UPGRADE_TREE[upgradeId];
     if (!upgrade) continue;
-    
+
     for (const connectedId of upgrade.connections) {
+      if (!visible.has(connectedId)) {
+        locked.add(connectedId);
+      }
+
+      // One more step deep: show connections of visible-but-unpurchased as locked
       const connected = UPGRADE_TREE[connectedId];
-      if (!connected) continue;
-      
-      // Check connections of visible but unpurchased nodes
-      if (getUpgradeLevel(upgradeId) > 0) {
-        // Show actual nodes for connections of purchased nodes
-        visible.add(connectedId);
-        
-        // Show locked placeholders one step further
-        for (const deepConnectedId of connected.connections) {
-          if (!visible.has(deepConnectedId) && getUpgradeLevel(connectedId) === 0) {
-            locked.add(deepConnectedId);
+      if (connected && getUpgradeLevel(upgradeId) > 0) {
+        for (const deepId of connected.connections) {
+          if (!visible.has(deepId)) {
+            locked.add(deepId);
           }
         }
       }
