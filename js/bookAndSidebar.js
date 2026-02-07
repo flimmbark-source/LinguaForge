@@ -25,6 +25,7 @@ function showBookMobile() {
   const book = document.getElementById('magicBook');
   if (!book) return;
   book.style.display = '';
+  document.body.classList.add('book-overlay-active');
   // Always open the book interior on mobile
   book.classList.remove('closed');
   book.classList.add('open');
@@ -48,6 +49,7 @@ function hideBookMobile() {
   const book = document.getElementById('magicBook');
   if (!book) return;
   book.style.display = 'none';
+  document.body.classList.remove('book-overlay-active');
 }
 
 /**
