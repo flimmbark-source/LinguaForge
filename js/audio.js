@@ -338,6 +338,34 @@ export function playHearthIgnite() {
 
 // ─── Background music ────────────────────────────────────────
 const BG_MUSIC_KEYS = ['bgMusic1', 'bgMusic2', 'bgMusic3', 'bgMusic4'];
+let currentMusicKey = null;
+
+function pickRandomTrack(availableTracks) {
+  if (availableTracks.length <= 1) return availableTracks[0];
+  let pick = availableTracks[Math.floor(Math.random() * availableTracks.length)];
+  while (pick === currentMusicKey) {
+    pick = availableTracks[Math.floor(Math.random() * availableTracks.length)];
+  }
+  return pick;
+}
+
+function playRandomTrack(availableTracks) {
+  const pick = pickRandomTrack(availableTracks);
+  currentMusicKey = pick;
+  const source = audioCtx.createBufferSource();
+  source.buffer = bufferCache[pick];
+  source.loop = false;
+  source.connect(musicGain);
+  source.onended = () => {
+    if (bgSource !== source) return;
+    bgSource = null;
+    if (audioCtx.state === 'running') {
+      playRandomTrack(availableTracks);
+    }
+  };
+  bgSource = source;
+  source.start();
+}
 
 /** Start looping background ambient track */
 export function startBackgroundMusic() {
@@ -347,12 +375,7 @@ export function startBackgroundMusic() {
 
   const availableTracks = BG_MUSIC_KEYS.filter((key) => bufferCache[key]);
   if (availableTracks.length) {
-    const pick = availableTracks[Math.floor(Math.random() * availableTracks.length)];
-    bgSource = audioCtx.createBufferSource();
-    bgSource.buffer = bufferCache[pick];
-    bgSource.loop = true;
-    bgSource.connect(musicGain);
-    bgSource.start();
+    playRandomTrack(availableTracks);
     return;
   }
 
@@ -425,6 +448,7 @@ export function stopBackgroundMusic() {
     bgSource.stop();
   }
   bgSource = null;
+  currentMusicKey = null;
 }
 
 // ─── Volume controls ─────────────────────────────────────────
