@@ -760,7 +760,7 @@ button.secondary {
 }
 
 .hearth-fire.disabled {
-  display: none;
+  visibility: hidden;
 }
 
 .hearth-fire-svg {
@@ -1919,23 +1919,31 @@ button.secondary {
 
   /* ─ Hearth: centered, just under the anvil area ─ */
   .hearth-wrapper {
-    left: 0;
-    right: 0;
-    transform: none;
-    /* Anvil bottom is ~170px from bottom; place hearth just below it */
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    /* Anvil bottom is ~160px from bottom; place hearth just below it */
     bottom: auto;
-    top: calc(100vh - 160px);
-    width: 100%;
-    max-width: none;
+    top: calc(100vh - 164px);
+    width: calc(100% - 32px);
+    max-width: 320px;
   }
 
   .hearth-structure {
     width: 100%;
-    max-width: none;
+    max-width: 320px;
   }
 
   .hearth-opening {
-    min-height: 50px;
+    /* Fixed height so hearth doesn't change size when fire appears/disappears */
+    height: 50px;
+    min-height: unset;
+  }
+
+  .hearth-fire {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 0;
   }
 
   .hearth-instructions {
@@ -2221,21 +2229,29 @@ button.secondary {
 
   /* Hearth */
   .hearth-wrapper {
-    left: 0;
-    right: 0;
-    transform: none;
-    width: 100%;
-    max-width: none;
-    top: calc(100vh - 160px);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 280px;
+    top: calc(100vh - 164px);
   }
 
   .hearth-structure {
     width: 100%;
-    max-width: none;
+    max-width: 280px;
   }
 
   .hearth-opening {
-    min-height: 45px;
+    /* Fixed height so hearth doesn't change size when fire appears/disappears */
+    height: 45px;
+    min-height: unset;
+  }
+
+  .hearth-fire {
+    width: 45px;
+    height: 45px;
+    margin-bottom: 0;
   }
 
   /* Basket: fills from bottom to under hearth */

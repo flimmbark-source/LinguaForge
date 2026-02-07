@@ -106,13 +106,21 @@ export class HammerSystem {
     this.refreshHandleCaps(true);
 
 
-    // Position anvil just above the letter pool bar (160px from bottom)
+    // Position anvil just above the hearth
     // Canvas now covers full viewport, so position relative to bottom
     const letterPoolBarHeight = 160;
     this.anvil.width = Math.min(260, this.width * 0.35);
     this.anvil.height = 70;
     this.anvil.x = this.width * 0.5 - this.anvil.width / 2;
-    this.anvil.y = this.height - letterPoolBarHeight - this.anvil.height - 10;
+
+    // On mobile portrait (<=768px), sit the anvil directly on top of the hearth
+    const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
+    if (isMobilePortrait) {
+      // Hearth top is at 100vh - 164px; overlap anvil base onto hearth mantle
+      this.anvil.y = this.height - 164 - this.anvil.height + 4;
+    } else {
+      this.anvil.y = this.height - letterPoolBarHeight - this.anvil.height - 10;
+    }
 
     // Position hammer pivot above anvil with enough clearance to swing
     const pivotX = this.width * 0.5;
