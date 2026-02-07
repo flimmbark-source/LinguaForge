@@ -368,6 +368,18 @@ resize() {
         return;
       }
     }
+
+    // Also pick up physics letters (thrown blocks on screen)
+    if (window.letterPhysics && this.collected.length < 5) {
+      const physLetters = window.letterPhysics.pickupInRect(
+        headBounds.left, headBounds.top, headBounds.right, headBounds.bottom
+      );
+      for (const pl of physLetters) {
+        if (this.collected.length >= 5) break;
+        this.collected.push(pl.char);
+        pl.consumed = true;
+      }
+    }
   }
 
   update(dt) {

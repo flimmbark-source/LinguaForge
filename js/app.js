@@ -21,11 +21,14 @@ import { addInk, addVerseWord /*, whatever else you need */ } from './state.js';
 import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js';
 import { initMagicBook, initToolsSidebar, updateSidebarToolVisibility } from './bookAndSidebar.js';
+import { LetterPhysicsSystem } from './letterPhysics.js';
 
 // Global crafting system references
 let hammerSystem = null;
 let pestleSystem = null;
 let shovelSystem = null;
+let letterPhysics = null;
+let craftingCanvasRef = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
 
 /**
@@ -299,6 +302,7 @@ function initializeCraftingSystems() {
     console.warn('Crafting canvas not found');
     return;
   }
+  craftingCanvasRef = craftingCanvas;
 
   // Create hammer system with callbacks
   hammerSystem = new HammerSystem(craftingCanvas);
@@ -419,16 +423,24 @@ function initializeCraftingSystems() {
     updateUI();
   };
 
-  // No-op overlay renderer (chip system removed in favour of magical text)
-  const renderChips = () => {};
+  // Initialize letter physics system (thrown letter blocks)
+  letterPhysics = new LetterPhysicsSystem();
+  window.letterPhysics = letterPhysics;
+  letterPhysics.onSlotFilled = handleMoldSlotFilled;
+
+  // Overlay renderer: draw physics letters on the crafting canvas
+  const renderPhysicsLetters = () => {
+    if (!letterPhysics || letterPhysics.count === 0) return;
+    const ctx = craftingCanvas.getContext('2d');
+    letterPhysics.render(ctx);
+  };
 
   // Create pestle system with callbacks
   pestleSystem = new PestleSystem(craftingCanvas);
     if (typeof pestleSystem.setOverlayRenderer === 'function') {
-    pestleSystem.setOverlayRenderer(renderChips);
+    pestleSystem.setOverlayRenderer(renderPhysicsLetters);
   } else {
-    // Fallback for older PestleSystem implementations that don't expose a setter yet
-    pestleSystem.overlayRenderer = renderChips;
+    pestleSystem.overlayRenderer = renderPhysicsLetters;
   }
 
   // Callback when ink is produced
@@ -450,11 +462,11 @@ function initializeCraftingSystems() {
   };
 
   // Start with hammer active
-  hammerSystem.setOverlayRenderer(renderChips);
+  hammerSystem.setOverlayRenderer(renderPhysicsLetters);
   hammerSystem.start();
   // Create and start shovel (initialized but not active by default)
   shovelSystem = new ShovelSystem(craftingCanvas);
-  shovelSystem.setOverlayRenderer(renderChips);
+  shovelSystem.setOverlayRenderer(renderPhysicsLetters);
   // do not start shovel until selected
 
   // Wire up put-away callbacks: when a tool is released near the sidebar, stow it
@@ -656,6 +668,31 @@ function gameLoop(timestamp) {
   // Update scribes
   if (gameState.scribeList.length > 0) {
     updateScribes(dt, handleMoldSlotFilled);
+  }
+
+  // Update physics letters
+  if (letterPhysics) {
+    letterPhysics.update(dt, window.innerWidth, window.innerHeight);
+    letterPhysics.checkMoldSlots();
+    letterPhysics.checkHearth();
+
+    // Hammer pushes nearby physics letters
+    if (hammerSystem && hammerSystem.isRunning && craftingCanvasRef) {
+      const cr = craftingCanvasRef.getBoundingClientRect();
+      const hx = cr.left + hammerSystem.hammer.headX;
+      const hy = cr.top + hammerSystem.hammer.headY;
+      letterPhysics.pushFrom(hx, hy, 45, hammerSystem.hammer.headVx || 0, hammerSystem.hammer.headVy || 0);
+    }
+
+    // Render physics letters when no tool is active
+    if (letterPhysics.count > 0 && craftingCanvasRef) {
+      const anyToolRunning = hammerSystem?.isRunning || pestleSystem?.isRunning || shovelSystem?.isRunning;
+      if (!anyToolRunning) {
+        const ctx = craftingCanvasRef.getContext('2d');
+        ctx.clearRect(0, 0, craftingCanvasRef.clientWidth, craftingCanvasRef.clientHeight);
+        letterPhysics.render(ctx);
+      }
+    }
   }
 
   // Update resource gain feedback

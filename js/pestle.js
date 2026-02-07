@@ -456,7 +456,16 @@ export class PestleSystem {
           tile.remove();
         }
 
-        break; // One per frame
+        return; // One per frame
+      }
+    }
+
+    // Also pick up physics letters (thrown blocks on screen)
+    if (window.letterPhysics) {
+      const physLetter = window.letterPhysics.pickupNearest(tipX, tipY, 30);
+      if (physLetter) {
+        this.pestle.attachedLetters.push(physLetter.char);
+        physLetter.consumed = true;
       }
     }
   }
