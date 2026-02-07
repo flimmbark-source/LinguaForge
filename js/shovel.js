@@ -3,10 +3,10 @@
  * Simple shovel tool for scooping letters from the letter basket and dumping into the hearth
  */
 
-import { canPlaceInHearth, getHearthBounds, heatHearth } from './hearth.js';
-import { createLetterTile, consumeLetterTile } from './letters.js';
-import { spawnResourceGain } from './resourceGainFeedback.js';
-import { gameState } from './state.js';
+import { canPlaceInHearth, getHearthBounds, heatHearth } from './hearth.js?v=3';
+import { createLetterTile, consumeLetterTile } from './letters.js?v=3';
+import { spawnResourceGain } from './resourceGainFeedback.js?v=3';
+import { gameState } from './state.js?v=3';
 
 function getLetterFromTile(tile) {
   if (!tile) return '';

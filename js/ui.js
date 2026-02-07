@@ -3,12 +3,12 @@
  * Handles all UI updates and rendering logic
  */
 
-import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON } from './config.js';
-import { gameState } from './state.js';
-import { setupWordChipDrag, sellWord } from './molds.js';
-import { toggleScribePaused } from './scribes.js';
-import { evaluateVerse, setupVerseWordChipDrag, isVerseSolved } from './grammar.js';
-import { updateSidebarToolVisibility } from './bookAndSidebar.js';
+import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON } from './config.js?v=3';
+import { gameState } from './state.js?v=3';
+import { setupWordChipDrag, sellWord } from './molds.js?v=3';
+import { toggleScribePaused } from './scribes.js?v=3';
+import { evaluateVerse, setupVerseWordChipDrag, isVerseSolved } from './grammar.js?v=3';
+import { updateSidebarToolVisibility } from './bookAndSidebar.js?v=3';
 
 // DOM element cache
 const elements = {};

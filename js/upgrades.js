@@ -3,8 +3,8 @@
  * Node-based skill tree with progressive unlock and reveal
  */
 
-import { gameState, spendLetters, spendInk } from './state.js';
-import { updateHearthVisuals } from './hearth.js';
+import { gameState, spendLetters, spendInk } from './state.js?v=3';
+import { updateHearthVisuals } from './hearth.js?v=3';
 
 // ===============================================
 // Column / tool classification for every upgrade
@@ -617,21 +617,12 @@ function updateHeaderStats() {
  * Render the two-column upgrade screen
  */
 export function renderUpgradeTree() {
-  try {
-    const { visible, locked } = getVisibleUpgrades();
-    const allShown = new Set([...visible, ...locked]);
-    console.log('[Upgrades] visible:', visible, 'locked:', locked, 'allShown size:', allShown.size);
+  const { visible, locked } = getVisibleUpgrades();
+  const allShown = new Set([...visible, ...locked]);
 
-    renderWorkshop(allShown, visible, locked);
-    renderForgecraft(allShown, visible, locked);
-    updateHeaderStats();
-
-    const wl = document.getElementById('workshopList');
-    const fl = document.getElementById('forgecraftList');
-    console.log('[Upgrades] workshop children:', wl?.children.length, 'forgecraft children:', fl?.children.length);
-  } catch (e) {
-    console.error('[Upgrades] renderUpgradeTree ERROR:', e);
-  }
+  renderWorkshop(allShown, visible, locked);
+  renderForgecraft(allShown, visible, locked);
+  updateHeaderStats();
 }
 
 /**

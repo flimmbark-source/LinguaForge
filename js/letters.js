@@ -3,9 +3,9 @@
  * Handles letter generation, tile creation, and drag-and-drop mechanics
  */
 
-import { getAllowedLetters, INK_PER_LETTER } from './config.js';
-import { gameState, addLetters, addInk, getNextLetterId } from './state.js';
-import { canPlaceInHearth, heatHearth } from './hearth.js';
+import { getAllowedLetters, INK_PER_LETTER } from './config.js?v=3';
+import { gameState, addLetters, addInk, getNextLetterId } from './state.js?v=3';
+import { canPlaceInHearth, heatHearth } from './hearth.js?v=3';
 
 // ─── Physics-based letter throw ──────────────────────────────
 let _heldLetter = null;
