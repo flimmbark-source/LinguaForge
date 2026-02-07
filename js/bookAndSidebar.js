@@ -37,14 +37,28 @@ export function initMagicBook() {
     }
   });
 
-  // Stop all mousedown events on the book from reaching document-level listeners
-  // (prevents canvas tools like hammer/pestle from activating through the book)
+  // Start book drag on mousedown (no stopPropagation so canvas tools still work)
   book.addEventListener('mousedown', (e) => {
-    e.stopPropagation();
     onBookMouseDown(e);
   });
   document.addEventListener('mousemove', onBookMouseMove);
   document.addEventListener('mouseup', onBookMouseUp);
+
+  // Touch support for mobile book dragging
+  book.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    onBookMouseDown({ target: e.target, clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => e.preventDefault() });
+  }, { passive: false });
+  document.addEventListener('touchmove', (e) => {
+    if (!bookDragging) return;
+    const touch = e.touches[0];
+    onBookMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+  }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (!bookDragging) return;
+    const touch = e.changedTouches[0];
+    onBookMouseUp({ clientX: touch.clientX, clientY: touch.clientY });
+  });
 }
 
 function isInteractiveElement(el) {
@@ -149,9 +163,47 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
     e.stopPropagation();
   });
 
+  // Mobile: tap the tab to toggle sidebar open/closed
+  const tab = sidebar.querySelector('.tools-sidebar-tab');
+  if (tab) {
+    tab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sidebar.classList.toggle('open');
+    });
+    // Also handle touch to prevent the click-through delay
+    tab.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      sidebar.classList.toggle('open');
+    });
+  }
+
+  // Close sidebar when tapping outside of it (mobile)
+  document.addEventListener('touchstart', (e) => {
+    if (sidebar.classList.contains('open') && !sidebar.contains(e.target)) {
+      sidebar.classList.remove('open');
+    }
+  }, { passive: true });
+
   const slots = sidebar.querySelectorAll('.tool-slot');
   slots.forEach(slot => {
     slot.addEventListener('mousedown', (e) => onToolSlotMouseDown(e, slot, onToolSelected));
+    // Mobile: tap a tool slot to activate it
+    slot.addEventListener('touchend', (e) => {
+      if (slot.classList.contains('locked-hidden')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const tool = slot.dataset.tool;
+      const isActive = slot.classList.contains('active') ||
+        (tool === 'book' && document.getElementById('magicBook')?.style.display !== 'none');
+      if (isActive) {
+        putToolAway(tool, slot, onToolPutAway);
+      } else {
+        activateTool(tool, e, onToolSelected);
+      }
+      // Close the sidebar after selecting a tool on mobile
+      sidebar.classList.remove('open');
+    });
   });
 
   document.addEventListener('mousemove', onToolSlotMouseMove);
@@ -304,6 +356,38 @@ function activateTool(tool, e, onToolSelected) {
       }
     });
   }
+}
+
+/**
+ * Initialize the mold viewport tab for mobile: tap to toggle open/closed
+ */
+export function initMoldSidebarTab() {
+  const wrapper = document.querySelector('.mold-viewport-wrapper');
+  if (!wrapper) return;
+
+  const tab = wrapper.querySelector('.mold-sidebar-tab');
+  if (!tab) return;
+
+  const toggle = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    wrapper.classList.toggle('open');
+  };
+
+  tab.addEventListener('click', toggle);
+  tab.addEventListener('touchend', toggle);
+
+  // Close when tapping outside
+  document.addEventListener('touchstart', (e) => {
+    if (wrapper.classList.contains('open') && !wrapper.contains(e.target)) {
+      wrapper.classList.remove('open');
+    }
+  }, { passive: true });
+
+  // Stop mousedown from reaching canvas
+  wrapper.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+  });
 }
 
 /**

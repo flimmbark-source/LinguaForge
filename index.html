@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lingua Forge – Hebrew Grammar Prototype</title>
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=9" />
 </head>
 <body>
   
@@ -93,17 +93,21 @@
   <!-- CRAFTING FORGE (HAMMER OR PESTLE) -->
   <div class="crafting-forge">
     <canvas id="craftingCanvas"></canvas>
-    <canvas id="chipCanvas" class="chip-layer"></canvas>
   </div>
 
   <!-- FLOATING STATS -->
   <div class="stats-wrap">
-    <button id="upgradesBtn" class="secondary">Upgrades</button>
     <div class="section core-stats-float">
       <div class="stat-row"><span>⭐ Renown</span><strong id="lettersDisplay">0</strong></div>
       <div class="stat-row"><span>💧 Ink</span><strong id="inkDisplay">0</strong></div>
     </div>
   </div>
+
+  <!-- UPGRADES BUTTON (TOP RIGHT) -->
+  <button id="upgradesBtn" class="upgrades-btn">
+    <span class="upgrades-btn-icon">&#x2728;</span>
+    <span class="upgrades-btn-label">Upgrades</span>
+  </button>
 
   <!-- HEARTH (FIXED AT BOTTOM CENTER) -->
   <div class="hearth-wrapper">
@@ -139,6 +143,7 @@
 
 <!-- FLOATING MOLD VIEWPORT -->
 <div class="mold-viewport-wrapper">
+  <div class="mold-sidebar-tab">Molds</div>
   <div class="section mold-panel">
     <h2 style="margin-bottom:6px;"></h2>
     <div class="mold-viewport">
@@ -163,15 +168,28 @@
     <div class="upgrade-modal-content">
       <div class="upgrade-modal-header">
         <h2>Upgrades</h2>
+        <div class="upgrade-header-stats">
+          <span class="upgrade-resource">⭐ <strong id="upgradeRenown">0</strong></span>
+          <span class="upgrade-resource">💧 <strong id="upgradeInk">0</strong></span>
+        </div>
         <button id="closeUpgradeBtn" class="close-button">✕</button>
       </div>
-      <div class="upgrade-tree-container">
-        <div id="upgradeTree" class="upgrade-tree"></div>
+      <div class="upgrade-columns">
+        <!-- LEFT COLUMN: Workshop (tool blocks) -->
+        <div class="upgrade-column" id="workshopColumn">
+          <div class="upgrade-column-header">Workshop</div>
+          <div class="upgrade-block-list" id="workshopList"></div>
+        </div>
+        <!-- RIGHT COLUMN: Forgecraft (stat upgrades) -->
+        <div class="upgrade-column" id="forgecraftColumn">
+          <div class="upgrade-column-header">Forgecraft</div>
+          <div class="upgrade-block-list" id="forgecraftList"></div>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Load JavaScript modules -->
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js?v=9"></script>
 </body>
 </html>

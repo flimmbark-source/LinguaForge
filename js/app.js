@@ -3,31 +3,31 @@
  * Entry point that initializes the game and manages the game loop
  */
 
-console.log('Lingua Forge app.js loading...');
 
-import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD } from './config.js';
-import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js';
-import { setMoldViewportWidth, navigatePreviousMold, navigateNextMold, forgeWords } from './molds.js';
-import { hireScribe, updateScribes } from './scribes.js';
-import { setupVerseAreaDrop, completeVerse } from './grammar.js';
-import { initializeElements, updateUI } from './ui.js';
-import { gameState } from './state.js';
-import { addLetters } from './state.js';
-import { HammerSystem } from './hammer.js';
-import { PestleSystem } from './pestle.js';
-import { ShovelSystem } from './shovel.js';
-import { ChipSystem } from './chips.js';
-import { initializeHearth, updateHearth } from './hearth.js';
-import { addInk /*, whatever else you need */ } from './state.js';
-import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
-import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js';
-import { initMagicBook, initToolsSidebar, updateSidebarToolVisibility } from './bookAndSidebar.js';
+import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD } from './config.js?v=9';
+import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
+import { setMoldViewportWidth, navigatePreviousMold, navigateNextMold } from './molds.js?v=9';
+import { hireScribe, updateScribes } from './scribes.js?v=9';
+import { setupVerseAreaDrop, completeVerse } from './grammar.js?v=9';
+import { initializeElements, updateUI } from './ui.js?v=9';
+import { gameState } from './state.js?v=9';
+import { addLetters } from './state.js?v=9';
+import { HammerSystem } from './hammer.js?v=9';
+import { PestleSystem } from './pestle.js?v=9';
+import { ShovelSystem } from './shovel.js?v=9';
+import { initializeHearth, updateHearth } from './hearth.js?v=9';
+import { addInk, addVerseWord /*, whatever else you need */ } from './state.js?v=9';
+import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from './upgrades.js?v=9';
+import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
+import { initMagicBook, initToolsSidebar, initMoldSidebarTab, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
+import { LetterPhysicsSystem } from './letterPhysics.js?v=9';
 
 // Global crafting system references
 let hammerSystem = null;
 let pestleSystem = null;
 let shovelSystem = null;
-let chipSystem = null;
+let letterPhysics = null;
+let craftingCanvasRef = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
 
 /**
@@ -44,6 +44,144 @@ function handleMoldSlotFilled(slotEl) {
   }
 
   updateUI();
+}
+
+/**
+ * Find the fly-to target for the magical text based on the book's current state.
+ *  - Book open & visible  → verse assembly area (#grammarHebrewLine)
+ *  - Book out but closed   → the closed book cover
+ *  - Book stowed / hidden  → the book's tool-sidebar slot (#toolSlotBook)
+ * Returns { x, y } in viewport coordinates.
+ */
+function getMagicalTextTarget() {
+  const book = document.getElementById('magicBook');
+  const isHidden = !book || book.style.display === 'none';
+
+  if (isHidden) {
+    // Book is stowed — fly to the sidebar slot
+    const slot = document.getElementById('toolSlotBook');
+    if (slot) {
+      const r = slot.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }
+    // Last resort: top-right corner
+    return { x: window.innerWidth - 40, y: window.innerHeight / 2 };
+  }
+
+  // Book is visible — if open, target the verse area; if closed, target the cover
+  if (book.classList.contains('open')) {
+    const verseArea = document.getElementById('grammarHebrewLine');
+    if (verseArea && verseArea.offsetParent !== null) {
+      const r = verseArea.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }
+  }
+
+  // Closed or fallback — target the book element itself
+  const r = book.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
+/**
+ * Spawn a "Magical Text" element that pops up above the mold, sparkles and glitters,
+ * expands slightly, then shrinks and zooms into the verse book (or its sidebar slot).
+ * The word is placed directly into the verse upon arrival (bypasses inventory).
+ * @param {Object} word - The forged word object { text, english, length }
+ * @param {DOMRect} moldBounds - Bounding rect of the mold viewport
+ * @param {number} delay - Stagger delay in ms
+ */
+function spawnMagicalText(word, moldBounds, delay) {
+  setTimeout(() => {
+    // Create a wrapper to handle centering (so the animation transform doesn't fight it)
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:fixed;z-index:200;pointer-events:none;';
+    // Start above the mold viewport so the text pops up from it
+    const startX = moldBounds.left + moldBounds.width / 2;
+    const startY = moldBounds.top - 10;
+    wrapper.style.left = startX + 'px';
+    wrapper.style.top = startY + 'px';
+
+    const el = document.createElement('div');
+    el.className = 'magical-text phase-emerge';
+    el.textContent = word.text;
+
+    wrapper.appendChild(el);
+
+    // Spawn sparkle particles around the text
+    const sparkleCount = 8 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < sparkleCount; i++) {
+      const sparkle = document.createElement('div');
+      sparkle.className = 'magical-sparkle';
+      const angle = (Math.PI * 2 * i) / sparkleCount + (Math.random() - 0.5) * 0.5;
+      const dist = 20 + Math.random() * 30;
+      sparkle.style.setProperty('--sparkle-dx', Math.cos(angle) * dist + 'px');
+      sparkle.style.setProperty('--sparkle-dy', Math.sin(angle) * dist + 'px');
+      sparkle.style.setProperty('--sparkle-duration', (0.6 + Math.random() * 0.5) + 's');
+      sparkle.style.left = '50%';
+      sparkle.style.top = '50%';
+      sparkle.style.animationDelay = (Math.random() * 0.3) + 's';
+      el.appendChild(sparkle);
+    }
+
+    document.body.appendChild(wrapper);
+
+    // Phase 2: After emerge animation ends, shrink and zoom to target
+    const emergeTime = 800;
+    setTimeout(() => {
+      const target = getMagicalTextTarget();
+
+      // Switch to zoom animation and move wrapper to target
+      el.classList.remove('phase-emerge');
+      el.classList.add('phase-zoom');
+      wrapper.style.transition = 'left 0.7s cubic-bezier(0.5, 0, 0.75, 0), top 0.7s cubic-bezier(0.5, 0, 0.75, 0)';
+      wrapper.style.left = target.x + 'px';
+      wrapper.style.top = target.y + 'px';
+
+      // Spawn a second burst of sparkles for the zoom trail
+      for (let i = 0; i < 6; i++) {
+        const sparkle = document.createElement('div');
+        sparkle.className = 'magical-sparkle';
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 15 + Math.random() * 25;
+        sparkle.style.setProperty('--sparkle-dx', Math.cos(angle) * dist + 'px');
+        sparkle.style.setProperty('--sparkle-dy', Math.sin(angle) * dist + 'px');
+        sparkle.style.setProperty('--sparkle-duration', (0.4 + Math.random() * 0.3) + 's');
+        sparkle.style.left = '50%';
+        sparkle.style.top = '50%';
+        el.appendChild(sparkle);
+      }
+
+      // On arrival: place word directly into verse (bypass inventory)
+      const zoomTime = 700;
+      setTimeout(() => {
+        // If this word is already in the verse, skip it
+        const alreadyInVerse = gameState.verseWords.some(w => w.hebrew === word.text);
+        if (alreadyInVerse) {
+          wrapper.remove();
+          return;
+        }
+
+        const instanceId = 'vw-' + Date.now() + '-' + Math.random();
+        addVerseWord({ instanceId, hebrew: word.text }, gameState.verseWords.length);
+        updateUI();
+
+        // Add a flash effect to the newly added verse chip
+        const freshVerseArea = document.getElementById('grammarHebrewLine');
+        if (freshVerseArea) {
+          const verseChips = freshVerseArea.querySelectorAll('.line-word-chip');
+          const lastChip = verseChips[verseChips.length - 1];
+          if (lastChip) {
+            lastChip.classList.add('verse-arrival-flash');
+            lastChip.addEventListener('animationend', () => {
+              lastChip.classList.remove('verse-arrival-flash');
+            }, { once: true });
+          }
+        }
+
+        wrapper.remove();
+      }, zoomTime);
+    }, emergeTime);
+  }, delay);
 }
 
 /**
@@ -75,8 +213,9 @@ function initializeGame() {
   // Setup tool selection
   setupToolSelection();
 
-  // Initialize magic book and tools sidebar
+  // Initialize magic book, tools sidebar, and mold tab
   initMagicBook();
+  initMoldSidebarTab();
   initToolsSidebar(
     // onToolSelected: pull a tool out to use it
     (toolName, dropX, dropY) => {
@@ -152,6 +291,7 @@ function initializeGame() {
 
   // Initial UI update
   updateUI();
+  console.log('Lingua Forge initialization complete!');
 }
 
 /**
@@ -159,29 +299,11 @@ function initializeGame() {
  */
 function initializeCraftingSystems() {
   const craftingCanvas = document.getElementById('craftingCanvas');
-  const chipCanvas = document.getElementById('chipCanvas');
-
   if (!craftingCanvas) {
     console.warn('Crafting canvas not found');
     return;
   }
-
-  const chipLayer = chipCanvas || craftingCanvas;
-  const syncChipCanvasSize = () => {
-    const rect = craftingCanvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-
-    chipLayer.width = rect.width * dpr;
-    chipLayer.height = rect.height * dpr;
-    chipLayer.style.width = `${rect.width}px`;
-    chipLayer.style.height = `${rect.height}px`;
-
-    const chipCtx = chipLayer.getContext('2d');
-    chipCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  };
-
-  syncChipCanvasSize();
-  window.addEventListener('resize', syncChipCanvasSize);
+  craftingCanvasRef = craftingCanvas;
 
   // Create hammer system with callbacks
   hammerSystem = new HammerSystem(craftingCanvas);
@@ -268,20 +390,33 @@ function initializeCraftingSystems() {
     updateUI();
   };
 
-  // Callback when red-hot hammer strikes mold viewport - forge words and spawn chips
+  // Callback when red-hot hammer strikes mold viewport - forge words as magical text
   hammerSystem.onForgeTriggered = () => {
-    const forgedWords = forgeWords();
+    // Forge completed molds but DON'T add words to inventory — they go
+    // straight to the verse via the magical text animation instead.
+    const forgedWords = [];
+    gameState.currentLine.molds.forEach(mold => {
+      if (mold.slots.every(slot => slot)) {
+        forgedWords.push({ text: mold.pattern, english: mold.english, length: mold.pattern.length });
+        mold.slots = new Array(mold.pattern.length).fill(false);
+      }
+    });
 
-    // Spawn physics chips for each forged word
-    if (forgedWords.length > 0 && chipSystem) {
+    // Spawn magical text animations that fly into the verse book
+    if (forgedWords.length > 0) {
       const moldViewport = document.querySelector('.mold-viewport');
       if (moldViewport) {
         const moldBounds = moldViewport.getBoundingClientRect();
         forgedWords.forEach((word, index) => {
-          // Stagger spawns so chips pop out one at a time instead of overlapping
-          setTimeout(() => {
-            chipSystem.spawnChip(word, moldBounds);
-          }, index * 120);
+          // Grant renown (same as chip system did)
+          const renownGained = word.length * 2;
+          addLetters(renownGained);
+          const screenX = moldBounds.left + moldBounds.width / 2;
+          const screenY = moldBounds.top + moldBounds.height / 2;
+          spawnResourceGain(screenX, screenY, renownGained, 'renown');
+
+          // Spawn magical text with stagger
+          spawnMagicalText(word, moldBounds, index * 300);
         });
       }
     }
@@ -289,20 +424,30 @@ function initializeCraftingSystems() {
     updateUI();
   };
 
-  // Create chip system
-  chipSystem = new ChipSystem(chipLayer);
-  chipSystem.onUpdate = updateUI;
+  // Initialize letter physics system (thrown letter blocks)
+  letterPhysics = new LetterPhysicsSystem();
+  window.letterPhysics = letterPhysics;
+  letterPhysics.onSlotFilled = handleMoldSlotFilled;
 
-  // Render chips after the active tool draws so they remain visible on the shared canvas
-  const renderChips = () => chipSystem.render();
+  // Overlay renderer: draw physics letters on the crafting canvas
+  const renderPhysicsLetters = () => {
+    if (!letterPhysics || letterPhysics.letters.length === 0) return;
+    try {
+      const ctx = craftingCanvas.getContext('2d');
+      ctx.save();
+      letterPhysics.render(ctx);
+      ctx.restore();
+    } catch (e) {
+      console.warn('Physics letter render error:', e);
+    }
+  };
 
   // Create pestle system with callbacks
   pestleSystem = new PestleSystem(craftingCanvas);
     if (typeof pestleSystem.setOverlayRenderer === 'function') {
-    pestleSystem.setOverlayRenderer(renderChips);
+    pestleSystem.setOverlayRenderer(renderPhysicsLetters);
   } else {
-    // Fallback for older PestleSystem implementations that don't expose a setter yet
-    pestleSystem.overlayRenderer = renderChips;
+    pestleSystem.overlayRenderer = renderPhysicsLetters;
   }
 
   // Callback when ink is produced
@@ -324,11 +469,11 @@ function initializeCraftingSystems() {
   };
 
   // Start with hammer active
-  hammerSystem.setOverlayRenderer(renderChips);
+  hammerSystem.setOverlayRenderer(renderPhysicsLetters);
   hammerSystem.start();
   // Create and start shovel (initialized but not active by default)
   shovelSystem = new ShovelSystem(craftingCanvas);
-  shovelSystem.setOverlayRenderer(renderChips);
+  shovelSystem.setOverlayRenderer(renderPhysicsLetters);
   // do not start shovel until selected
 
   // Wire up put-away callbacks: when a tool is released near the sidebar, stow it
@@ -527,16 +672,40 @@ function gameLoop(timestamp) {
   // Update hearth
   updateHearth(dt);
 
-  // Update chip physics
-  if (chipSystem) {
-    chipSystem.update(dt);
-  // Ensure chips stay visible even when no tool overlay is running
-    chipSystem.render();
-  }
-
   // Update scribes
   if (gameState.scribeList.length > 0) {
     updateScribes(dt, handleMoldSlotFilled);
+  }
+
+  // Update physics letters
+  if (letterPhysics) {
+    try {
+      letterPhysics.update(dt, window.innerWidth, window.innerHeight);
+      letterPhysics.checkMoldSlots();
+      letterPhysics.checkHearth();
+
+      // Hammer pushes nearby physics letters
+      if (hammerSystem && hammerSystem.isRunning && craftingCanvasRef) {
+        const cr = craftingCanvasRef.getBoundingClientRect();
+        const hx = cr.left + hammerSystem.hammer.headX;
+        const hy = cr.top + hammerSystem.hammer.headY;
+        letterPhysics.pushFrom(hx, hy, 45, hammerSystem.hammer.headVx || 0, hammerSystem.hammer.headVy || 0);
+      }
+
+      // Render physics letters when no tool is active
+      if (letterPhysics.letters.length > 0 && craftingCanvasRef) {
+        const anyToolRunning = hammerSystem?.isRunning || pestleSystem?.isRunning || shovelSystem?.isRunning;
+        if (!anyToolRunning) {
+          const ctx = craftingCanvasRef.getContext('2d');
+          ctx.save();
+          ctx.clearRect(0, 0, craftingCanvasRef.clientWidth, craftingCanvasRef.clientHeight);
+          letterPhysics.render(ctx);
+          ctx.restore();
+        }
+      }
+    } catch (e) {
+      console.warn('Physics update error:', e);
+    }
   }
 
   // Update resource gain feedback
@@ -544,6 +713,7 @@ function gameLoop(timestamp) {
 
   // Update UI
   updateUI();
+  updateUpgradeHeaderStats();
 
   // Continue loop
   requestAnimationFrame(gameLoop);

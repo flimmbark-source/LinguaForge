@@ -3,9 +3,48 @@
  * Handles letter generation, tile creation, and drag-and-drop mechanics
  */
 
-import { getAllowedLetters, INK_PER_LETTER } from './config.js';
-import { gameState, addLetters, addInk, getNextLetterId } from './state.js';
-import { canPlaceInHearth, heatHearth } from './hearth.js';
+import { getAllowedLetters, INK_PER_LETTER } from './config.js?v=9';
+import { gameState, addLetters, addInk, getNextLetterId } from './state.js?v=9';
+import { canPlaceInHearth, heatHearth } from './hearth.js?v=9';
+
+// ─── Physics-based letter throw ──────────────────────────────
+let _heldLetter = null;
+let _mouseHist = [];
+
+document.addEventListener('pointermove', e => {
+  if (!_heldLetter) return;
+  _heldLetter.x = e.clientX;
+  _heldLetter.y = e.clientY;
+  _mouseHist.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+  if (_mouseHist.length > 6) _mouseHist.shift();
+});
+
+document.addEventListener('pointerup', e => {
+  if (!_heldLetter) return;
+  let vx = 0, vy = 0;
+  if (_mouseHist.length >= 2) {
+    const a = _mouseHist[_mouseHist.length - 1];
+    let b = _mouseHist[0];
+    for (let i = _mouseHist.length - 2; i >= 0; i--) {
+      if (a.t - _mouseHist[i].t >= 50) { b = _mouseHist[i]; break; }
+    }
+    const dt = (a.t - b.t) / 1000;
+    if (dt > 0.01) {
+      vx = (a.x - b.x) / dt;
+      vy = (a.y - b.y) / dt;
+      const sp = Math.hypot(vx, vy);
+      if (sp > 2500) { vx *= 2500 / sp; vy *= 2500 / sp; }
+    }
+  }
+  _heldLetter.isHeld = false;
+  _heldLetter.settled = false;
+  _heldLetter.vx = vx;
+  _heldLetter.vy = vy;
+  _heldLetter.angularVel = vx * 0.005;
+  _heldLetter = null;
+  _mouseHist = [];
+  gameState.activeLetterDrag = null;
+});
 
 function getLetterDragOverlay() {
   let overlay = document.getElementById('letterDragOverlay');
@@ -203,6 +242,19 @@ export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled
 export function setupLetterTilePointerDrag(tile, onDrop) {
   tile.addEventListener('pointerdown', e => {
     e.preventDefault();
+
+    // Physics-based throw (if system available)
+    if (window.letterPhysics && !_heldLetter) {
+      const char = tile.dataset.letterChar || '';
+      consumeLetterTile(tile);
+      _heldLetter = window.letterPhysics.spawn(char, e.clientX, e.clientY);
+      _heldLetter.isHeld = true;
+      _mouseHist = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
+      gameState.activeLetterDrag = { isPhysics: true };
+      return;
+    }
+
+    // Fallback: DOM-based drag
     const rect = tile.getBoundingClientRect();
     const overlay = getLetterDragOverlay();
     gameState.activeLetterDrag = {
@@ -221,7 +273,8 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
   });
 
   tile.addEventListener('pointermove', e => {
-    if (!gameState.activeLetterDrag || gameState.activeLetterDrag.tile !== tile) return;
+    if (!gameState.activeLetterDrag || gameState.activeLetterDrag.isPhysics) return;
+    if (gameState.activeLetterDrag.tile !== tile) return;
     e.preventDefault();
     const x = e.clientX - gameState.activeLetterDrag.offsetX;
     const y = e.clientY - gameState.activeLetterDrag.offsetY;
@@ -230,7 +283,8 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
   });
 
   tile.addEventListener('pointerup', e => {
-    if (!gameState.activeLetterDrag || gameState.activeLetterDrag.tile !== tile) return;
+    if (!gameState.activeLetterDrag || gameState.activeLetterDrag.isPhysics) return;
+    if (gameState.activeLetterDrag.tile !== tile) return;
     tile.releasePointerCapture(e.pointerId);
     const dragState = gameState.activeLetterDrag;
     gameState.activeLetterDrag = null;

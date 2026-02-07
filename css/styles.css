@@ -23,6 +23,8 @@ body {
   height: 100vh;
   padding-bottom: 220px;
   box-sizing: border-box;
+  overflow: hidden;
+  touch-action: none;
 }
 
 /* Utility helpers */
@@ -357,6 +359,11 @@ button.secondary {
 
   display: flex;
   justify-content: center;
+}
+
+/* Mold tab: hidden on desktop, shown on mobile */
+.mold-sidebar-tab {
+  display: none;
 }
 
 .mold-viewport {
@@ -1155,6 +1162,59 @@ button.secondary {
 }
 
 /* ===============================================
+   UPGRADES BUTTON - Top Right Corner
+   =============================================== */
+
+.upgrades-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 160;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 2px solid #7c3aed;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #4c1d95, #6d28d9);
+  color: #f5f3ff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow:
+    0 4px 16px rgba(109, 40, 217, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.upgrades-btn:hover {
+  background: linear-gradient(145deg, #5b21b6, #7c3aed);
+  border-color: #a78bfa;
+  box-shadow:
+    0 6px 24px rgba(124, 58, 237, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.upgrades-btn:active {
+  transform: translateY(0px);
+  box-shadow:
+    0 2px 8px rgba(109, 40, 217, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.upgrades-btn-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.upgrades-btn-label {
+  line-height: 1;
+}
+
+/* ===============================================
    UPGRADE TREE - NODE-BASED SKILL TREE
    Inspired by roguelike skill trees with small nodes
    =============================================== */
@@ -1184,8 +1244,9 @@ button.secondary {
   border-radius: 16px;
   border: 1px solid rgba(148, 163, 184, 0.15);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
-  max-width: 1100px;
   width: 100%;
+  height: 100%;
+  max-width: 1100px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -1251,465 +1312,1047 @@ button.secondary {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Upgrade Tree Container */
-.upgrade-tree-container {
-  flex: 1;
-  overflow: auto;
-  padding: 40px;
-  min-height: 550px;
-  position: relative;
-  background: radial-gradient(ellipse at center, rgba(30, 20, 50, 0.5) 0%, transparent 70%);
-}
-
-.upgrade-tree {
-  position: relative;
-  width: 100%;
-  min-height: 500px;
-}
-
-/* Upgrade Connections SVG */
-.upgrade-connections {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.upgrade-connection-line {
-  stroke: #3b4252;
-  stroke-width: 2;
-  stroke-linecap: round;
-  transition: stroke 0.3s ease;
-}
-
-.upgrade-connection-line.active {
-  stroke: #64748b;
-}
-
 /* ===============================================
-   NODE STYLES
+   TWO-COLUMN UPGRADE LAYOUT
    =============================================== */
 
-/* Base Node */
-.upgrade-node {
-  position: absolute;
-  width: 48px;
-  height: 48px;
+.upgrade-columns {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: translate(-50%, -50%);
-  z-index: 2;
+  flex: 1;
+  gap: 1px;
+  background: rgba(148, 163, 184, 0.08);
+  overflow: hidden;
+  min-height: 0;
 }
 
-.upgrade-node:hover {
-  z-index: 20;
-}
-
-/* Node Inner (the actual visible node) */
-.upgrade-node-inner {
-  width: 100%;
-  height: 100%;
+.upgrade-column {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  background: rgba(15, 10, 30, 0.6);
+  min-height: 0;
 }
 
-.upgrade-node:hover .upgrade-node-inner {
-  transform: scale(1.15);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-}
-
-/* ===============================================
-   NODE TYPE VARIANTS
-   =============================================== */
-
-/* Locked/Hidden Node (question mark) */
-.upgrade-node.locked .upgrade-node-inner {
-  background: #1e1e2e;
-  border: 2px solid #3b3b4f;
-  border-radius: 10px;
-}
-
-.upgrade-node.locked .upgrade-icon {
-  color: #4a4a5f;
-  font-size: 18px;
-}
-
-.upgrade-node.locked:hover .upgrade-node-inner {
-  border-color: #5a5a7f;
-  transform: scale(1.05);
-}
-
-/* Available Node (can be purchased) */
-.upgrade-node.available .upgrade-node-inner {
-  background: linear-gradient(145deg, #2d4a4a, #1a3535);
-  border: 2px solid #3d6a6a;
-  box-shadow: 0 4px 16px rgba(45, 100, 100, 0.3);
-}
-
-.upgrade-node.available:hover .upgrade-node-inner {
-  background: linear-gradient(145deg, #3d6a6a, #2d5555);
-  border-color: #5dabab;
-  box-shadow: 0 8px 24px rgba(45, 140, 140, 0.4);
-}
-
-/* Circular Node Variant */
-.upgrade-node.node-circle .upgrade-node-inner {
-  border-radius: 50%;
-}
-
-/* Teal/Green Nodes (primary upgrades) */
-.upgrade-node.node-teal .upgrade-node-inner {
-  background: linear-gradient(145deg, #2dd4bf, #14b8a6);
-  border: 2px solid #5eead4;
-  box-shadow: 0 4px 16px rgba(45, 212, 191, 0.35);
-}
-
-.upgrade-node.node-teal .upgrade-icon {
-  color: #042f2e;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
-}
-
-.upgrade-node.node-teal:hover .upgrade-node-inner {
-  box-shadow: 0 8px 28px rgba(45, 212, 191, 0.5);
-  border-color: #99f6e4;
-}
-
-/* Pink/Red Nodes (combat/offensive upgrades) */
-.upgrade-node.node-pink .upgrade-node-inner {
-  background: linear-gradient(145deg, #f472b6, #db2777);
-  border: 2px solid #f9a8d4;
-  box-shadow: 0 4px 16px rgba(244, 114, 182, 0.35);
-}
-
-.upgrade-node.node-pink .upgrade-icon {
-  color: #500724;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
-}
-
-.upgrade-node.node-pink:hover .upgrade-node-inner {
-  box-shadow: 0 8px 28px rgba(244, 114, 182, 0.5);
-  border-color: #fbcfe8;
-}
-
-/* Yellow/Gold Nodes (special/maxed upgrades) */
-.upgrade-node.node-yellow .upgrade-node-inner {
-  background: linear-gradient(145deg, #fbbf24, #d97706);
-  border: 2px solid #fcd34d;
-  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.35);
-}
-
-.upgrade-node.node-yellow .upgrade-icon {
-  color: #451a03;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
-}
-
-.upgrade-node.node-yellow:hover .upgrade-node-inner {
-  box-shadow: 0 8px 28px rgba(251, 191, 36, 0.5);
-  border-color: #fde68a;
-}
-
-/* ===============================================
-   NODE STATES
-   =============================================== */
-
-/* Purchased but not maxed */
-.upgrade-node.purchased:not(.max-level) .upgrade-node-inner {
-  /* Uses color variant classes above */
-}
-
-/* Max Level */
-.upgrade-node.max-level .upgrade-node-inner {
-  background: linear-gradient(145deg, #fbbf24, #b45309);
-  border: 2px solid #fcd34d;
-  box-shadow: 
-    0 4px 16px rgba(251, 191, 36, 0.4),
-    inset 0 0 20px rgba(255, 255, 255, 0.1);
-}
-
-.upgrade-node.max-level .upgrade-icon {
-  color: #451a03;
-}
-
-.upgrade-node.max-level::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: inherit;
-  background: conic-gradient(from 0deg, transparent, rgba(251, 191, 36, 0.3), transparent);
-  animation: nodeGlow 3s linear infinite;
-  z-index: -1;
-}
-
-@keyframes nodeGlow {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-/* ===============================================
-   NODE CONTENT
-   =============================================== */
-
-/* Node Icon */
-.upgrade-icon {
-  font-size: 20px;
-  line-height: 1;
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Level Badge */
-.upgrade-level-badge {
-  position: absolute;
-  bottom: -6px;
-  right: -6px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 9px;
-  background: #1e293b;
-  border: 2px solid #334155;
-  font-size: 10px;
+.upgrade-column-header {
+  padding: 12px 16px;
+  font-size: 15px;
   font-weight: 700;
-  color: #f1f5f9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 3;
-}
-
-.upgrade-node.max-level .upgrade-level-badge {
-  background: linear-gradient(145deg, #fbbf24, #d97706);
-  border-color: #fde68a;
-  color: #451a03;
-}
-
-/* ===============================================
-   TOOLTIP
-   =============================================== */
-
-.upgrade-tooltip {
-  position: absolute;
-  bottom: calc(100% + 12px);
-  left: 50%;
-  transform: translateX(-50%) translateY(8px);
-  background: linear-gradient(145deg, #1e293b, #0f172a);
-  border: 1px solid #475569;
-  border-radius: 10px;
-  padding: 14px 16px;
-  min-width: 200px;
-  max-width: 260px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.2s ease;
-  pointer-events: none;
-  z-index: 100;
-}
-
-.upgrade-node:hover .upgrade-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* Tooltip Arrow */
-.upgrade-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 8px solid transparent;
-  border-top-color: #475569;
-}
-
-.upgrade-tooltip::before {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #0f172a;
-  z-index: 1;
-}
-
-/* Tooltip Header */
-.tooltip-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 8px;
-  gap: 8px;
-}
-
-.tooltip-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #f1f5f9;
-  line-height: 1.2;
-}
-
-.tooltip-level-pill {
-  flex-shrink: 0;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  background: rgba(0, 0, 0, 0.4);
-  color: #94a3b8;
-  border: 1px solid #334155;
-}
-
-.tooltip-level-pill.maxed {
-  background: linear-gradient(145deg, #fbbf24, #d97706);
-  color: #451a03;
-  border-color: #fde68a;
-}
-
-/* Tooltip Description */
-.tooltip-description {
-  font-size: 12px;
-  color: #cbd5e1;
-  line-height: 1.5;
-  margin-bottom: 10px;
-}
-
-/* Tooltip Cost */
-.tooltip-cost {
-  display: flex;
-  gap: 10px;
-  padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
-  margin-bottom: 6px;
-}
-
-.tooltip-cost-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.tooltip-cost-item.renown {
-  color: #fbbf24;
-}
-
-.tooltip-cost-item.ink {
-  color: #a78bfa;
-}
-
-.tooltip-cost-item.affordable {
-  opacity: 1;
-}
-
-.tooltip-cost-item.unaffordable {
-  opacity: 0.5;
-  color: #f87171;
-}
-
-/* Tooltip Warning */
-.tooltip-warning {
-  font-size: 11px;
-  color: #f87171;
-  padding: 6px 8px;
-  background: rgba(248, 113, 113, 0.1);
-  border-radius: 4px;
-  border-left: 2px solid #f87171;
-}
-
-/* Tooltip Max */
-.tooltip-max {
-  font-size: 12px;
-  color: #fbbf24;
-  font-weight: 700;
-  text-align: center;
-  padding: 8px;
-  background: rgba(251, 191, 36, 0.1);
-  border-radius: 6px;
+  color: #e2e8f0;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(0, 0, 0, 0.25);
+  text-align: center;
 }
 
 /* ===============================================
-   PURCHASE BUTTON (in tooltip)
+   WORKSHOP TOOL BLOCKS (clickable filter blocks)
    =============================================== */
 
-.tooltip-purchase-btn {
-  width: 100%;
-  padding: 8px 12px;
-  margin-top: 8px;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
+.workshop-tool-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(148, 163, 184, 0.12);
+  background: rgba(30, 25, 50, 0.5);
   cursor: pointer;
   transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  position: relative;
 }
 
-.tooltip-purchase-btn.can-afford {
-  background: linear-gradient(145deg, #2dd4bf, #14b8a6);
-  color: #042f2e;
-  box-shadow: 0 2px 8px rgba(45, 212, 191, 0.3);
-}
-
-.tooltip-purchase-btn.can-afford:hover {
-  background: linear-gradient(145deg, #5eead4, #2dd4bf);
-  box-shadow: 0 4px 12px rgba(45, 212, 191, 0.4);
+.workshop-tool-block:hover {
+  background: rgba(45, 35, 75, 0.6);
+  border-color: rgba(148, 163, 184, 0.25);
   transform: translateY(-1px);
 }
 
-.tooltip-purchase-btn.cannot-afford {
-  background: #374151;
-  color: #6b7280;
-  cursor: not-allowed;
+/* Selected state (active filter) */
+.workshop-tool-block.tool-selected {
+  border-color: rgba(99, 102, 241, 0.6);
+  background: linear-gradient(135deg, rgba(40, 30, 80, 0.8), rgba(25, 20, 55, 0.8));
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.2);
 }
 
-.tooltip-purchase-btn.maxed {
+/* Unlocked tool */
+.workshop-tool-block.tool-unlocked {
+  border-color: rgba(45, 212, 191, 0.25);
+}
+
+.workshop-tool-block.tool-unlocked:hover {
+  border-color: rgba(45, 212, 191, 0.5);
+}
+
+/* Permanent tool (Fist - always available) */
+.workshop-tool-block.tool-permanent {
+  border-color: rgba(45, 212, 191, 0.25);
+}
+
+/* Available for purchase */
+.workshop-tool-block.tool-available {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: linear-gradient(135deg, rgba(50, 35, 15, 0.6), rgba(30, 20, 10, 0.6));
+}
+
+.workshop-tool-block.tool-available:hover {
+  border-color: rgba(251, 191, 36, 0.6);
+  background: linear-gradient(135deg, rgba(60, 45, 20, 0.7), rgba(40, 28, 14, 0.7));
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.15);
+}
+
+/* Locked tool */
+.workshop-tool-block.tool-locked {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.workshop-tool-block.tool-locked:hover {
+  transform: none;
+  background: rgba(30, 25, 50, 0.5);
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+/* Tool icon */
+.workshop-tool-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.tool-selected .workshop-tool-icon {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.tool-unlocked .workshop-tool-icon,
+.tool-permanent .workshop-tool-icon {
+  background: rgba(45, 212, 191, 0.08);
+  border-color: rgba(45, 212, 191, 0.2);
+}
+
+.tool-available .workshop-tool-icon {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.25);
+}
+
+.tool-locked .workshop-tool-icon {
+  font-size: 18px;
+  color: #4a4a5f;
+}
+
+/* Tool info */
+.workshop-tool-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.workshop-tool-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.tool-locked .workshop-tool-label {
+  color: #64748b;
+}
+
+.tool-selected .workshop-tool-label {
+  color: #c4b5fd;
+}
+
+.workshop-tool-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Right side */
+.workshop-tool-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.workshop-tool-cost {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.workshop-tool-check {
+  font-size: 18px;
+  color: #2dd4bf;
+  font-weight: 700;
+}
+
+/* Scrollable block list */
+.upgrade-block-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upgrade-block-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.upgrade-block-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.upgrade-block-list::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 3px;
+}
+
+.upgrade-block-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.upgrade-empty {
+  text-align: center;
+  color: #64748b;
+  padding: 32px 16px;
+  font-size: 13px;
+}
+
+/* ===============================================
+   UPGRADE BLOCK CARDS
+   =============================================== */
+
+.upgrade-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(30, 25, 50, 0.5);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+/* Available — can purchase */
+.upgrade-block.block-available {
+  border-color: rgba(45, 212, 191, 0.3);
+  background: linear-gradient(135deg, rgba(20, 40, 45, 0.7), rgba(15, 25, 35, 0.7));
+  cursor: pointer;
+}
+
+.upgrade-block.block-available:hover {
+  border-color: rgba(45, 212, 191, 0.6);
+  background: linear-gradient(135deg, rgba(25, 55, 60, 0.8), rgba(20, 35, 50, 0.8));
+  box-shadow: 0 4px 16px rgba(45, 212, 191, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Purchased (not maxed) */
+.upgrade-block.block-purchased {
+  border-color: rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(30, 25, 60, 0.7), rgba(20, 15, 40, 0.7));
+  cursor: pointer;
+}
+
+.upgrade-block.block-purchased:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: linear-gradient(135deg, rgba(40, 35, 80, 0.8), rgba(25, 20, 55, 0.8));
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Maxed */
+.upgrade-block.block-maxed {
+  border-color: rgba(251, 191, 36, 0.3);
+  background: linear-gradient(135deg, rgba(50, 35, 10, 0.5), rgba(30, 20, 5, 0.5));
+  cursor: default;
+}
+
+/* Locked (greyed out, ? marks) */
+.upgrade-block.block-locked {
+  border-color: rgba(148, 163, 184, 0.06);
+  background: rgba(20, 15, 30, 0.4);
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Icon */
+.upgrade-block-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.block-locked .upgrade-block-icon {
+  font-size: 18px;
+  color: #4a4a5f;
+}
+
+.block-maxed .upgrade-block-icon {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.block-available .upgrade-block-icon {
+  background: rgba(45, 212, 191, 0.1);
+  border-color: rgba(45, 212, 191, 0.25);
+}
+
+.block-purchased .upgrade-block-icon {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+/* Info section */
+.upgrade-block-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.upgrade-block-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 2px;
+}
+
+.block-locked .upgrade-block-name {
+  color: #64748b;
+}
+
+.block-maxed .upgrade-block-name {
+  color: #fbbf24;
+}
+
+.upgrade-block-desc {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Right side: level + cost */
+.upgrade-block-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.upgrade-block-level {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.upgrade-block-level.level-max {
   background: linear-gradient(145deg, #fbbf24, #d97706);
   color: #451a03;
-  cursor: default;
+  border-color: #fde68a;
+}
+
+.upgrade-block-cost {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cost-affordable {
+  color: #a3e635;
+}
+
+.cost-unaffordable {
+  color: #f87171;
+  opacity: 0.7;
+}
+
+/* Warning */
+.upgrade-block-warning {
+  position: absolute;
+  bottom: 4px;
+  right: 14px;
+  font-size: 10px;
+  color: #f87171;
+  opacity: 0.8;
+}
+
+/* Resource display in upgrade header */
+.upgrade-resource {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.upgrade-resource strong {
+  color: #fbbf24;
+  font-weight: 700;
 }
 
 /* ===============================================
    RESPONSIVE ADJUSTMENTS
    =============================================== */
 
-@media (max-width: 768px) {
-  .upgrade-tree-container {
-    padding: 20px;
+/* ── Tablet (≤1024px) ── */
+@media (max-width: 1024px) {
+  .workers-panel {
+    width: 220px;
+    min-width: 180px;
+    top: 380px;
+    right: 10px;
   }
-  
-  .upgrade-node {
-    width: 42px;
-    height: 42px;
+
+  .letter-basket {
+    width: 260px;
+    min-width: 200px;
+    left: 10px;
+    bottom: 40px;
   }
-  
-  .upgrade-icon {
+
+  .mold-viewport-wrapper {
+    width: 260px;
+    left: 10px;
+    top: 250px;
+  }
+
+  .book-interior {
+    width: 440px;
+    min-height: 270px;
+  }
+}
+
+/* ── Portrait-only lock for mobile ── */
+@media (max-width: 768px) and (orientation: landscape) {
+  body::after {
+    content: 'Please rotate your device to portrait mode';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #111827;
+    color: #f9fafb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 600;
+    text-align: center;
+    padding: 32px;
+  }
+}
+
+/* ── Mobile portrait (≤768px) ── */
+@media (max-width: 768px) and (orientation: portrait) {
+  :root {
+    --basket-height: 60px;  /* half of original 120px */
+  }
+
+  body {
+    padding: 0;
+    padding-bottom: 0;
+  }
+
+  /* ─ Stats: top-left ─ */
+  .stats-wrap {
+    left: 8px;
+    top: 8px;
+  }
+
+  .core-stats-float {
+    width: 140px;
+  }
+
+  .stat-row {
+    font-size: 12px;
+  }
+
+  /* ─ Upgrades button: top-right, compact ─ */
+  .upgrades-btn {
+    top: 8px;
+    right: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 10px;
+    gap: 5px;
+  }
+
+  .upgrades-btn-icon {
+    font-size: 14px;
+  }
+
+  /* ─ Upgrade modal: full-screen ─ */
+  .upgrade-modal {
+    padding: 0;
+  }
+
+  .upgrade-modal-content {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+
+  .upgrade-modal-header {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .upgrade-modal-header h2 {
+    font-size: 16px;
+  }
+
+  .upgrade-header-stats {
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .upgrade-columns {
+    flex-direction: column;
+  }
+
+  .upgrade-column {
+    max-height: 50%;
+  }
+
+  .upgrade-column-header {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .upgrade-block-list {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .workshop-tool-block {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .workshop-tool-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 20px;
+  }
+
+  .workshop-tool-label {
+    font-size: 13px;
+  }
+
+  .upgrade-block {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .upgrade-block-icon {
+    width: 36px;
+    height: 36px;
     font-size: 18px;
   }
-  
-  .upgrade-tooltip {
-    min-width: 180px;
-    max-width: 220px;
-    padding: 12px;
+
+  /* ─ Magic book: fits screen width ─ */
+  .magic-book {
+    top: 50px;
+  }
+
+  .book-interior {
+    width: calc(100vw - 32px);
+    max-width: 440px;
+    min-height: 240px;
+  }
+
+  .book-page {
+    padding: 10px;
+  }
+
+  .book-page-header {
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+
+  .book-page-content {
+    font-size: 12px;
+  }
+
+  .book-cover {
+    width: 130px;
+    height: 180px;
+  }
+
+  /* ─ Hearth: centered, just under the anvil area ─ */
+  .hearth-wrapper {
+    left: 0;
+    right: 0;
+    transform: none;
+    /* Anvil bottom is ~170px from bottom; place hearth just below it */
+    bottom: auto;
+    top: calc(100vh - 160px);
+    width: 100%;
+    max-width: none;
+  }
+
+  .hearth-structure {
+    width: 100%;
+    max-width: none;
+  }
+
+  .hearth-opening {
+    min-height: 50px;
+  }
+
+  .hearth-instructions {
+    display: none;
+  }
+
+  /* ─ Letter basket: full width, from bottom up to just under hearth ─ */
+  /* Hearth top is at calc(100vh - 160px), hearth is ~100px tall,
+     so hearth bottom is at calc(100vh - 60px). Basket fills below that. */
+  .letter-basket {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    min-width: unset;
+    max-width: none;
+    height: calc(var(--basket-height) - 6px);  /* from bottom to just under hearth, with gap */
+    border-radius: 12px 12px 0 0;
+    z-index: 97;
+  }
+
+  .letter-basket .letter-board {
+    padding: 4px 8px 6px;
+  }
+
+  .letter-tile {
+    min-width: 22px;
+    height: 24px;
+    font-size: 15px;
+  }
+
+  /* ─ Mold viewport: right-edge tab, above tools tab ─ */
+  .mold-viewport-wrapper {
+    position: fixed;
+    left: auto;
+    top: auto;
+    width: auto;
+    min-width: unset;
+    max-width: none;
+    right: 0;
+    /* Position above the tools sidebar: tools is at ~50%, mold sits above */
+    bottom: calc(50% + 80px);
+    z-index: 98;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    pointer-events: auto;
+  }
+
+  /* Mold tab visible on mobile */
+  .mold-sidebar-tab {
+    display: flex;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    align-items: center;
+    justify-content: center;
+    background: rgba(58, 54, 50, 0.85);
+    color: #c9b58a;
+    padding: 12px 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 8px 0 0 8px;
+    border: 1px solid rgba(107, 96, 80, 0.4);
+    border-right: none;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    flex-shrink: 0;
+  }
+
+  /* Mold panel content: hidden by default, slides out on tap */
+  .mold-viewport-wrapper .mold-panel {
+    max-width: 0;
+    overflow: hidden;
+    padding: 0;
+    opacity: 0;
+    transition: max-width 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+    border-radius: 10px 0 0 10px;
+    border-right: none;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .mold-viewport-wrapper.open .mold-panel {
+    max-width: 280px;
+    padding: 8px;
+    opacity: 1;
+    border: 1px solid rgba(107, 96, 80, 0.3);
+    border-right: none;
+  }
+
+  .mold-viewport-wrapper .mold-viewport {
+    width: 240px;
+  }
+
+  /* ─ Workers panel: top-right, below upgrades btn ─ */
+  .workers-panel {
+    position: fixed;
+    right: 8px;
+    top: 52px;
+    bottom: auto;
+    width: 160px;
+    min-width: 130px;
+    max-width: 200px;
+  }
+
+  .workers-panel h2 {
+    font-size: 13px;
+    margin: 0 0 2px 0;
+  }
+
+  .workers-panel h3 {
+    font-size: 11px;
+    margin: 2px 0;
+  }
+
+  .workers-panel .row {
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .scribe-block {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+  }
+
+  .scribe-icon {
+    font-size: 14px;
+  }
+
+  /* ─ Tools sidebar: right edge, tap-to-toggle ─ */
+  .tools-sidebar {
+    right: 0;
+    left: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    flex-direction: row;
+    z-index: 98;
+  }
+
+  /* Reset desktop hover/translateX to simple right-edge behavior */
+  .tools-sidebar:hover {
+    transform: translateY(-50%);
+  }
+
+  /* Content hidden by default on mobile */
+  .tools-sidebar .tools-sidebar-content {
+    max-width: 0;
+    overflow: hidden;
+    padding: 0;
+    opacity: 0;
+    transition: max-width 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+    flex-direction: column;
+    border-radius: 10px 0 0 10px;
+    border: none;
+    border-right: none;
+    min-width: 0;
+  }
+
+  /* Show content when .open or .pinned */
+  .tools-sidebar.open .tools-sidebar-content,
+  .tools-sidebar.pinned .tools-sidebar-content {
+    max-width: 80px;
+    padding: 10px 8px;
+    opacity: 1;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-right: none;
+  }
+
+  /* Prevent hover from expanding on mobile */
+  .tools-sidebar:hover .tools-sidebar-content {
+    max-width: 0;
+    padding: 0;
+    opacity: 0;
+    border: none;
+  }
+
+  /* Higher specificity: .open/.pinned still works on hover */
+  .tools-sidebar.open:hover .tools-sidebar-content,
+  .tools-sidebar.pinned:hover .tools-sidebar-content {
+    max-width: 80px;
+    padding: 10px 8px;
+    opacity: 1;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-right: none;
+  }
+
+  .tools-sidebar-tab {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    border-radius: 8px 0 0 8px;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-right: none;
+    padding: 12px 4px;
+    font-size: 10px;
+    cursor: pointer;
+    background: rgba(15, 23, 42, 0.85);
+  }
+
+  .tools-sidebar-content {
+    background: rgba(15, 23, 42, 0.9);
+    gap: 6px;
+  }
+
+  .tool-slot {
+    width: 48px;
+    padding: 5px 4px;
+    gap: 2px;
+  }
+
+  .tool-slot-icon {
+    font-size: 18px;
+  }
+
+  .tool-slot-label {
+    font-size: 8px;
+  }
+
+  /* ─ Crafting hint ─ */
+  .crafting-hint {
+    bottom: auto;
+    top: 65px;
+    font-size: 10px;
+    padding: 4px 10px;
+  }
+}
+
+/* ── Small phones portrait (≤480px) ── */
+@media (max-width: 480px) and (orientation: portrait) {
+  :root {
+    --basket-height: 50px;
+  }
+
+  .core-stats-float {
+    width: 120px;
+  }
+
+  .stat-row {
+    font-size: 11px;
+  }
+
+  .upgrades-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    gap: 4px;
+  }
+
+  .upgrades-btn-icon {
+    font-size: 12px;
+  }
+
+  /* Book: even smaller */
+  .magic-book {
+    top: 44px;
+  }
+
+  .book-interior {
+    width: calc(100vw - 16px);
+    min-height: 200px;
+  }
+
+  .book-spine {
+    width: 10px;
+  }
+
+  .book-page {
+    padding: 8px;
+  }
+
+  .book-page-header {
+    font-size: 10px;
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+  }
+
+  .book-cover {
+    width: 110px;
+    height: 150px;
+  }
+
+  /* Hearth */
+  .hearth-wrapper {
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    top: calc(100vh - 160px);
+  }
+
+  .hearth-structure {
+    width: 100%;
+    max-width: none;
+  }
+
+  .hearth-opening {
+    min-height: 45px;
+  }
+
+  /* Basket: fills from bottom to under hearth */
+  .letter-basket {
+    height: calc(var(--basket-height) - 6px);
+  }
+
+  .letter-tile {
+    min-width: 20px;
+    height: 22px;
+    font-size: 14px;
+    border-radius: 4px;
+  }
+
+  .letter-board {
+    min-height: 40px;
+    gap: 3px;
+    padding: 3px;
+  }
+
+  /* Mold: tab panel, slightly smaller */
+  .mold-viewport-wrapper .mold-viewport {
+    width: 210px;
+  }
+
+  /* Workers */
+  .workers-panel {
+    right: 4px;
+    top: 48px;
+    width: 140px;
+    min-width: 120px;
+    max-width: 160px;
+  }
+
+  .workers-panel h2 {
+    font-size: 12px;
+  }
+
+  .workers-panel h3 {
+    font-size: 10px;
+  }
+
+  .scribe-block {
+    width: 26px;
+    height: 26px;
+  }
+
+  .scribe-icon {
+    font-size: 12px;
+  }
+
+  /* Tools sidebar */
+  .tool-slot {
+    width: 40px;
+    padding: 4px 3px;
+  }
+
+  .tool-slot-icon {
+    font-size: 16px;
+  }
+
+  .tool-slot-label {
+    font-size: 7px;
+  }
+
+  /* Upgrade modal */
+  .upgrade-modal-header {
+    padding: 8px 10px;
+  }
+
+  .upgrade-modal-header h2 {
+    font-size: 14px;
+  }
+
+  .upgrade-header-stats {
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .upgrade-resource {
+    padding: 2px 6px;
+    font-size: 11px;
+  }
+
+  .close-button {
+    font-size: 20px;
+    padding: 2px 6px;
+  }
+
+  .workshop-tool-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+
+  .workshop-tool-label {
+    font-size: 12px;
+  }
+
+  .workshop-tool-desc {
+    font-size: 10px;
+    -webkit-line-clamp: 1;
+  }
+
+  .upgrade-block-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+
+  .upgrade-block-name {
+    font-size: 12px;
+  }
+
+  .upgrade-block-desc {
+    font-size: 10px;
+    -webkit-line-clamp: 1;
   }
 }
 
@@ -1951,7 +2594,8 @@ button.secondary {
 }
 
 .tools-sidebar:hover,
-.tools-sidebar.pinned {
+.tools-sidebar.pinned,
+.tools-sidebar.open {
   transform: translateY(-50%) translateX(0);
 }
 
@@ -2068,4 +2712,146 @@ button.secondary {
 .tool-drag-ghost .tool-slot-label {
   font-size: 9px;
   color: #e2e8f0;
+}
+
+/* ===============================================
+   MAGICAL TEXT - Forged Word Animation
+   =============================================== */
+
+.magical-text {
+  pointer-events: none;
+  font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  color: #fcd34d;
+  direction: rtl;
+  text-shadow:
+    0 0 8px rgba(252, 211, 77, 0.9),
+    0 0 20px rgba(251, 191, 36, 0.6),
+    0 0 40px rgba(245, 158, 11, 0.4);
+  white-space: nowrap;
+  /* Use transform to center within the fixed-position wrapper */
+  transform: translate(-50%, -50%);
+}
+
+/* Phase 1: Pop up from mold, sparkle and expand */
+.magical-text.phase-emerge {
+  animation: magicalEmerge 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes magicalEmerge {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(20px) scale(0.3);
+    filter: brightness(2) blur(4px);
+  }
+  30% {
+    opacity: 1;
+    filter: brightness(1.8) blur(0px);
+  }
+  60% {
+    transform: translate(-50%, -50%) translateY(-30px) scale(1.35);
+    filter: brightness(1.4);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(-20px) scale(1.3);
+    filter: brightness(1.2);
+  }
+}
+
+/* Phase 2: Shrink and zoom into verse book */
+.magical-text.phase-zoom {
+  animation: magicalZoom 0.7s cubic-bezier(0.5, 0, 0.75, 0) forwards;
+}
+
+@keyframes magicalZoom {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3);
+    filter: brightness(1.2);
+  }
+  40% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0.6);
+    filter: brightness(1.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+    filter: brightness(2.5) blur(2px);
+  }
+}
+
+/* Sparkle particles around the magical text */
+.magical-sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, #fcd34d 40%, transparent 70%);
+  pointer-events: none;
+  animation: sparkleFloat var(--sparkle-duration, 0.8s) ease-out forwards;
+  box-shadow:
+    0 0 4px #fcd34d,
+    0 0 8px rgba(251, 191, 36, 0.5);
+}
+
+@keyframes sparkleFloat {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(var(--sparkle-dx, 10px), var(--sparkle-dy, -15px)) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--sparkle-dx, 10px) * 1.5), calc(var(--sparkle-dy, -15px) * 1.5)) scale(0.3);
+  }
+}
+
+/* Glitter shimmer overlay */
+.magical-text::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.8) 0%, transparent 8%),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.6) 0%, transparent 6%),
+    radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.7) 0%, transparent 7%),
+    radial-gradient(circle at 30% 60%, rgba(252, 211, 77, 0.5) 0%, transparent 10%),
+    radial-gradient(circle at 70% 50%, rgba(252, 211, 77, 0.4) 0%, transparent 9%);
+  animation: glitterShimmer 0.4s steps(3) infinite;
+  pointer-events: none;
+}
+
+@keyframes glitterShimmer {
+  0% { opacity: 0.6; transform: rotate(0deg); }
+  33% { opacity: 1; transform: rotate(2deg); }
+  66% { opacity: 0.7; transform: rotate(-1deg); }
+  100% { opacity: 0.9; transform: rotate(1deg); }
+}
+
+/* Arrival flash in the verse area */
+.verse-arrival-flash {
+  animation: verseArrivalFlash 0.4s ease-out forwards;
+}
+
+@keyframes verseArrivalFlash {
+  0% {
+    background: #fef3c7;
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.8), 0 0 24px rgba(252, 211, 77, 0.4);
+    transform: scale(1.15);
+  }
+  50% {
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+    transform: scale(1.05);
+  }
+  100% {
+    background: #e8d5b0;
+    box-shadow: none;
+    transform: scale(1);
+  }
 }
