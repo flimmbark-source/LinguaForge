@@ -16,7 +16,7 @@ import { HammerSystem } from './hammer.js?v=9';
 import { PestleSystem } from './pestle.js?v=9';
 import { ShovelSystem } from './shovel.js?v=9';
 import { initializeHearth, updateHearth } from './RuneHearth.js?v=9';
-import { initAudio, startBackgroundMusic, toggleMute, isMuted } from './audio.js?v=9';
+import { initAudio, startBackgroundMusic, getMusicVolume, getSfxVolume, setMusicVolume, setSfxVolume, unlockAudio } from './audio.js?v=9';
 import { addInk, addVerseWord /*, whatever else you need */ } from './state.js?v=9';
 import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from './upgrades.js?v=9';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
@@ -29,6 +29,7 @@ let pestleSystem = null;
 let shovelSystem = null;
 let letterPhysics = null;
 let craftingCanvasRef = null;
+let letterBlocksCanvasRef = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
 
 /**
@@ -45,6 +46,16 @@ function handleMoldSlotFilled(slotEl) {
   }
 
   updateUI();
+}
+
+function resizeLetterBlocksCanvas() {
+  if (!letterBlocksCanvasRef || !craftingCanvasRef) return;
+  const rect = craftingCanvasRef.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  letterBlocksCanvasRef.width = rect.width * dpr;
+  letterBlocksCanvasRef.height = rect.height * dpr;
+  const ctx = letterBlocksCanvasRef.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 /**
@@ -212,9 +223,12 @@ function initializeGame() {
   initializeHearth();
 
   // Initialize audio on first user gesture (Web Audio API requirement)
-  const startAudio = () => {
+  const startAudio = async () => {
     initAudio();
-    startBackgroundMusic();
+    const unlocked = await unlockAudio();
+    if (unlocked) {
+      startBackgroundMusic();
+    }
     document.removeEventListener('pointerdown', startAudio);
     document.removeEventListener('touchstart', startAudio);
     document.removeEventListener('keydown', startAudio);
@@ -317,6 +331,13 @@ function initializeCraftingSystems() {
     return;
   }
   craftingCanvasRef = craftingCanvas;
+  letterBlocksCanvasRef = document.getElementById('letterBlocksCanvas');
+  if (!letterBlocksCanvasRef) {
+    console.warn('Letter blocks canvas not found');
+  } else {
+    resizeLetterBlocksCanvas();
+    window.addEventListener('resize', resizeLetterBlocksCanvas);
+  }
 
   // Create hammer system with callbacks
   hammerSystem = new HammerSystem(craftingCanvas);
@@ -442,11 +463,13 @@ function initializeCraftingSystems() {
   window.letterPhysics = letterPhysics;
   letterPhysics.onSlotFilled = handleMoldSlotFilled;
 
-  // Overlay renderer: draw physics letters on the crafting canvas
+  // Overlay renderer: draw physics letters on the letter blocks canvas
   const renderPhysicsLetters = () => {
+    if (!letterBlocksCanvasRef) return;
+    const ctx = letterBlocksCanvasRef.getContext('2d');
+    ctx.clearRect(0, 0, letterBlocksCanvasRef.width, letterBlocksCanvasRef.height);
     if (!letterPhysics || letterPhysics.letters.length === 0) return;
     try {
-      const ctx = craftingCanvas.getContext('2d');
       ctx.save();
       letterPhysics.render(ctx);
       ctx.restore();
@@ -457,7 +480,7 @@ function initializeCraftingSystems() {
 
   // Create pestle system with callbacks
   pestleSystem = new PestleSystem(craftingCanvas);
-    if (typeof pestleSystem.setOverlayRenderer === 'function') {
+  if (typeof pestleSystem.setOverlayRenderer === 'function') {
     pestleSystem.setOverlayRenderer(renderPhysicsLetters);
   } else {
     pestleSystem.overlayRenderer = renderPhysicsLetters;
@@ -625,14 +648,71 @@ function setupEventHandlers() {
     });
   }
 
-  // Audio mute toggle
+  // Audio controls
   const audioToggleBtn = document.getElementById('audioToggleBtn');
-  if (audioToggleBtn) {
-    audioToggleBtn.addEventListener('click', () => {
-      toggleMute();
-      audioToggleBtn.classList.toggle('muted', isMuted());
-      audioToggleBtn.querySelector('.audio-toggle-icon').innerHTML = isMuted() ? '&#x1F507;' : '&#x1F50A;';
+  const audioControls = document.getElementById('audioControls');
+  const musicVolumeSlider = document.getElementById('musicVolumeSlider');
+  const sfxVolumeSlider = document.getElementById('sfxVolumeSlider');
+  const musicVolumeValue = document.getElementById('musicVolumeValue');
+  const sfxVolumeValue = document.getElementById('sfxVolumeValue');
+  if (audioToggleBtn && audioControls) {
+    const stopAudioPanelClick = (event) => {
+      event.stopPropagation();
+    };
+    const stopAudioPanelPointer = (event) => {
+      event.stopPropagation();
+      event.preventDefault();
+    };
+    const updateVolumeDisplay = (slider, valueEl) => {
+      if (!slider || !valueEl) return;
+      valueEl.textContent = `${Math.round(parseFloat(slider.value) * 100)}%`;
+    };
+
+    const syncVolumeSliders = () => {
+      if (musicVolumeSlider) musicVolumeSlider.value = getMusicVolume();
+      if (sfxVolumeSlider) sfxVolumeSlider.value = getSfxVolume();
+      updateVolumeDisplay(musicVolumeSlider, musicVolumeValue);
+      updateVolumeDisplay(sfxVolumeSlider, sfxVolumeValue);
+    };
+
+    syncVolumeSliders();
+
+    audioToggleBtn.addEventListener('pointerdown', stopAudioPanelPointer);
+    audioToggleBtn.addEventListener('mousedown', stopAudioPanelPointer);
+    audioToggleBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      audioControls.classList.toggle('hidden');
+      if (!audioControls.classList.contains('hidden')) {
+        syncVolumeSliders();
+      }
     });
+
+    audioControls.addEventListener('pointerdown', stopAudioPanelPointer);
+    audioControls.addEventListener('mousedown', stopAudioPanelPointer);
+    audioControls.addEventListener('click', stopAudioPanelClick);
+
+    document.addEventListener('click', (event) => {
+      if (audioControls.classList.contains('hidden')) return;
+      if (!audioControls.contains(event.target) && !audioToggleBtn.contains(event.target)) {
+        audioControls.classList.add('hidden');
+      }
+    });
+
+    if (musicVolumeSlider) {
+      musicVolumeSlider.addEventListener('input', () => {
+        const value = parseFloat(musicVolumeSlider.value);
+        setMusicVolume(value);
+        updateVolumeDisplay(musicVolumeSlider, musicVolumeValue);
+      });
+    }
+
+    if (sfxVolumeSlider) {
+      sfxVolumeSlider.addEventListener('input', () => {
+        const value = parseFloat(sfxVolumeSlider.value);
+        setSfxVolume(value);
+        updateVolumeDisplay(sfxVolumeSlider, sfxVolumeValue);
+      });
+    }
   }
 
   // Forge words button removed - now triggered by red-hot hammer hitting mold viewport
@@ -688,6 +768,12 @@ function setupEventHandlers() {
  * Game loop - runs every frame
  */
 let lastTime = performance.now();
+let uiThrottleAcc = 0;       // accumulate time between UI updates
+const UI_INTERVAL = 0.25;    // update UI at most 4×/sec
+let cachedCanvasRect = null;
+let canvasRectAge = 0;
+const RECT_CACHE_MS = 200;   // refresh canvas rect every 200ms
+
 function gameLoop(timestamp) {
   const dt = (timestamp - lastTime) / 1000;
   lastTime = timestamp;
@@ -730,23 +816,29 @@ function gameLoop(timestamp) {
         }
       });
 
+      // Cache canvas rect (avoid per-frame getBoundingClientRect)
+      canvasRectAge += dt * 1000;
+      if (!cachedCanvasRect || canvasRectAge > RECT_CACHE_MS) {
+        if (craftingCanvasRef) cachedCanvasRect = craftingCanvasRef.getBoundingClientRect();
+        canvasRectAge = 0;
+      }
+
       // Hammer pushes nearby physics letters
-      if (hammerSystem && hammerSystem.isRunning && craftingCanvasRef) {
-        const cr = craftingCanvasRef.getBoundingClientRect();
-        const hx = cr.left + hammerSystem.hammer.headX;
-        const hy = cr.top + hammerSystem.hammer.headY;
+      if (hammerSystem && hammerSystem.isRunning && cachedCanvasRect) {
+        const hx = cachedCanvasRect.left + hammerSystem.hammer.headX;
+        const hy = cachedCanvasRect.top + hammerSystem.hammer.headY;
         letterPhysics.pushFrom(hx, hy, 45, hammerSystem.hammer.headVx || 0, hammerSystem.hammer.headVy || 0);
       }
 
       // Render physics letters when no tool is active
-      if (letterPhysics.letters.length > 0 && craftingCanvasRef) {
+      if (letterBlocksCanvasRef) {
         const anyToolRunning = hammerSystem?.isRunning || pestleSystem?.isRunning || shovelSystem?.isRunning;
         if (!anyToolRunning) {
-          const ctx = craftingCanvasRef.getContext('2d');
-          ctx.save();
-          ctx.clearRect(0, 0, craftingCanvasRef.clientWidth, craftingCanvasRef.clientHeight);
-          letterPhysics.render(ctx);
-          ctx.restore();
+          const ctx = letterBlocksCanvasRef.getContext('2d');
+          ctx.clearRect(0, 0, letterBlocksCanvasRef.width, letterBlocksCanvasRef.height);
+          if (letterPhysics.letters.length > 0) {
+            letterPhysics.render(ctx);
+          }
         }
       }
     } catch (e) {
@@ -757,9 +849,13 @@ function gameLoop(timestamp) {
   // Update resource gain feedback
   updateResourceFeedback(dt);
 
-  // Update UI
-  updateUI();
-  updateUpgradeHeaderStats();
+  // Throttle UI updates (expensive DOM reads) to ~4×/sec
+  uiThrottleAcc += dt;
+  if (uiThrottleAcc >= UI_INTERVAL) {
+    uiThrottleAcc = 0;
+    updateUI();
+    updateUpgradeHeaderStats();
+  }
 
   // Continue loop
   requestAnimationFrame(gameLoop);
@@ -809,4 +905,3 @@ if (document.readyState === 'loading') {
 } else {
   start();
 }
-

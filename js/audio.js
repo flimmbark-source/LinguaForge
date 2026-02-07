@@ -11,25 +11,28 @@
 // Set a path to `null` to fall back to the procedural placeholder.
 const SOUND_FILES = {
   // Background
-  bgMusic: null, // e.g. './audio/bg-ambient.mp3'
+  bgMusic1: './audio/bg-ambient1.mp3',
+  bgMusic2: './audio/bg-ambient2.mp3',
+  bgMusic3: './audio/bg-ambient3.mp3',
+  bgMusic4: './audio/bg-ambient4.mp3',
 
   // Hammer / anvil
-  hammerClank1: null, // e.g. './audio/hammer-clank-1.mp3'
-  hammerClank2: null,
-  hammerClank3: null,
+  hammerClank1: './audio/hammer-clank-1.mp3',
+  hammerClank2: './audio/hammer-clank-2.mp3',
+  hammerClank3: './audio/hammer-clank-3.mp3',
 
   // Mortar & pestle
-  pestleGrind1: null, // e.g. './audio/pestle-grind-1.mp3'
-  pestleGrind2: null,
+  pestleGrind1: './audio/pestleGrind1.mp3',
+  pestleGrind2: './audio/pestleGrind2.mp3',
   pestleSquelch1: null,
 
   // Shovel
-  shovelScoop: null,  // e.g. './audio/shovel-scoop.mp3'
+  shovelScoop: './audio/shovelScoop.mp3',
   shovelDump: null,
 
   // Hearth
-  hearthIgnite: null, // e.g. './audio/hearth-ignite.mp3'
-  hearthCrackle: null,
+  hearthIgnite: './audio/hearthIgnite.mp3',
+  hearthCrackle: './audio/hearthCrackle.mp3',
 };
 
 // ─── State ───────────────────────────────────────────────────
@@ -39,13 +42,15 @@ let musicGain = null;
 let sfxGain = null;
 let bgSource = null;
 let isInitialized = false;
+let pendingMusicStart = false;
 
 // Pre-decoded audio buffers keyed by SOUND_FILES key
 const bufferCache = {};
+const loadPromises = {};
 
 // ─── Public volume controls (0-1) ───────────────────────────
-let musicVolume = 0.3;
-let sfxVolume = 0.5;
+let musicVolume = 0.15;
+let sfxVolume = 0.15;
 
 // ─── Initialise on first user gesture ───────────────────────
 export function initAudio() {
@@ -67,7 +72,9 @@ export function initAudio() {
 
   // Pre-load any real audio files
   Object.entries(SOUND_FILES).forEach(([key, path]) => {
-    if (path) preloadSound(key, path);
+    if (path) {
+      loadPromises[key] = preloadSound(key, path);
+    }
   });
 }
 
@@ -83,7 +90,21 @@ async function preloadSound(key, path) {
 
 function ensureCtx() {
   if (!isInitialized) initAudio();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+}
+
+export async function unlockAudio() {
+  if (!isInitialized) initAudio();
+  if (audioCtx.state === 'suspended') {
+    try {
+      await audioCtx.resume();
+    } catch (err) {
+      console.warn('Audio: unable to resume AudioContext', err);
+    }
+  }
+  return audioCtx.state === 'running';
 }
 
 // ─── Play a cached buffer ────────────────────────────────────
@@ -316,22 +337,64 @@ export function playHearthIgnite() {
 }
 
 // ─── Background music ────────────────────────────────────────
+const BG_MUSIC_KEYS = ['bgMusic1', 'bgMusic2', 'bgMusic3', 'bgMusic4'];
+let currentMusicKey = null;
+
+function pickRandomTrack(availableTracks) {
+  if (availableTracks.length <= 1) return availableTracks[0];
+  let pick = availableTracks[Math.floor(Math.random() * availableTracks.length)];
+  while (pick === currentMusicKey) {
+    pick = availableTracks[Math.floor(Math.random() * availableTracks.length)];
+  }
+  return pick;
+}
+
+function playRandomTrack(availableTracks) {
+  const pick = pickRandomTrack(availableTracks);
+  currentMusicKey = pick;
+  const source = audioCtx.createBufferSource();
+  source.buffer = bufferCache[pick];
+  source.loop = false;
+  source.connect(musicGain);
+  source.onended = () => {
+    if (bgSource !== source) return;
+    bgSource = null;
+    if (audioCtx.state === 'running') {
+      playRandomTrack(availableTracks);
+    }
+  };
+  bgSource = source;
+  source.start();
+}
 
 /** Start looping background ambient track */
 export function startBackgroundMusic() {
-  ensureCtx();
+  if (!isInitialized) initAudio();
+  if (audioCtx.state === 'suspended') return;
   if (bgSource) return; // already playing
 
-  if (bufferCache.bgMusic) {
-    bgSource = audioCtx.createBufferSource();
-    bgSource.buffer = bufferCache.bgMusic;
-    bgSource.loop = true;
-    bgSource.connect(musicGain);
-    bgSource.start();
+  const availableTracks = BG_MUSIC_KEYS.filter((key) => bufferCache[key]);
+  if (availableTracks.length) {
+    playRandomTrack(availableTracks);
     return;
   }
 
-  // Procedural placeholder: gentle ambient drone
+  const hasConfiguredMusicFiles = BG_MUSIC_KEYS.some((key) => SOUND_FILES[key]);
+  if (hasConfiguredMusicFiles) {
+    if (pendingMusicStart) return;
+    pendingMusicStart = true;
+    Promise.all(
+      BG_MUSIC_KEYS.filter((key) => loadPromises[key]).map((key) => loadPromises[key])
+    ).finally(() => {
+      pendingMusicStart = false;
+      if (!bgSource && audioCtx.state === 'running') {
+        startBackgroundMusic();
+      }
+    });
+    return;
+  }
+
+  // Procedural placeholder: gentle ambient drone (only when no music files exist)
   startProceduralAmbient();
 }
 
@@ -385,6 +448,7 @@ export function stopBackgroundMusic() {
     bgSource.stop();
   }
   bgSource = null;
+  currentMusicKey = null;
 }
 
 // ─── Volume controls ─────────────────────────────────────────

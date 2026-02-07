@@ -6,6 +6,7 @@
  */
 
 import { playPestleGrind, playPestleSquelch } from './audio.js?v=9';
+import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 
 export class PestleSystem {
   constructor(canvas) {
@@ -94,6 +95,7 @@ export class PestleSystem {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.width = rect.width;
     this.height = rect.height;
+    this._cachedCanvasRect = null; // invalidate rect cache
 
     // Position mortar just above the hearth so they visually stack
     const isMobile = this.width <= 768;
@@ -210,24 +212,23 @@ export class PestleSystem {
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
+    // Open sidebar when dragging near the tab
+    if (this.input.isDown) {
+      handleToolDragNearSidebar(client.clientX);
+    }
   }
 
   onPointerUp(e) {
     if (!this.isRunning) return;
 
-    // If released near the right edge / sidebar, put the tool away
+    // Only put tool away if released over the open sidebar content
     const client = e.changedTouches ? e.changedTouches[0] : e;
-    const sidebar = document.getElementById('toolsSidebar');
-    const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
-    const nearRightEdge = client.clientX >= (window.innerWidth - 100);
-    const inSidebar = sidebarRect &&
-      client.clientX >= sidebarRect.left &&
-      client.clientY >= sidebarRect.top &&
-      client.clientY <= sidebarRect.bottom;
-    if ((nearRightEdge || inSidebar) && this.onPutAway) {
+    if (shouldPutToolAway(client.clientX, client.clientY) && this.onPutAway) {
+      cleanupToolDragSidebar();
       this.onPutAway();
       return;
     }
+    cleanupToolDragSidebar();
 
     this.input.isDown = false;
   }
@@ -444,12 +445,22 @@ export class PestleSystem {
     const letterPoolDiv = document.getElementById('letterPool');
     if (!letterPoolDiv) return;
 
-    const tiles = Array.from(letterPoolDiv.querySelectorAll('.letter-tile'));
-    const canvasRect = this.canvas.getBoundingClientRect();
+    // Use children directly instead of querySelectorAll (faster, no selector matching)
+    const children = letterPoolDiv.children;
+    if (!children.length) return;
+
+    // Cache canvas rect (only re-read if not set; resize handler updates it)
+    if (!this._cachedCanvasRect || this._canvasRectAge++ > 12) {
+      this._cachedCanvasRect = this.canvas.getBoundingClientRect();
+      this._canvasRectAge = 0;
+    }
+    const canvasRect = this._cachedCanvasRect;
     const tipX = canvasRect.left + this.pestle.headX;
     const tipY = canvasRect.top + this.pestle.headY;
 
-    for (const tile of tiles) {
+    for (let i = 0; i < children.length; i++) {
+      const tile = children[i];
+      if (!tile.classList || !tile.classList.contains('letter-tile')) continue;
       const tileRect = tile.getBoundingClientRect();
       const tileCenterX = tileRect.left + tileRect.width / 2;
       const tileCenterY = tileRect.top + tileRect.height / 2;
@@ -490,7 +501,8 @@ export class PestleSystem {
    * Spawn ink drop visual effect
    */
   spawnInkDrop(x, y) {
-    const burstCount = 10 + Math.floor(Math.random() * 6);
+    const MAX_INK_DROPS = 30;
+    const burstCount = Math.min(5 + Math.floor(Math.random() * 3), MAX_INK_DROPS - this.inkDrops.length);
     for (let i = 0; i < burstCount; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 120 + Math.random() * 80;

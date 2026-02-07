@@ -148,31 +148,38 @@ export class LetterPhysicsSystem {
     const slots = moldListDiv.querySelectorAll('.slot');
     if (!slots.length) return;
 
+    // Batch-read all slot rects ONCE, then check letters against cached rects
+    const slotData = [];
+    for (const slotEl of slots) {
+      const moldId  = Number(slotEl.dataset.moldId);
+      const slotIdx = Number(slotEl.dataset.slotIndex);
+      if (!gameState.currentLine || !gameState.currentLine.molds) continue;
+      const mold = gameState.currentLine.molds.find(m => m.id === moldId);
+      if (!mold) continue;
+      if (mold.slots[slotIdx]) continue; // already filled
+      const neededChar = mold.pattern[slotIdx];
+      if (!neededChar) continue;
+      const sr = slotEl.getBoundingClientRect();
+      slotData.push({ slotEl, mold, slotIdx, neededChar, left: sr.left, top: sr.top, right: sr.right, bottom: sr.bottom });
+    }
+
+    if (!slotData.length) return;
+
+    const tolerance = 6;
     for (const l of this.letters) {
       if (l.consumed || l.isHeld) continue;
-      // Only check letters that are actually moving
       const speed = Math.hypot(l.vx, l.vy);
       if (speed < 30 && !l.settled) continue;
-      // Settled letters can still fill slots if they're sitting on one
-      // But moving letters get priority check
 
-      for (const slotEl of slots) {
-        const moldId   = Number(slotEl.dataset.moldId);
-        const slotIdx  = Number(slotEl.dataset.slotIndex);
-        if (!gameState.currentLine || !gameState.currentLine.molds) continue;
-        const mold     = gameState.currentLine.molds.find(m => m.id === moldId);
-        if (!mold) continue;
-        if (mold.slots[slotIdx]) continue;                  // already filled
-        if (mold.pattern[slotIdx] !== l.char) continue;     // wrong letter
-
-        const sr = slotEl.getBoundingClientRect();
-        // Check overlap (letter center inside slot rect, with some tolerance)
-        const tolerance = 6;
-        if (l.x >= sr.left - tolerance && l.x <= sr.right + tolerance &&
-            l.y >= sr.top - tolerance  && l.y <= sr.bottom + tolerance) {
-          mold.slots[slotIdx] = true;
+      for (const sd of slotData) {
+        if (sd.neededChar !== l.char) continue;
+        if (l.x >= sd.left - tolerance && l.x <= sd.right + tolerance &&
+            l.y >= sd.top - tolerance  && l.y <= sd.bottom + tolerance) {
+          sd.mold.slots[sd.slotIdx] = true;
           l.consumed = true;
-          if (this.onSlotFilled) this.onSlotFilled(slotEl);
+          if (this.onSlotFilled) this.onSlotFilled(sd.slotEl);
+          // Remove this slot from further checks
+          slotData.splice(slotData.indexOf(sd), 1);
           break;
         }
       }
@@ -208,40 +215,30 @@ export class LetterPhysicsSystem {
    * @param {Function} onReturnToBasket - callback(char) when a letter returns to basket
    */
   checkBasket(onReturnToBasket) {
+    const basket = document.querySelector('.letter-basket');
     const letterPool = document.getElementById('letterPool');
     if (!letterPool) return;
 
-    // If there are tiles in the pool, use the bounding box of the actual
-    // tiles so the hit area matches only the visible letter area.
-    // Otherwise fall back to the pool element itself with generous insets
-    // so a full-width mobile basket doesn't swallow every floor letter.
-    const tiles = letterPool.querySelectorAll('.letter-tile');
-    let left, top, right, bottom;
+    // Use the pool element rect, clamped to the basket's inner padding.
+    const poolRect = letterPool.getBoundingClientRect();
+    const margin = 6;
+    let left = poolRect.left - margin;
+    let top = poolRect.top - margin;
+    let right = poolRect.right + margin;
+    let bottom = poolRect.bottom + margin;
 
-    if (tiles.length > 0) {
-      // Compute tight bounding box around all visible tiles
-      left = Infinity; top = Infinity; right = -Infinity; bottom = -Infinity;
-      for (const t of tiles) {
-        const r = t.getBoundingClientRect();
-        if (r.left < left)   left   = r.left;
-        if (r.top  < top)    top    = r.top;
-        if (r.right > right) right  = r.right;
-        if (r.bottom > bottom) bottom = r.bottom;
-      }
-      // Add a small margin around the tiles so letters don't need pixel-perfect aim
-      const margin = 12;
-      left   -= margin;
-      top    -= margin;
-      right  += margin;
-      bottom += margin;
-    } else {
-      // No tiles yet — use the pool element with horizontal insets
-      const br = letterPool.getBoundingClientRect();
-      const insetX = br.width * 0.3;
-      left   = br.left + insetX;
-      top    = br.top;
-      right  = br.right - insetX;
-      bottom = br.bottom;
+    if (basket) {
+      const basketRect = basket.getBoundingClientRect();
+      const basketStyles = getComputedStyle(basket);
+      const padLeft = parseFloat(basketStyles.paddingLeft) || 0;
+      const padRight = parseFloat(basketStyles.paddingRight) || 0;
+      const padTop = parseFloat(basketStyles.paddingTop) || 0;
+      const padBottom = parseFloat(basketStyles.paddingBottom) || 0;
+
+      left = Math.max(left, basketRect.left + padLeft - margin);
+      right = Math.min(right, basketRect.right - padRight + margin);
+      top = Math.max(top, basketRect.top + padTop - margin);
+      bottom = Math.min(bottom, basketRect.bottom - padBottom + margin);
     }
 
     for (const l of this.letters) {

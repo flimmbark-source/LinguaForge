@@ -168,7 +168,7 @@ button.secondary {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 120;
+  z-index: 520;
 }
 
 .letter-basket {
@@ -190,7 +190,7 @@ button.secondary {
   flex-direction: column;
   gap: 6px;
   pointer-events: none;
-  z-index: 96;
+  z-index: 100;
 
   /* IMPORTANT for the weave pseudo-element */
   position: fixed;
@@ -354,7 +354,7 @@ button.secondary {
   left: 13px; /* match letter-basket or column edge */
   top: 290px;
   width: calc((100% - 32px) / 3); /* same as a column / basket width */
-  z-index: 95;
+  z-index: 505;
   pointer-events: auto;
 
   display: flex;
@@ -1024,7 +1024,7 @@ button.secondary {
   position: fixed;
   top: 16px;
   right: 160px;
-  z-index: 100;
+  z-index: 330;
   background: rgba(15, 23, 42, 0.8);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 8px;
@@ -1044,6 +1044,55 @@ button.secondary {
 
 .audio-toggle-btn.muted .audio-toggle-icon {
   opacity: 0.4;
+}
+
+.audio-controls-panel {
+  position: fixed;
+  top: 56px;
+  right: 160px;
+  z-index: 330;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 220px;
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(10px);
+  color: #e2e8f0;
+}
+
+.audio-controls-panel.hidden {
+  display: none;
+}
+
+.audio-controls-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+}
+
+.audio-controls-row {
+  display: grid;
+  grid-template-columns: 46px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.audio-controls-slider {
+  width: 100%;
+  accent-color: #60a5fa;
+}
+
+.audio-controls-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #cbd5f5;
+  font-size: 12px;
 }
 
 /* Tool Rack */
@@ -1119,10 +1168,18 @@ button.secondary {
   top: 0;
   bottom: 0;
   pointer-events: none;
-  z-index: 150;
+  z-index: 500;
+}
+
+.letter-block-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 510;
 }
 
 #craftingCanvas,
+#letterBlocksCanvas,
 #chipCanvas {
   position: absolute;
   inset: 0;
@@ -1914,7 +1971,7 @@ button.secondary {
     width: 100% !important;
     height: 100% !important;
     transform: none !important;
-    z-index: 200 !important;
+    z-index: 700 !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1927,7 +1984,7 @@ button.secondary {
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 220;
+    z-index: 720;
   }
 
   .magic-book .book-close-btn {
@@ -1973,17 +2030,24 @@ button.secondary {
     transform: translateX(-50%);
     bottom: var(--basket-height);
     top: auto;
-    width: 240px;
-    max-width: 240px;
+    width: calc(100% - 32px);
+    max-width: 320px;
   }
 
   .hearth-structure {
     width: 100%;
-    max-width: 240px;
+    max-width: 320px;
   }
 
   .hearth-opening {
-    min-height: 40px;
+    height: 50px;
+    min-height: unset;
+  }
+
+  .hearth-fire {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 0;
   }
 
   .hearth-instructions {
@@ -1991,15 +2055,15 @@ button.secondary {
   }
 
   .hearth-mantle {
-    height: 8px;
+    height: 12px;
   }
 
   .hearth-base {
-    height: 10px;
+    height: 16px;
   }
 
   .hearth-body {
-    padding: 4px;
+    padding: 8px;
   }
 
   /* ─ Letter basket: full width at bottom ─ */
@@ -2013,7 +2077,7 @@ button.secondary {
     max-width: none;
     height: calc(var(--basket-height) - 4px);
     border-radius: 8px 8px 0 0;
-    z-index: 97;
+    z-index: 100;
   }
 
   .letter-basket .letter-board {
@@ -2042,7 +2106,7 @@ button.secondary {
     width: auto;
     min-width: unset;
     max-width: none;
-    z-index: 98;
+    z-index: 505;
     display: flex;
     flex-direction: row-reverse;
     justify-content: flex-start;
@@ -2143,7 +2207,7 @@ button.secondary {
     top: 50%;
     transform: translateY(-50%);
     flex-direction: row;
-    z-index: 98;
+    z-index: 90;
   }
 
   .tools-sidebar:hover {
@@ -2165,8 +2229,8 @@ button.secondary {
 
   .tools-sidebar.open .tools-sidebar-content,
   .tools-sidebar.pinned .tools-sidebar-content {
-    max-width: 64px;
-    padding: 6px 5px;
+    max-width: 72px;
+    padding: 8px 6px;
     opacity: 1;
     border: 1px solid rgba(148, 163, 184, 0.12);
     border-right: none;
@@ -2181,8 +2245,8 @@ button.secondary {
 
   .tools-sidebar.open:hover .tools-sidebar-content,
   .tools-sidebar.pinned:hover .tools-sidebar-content {
-    max-width: 64px;
-    padding: 6px 5px;
+    max-width: 72px;
+    padding: 8px 6px;
     opacity: 1;
     border: 1px solid rgba(148, 163, 184, 0.12);
     border-right: none;
@@ -2194,29 +2258,29 @@ button.secondary {
     border-radius: 8px 0 0 8px;
     border: 1px solid rgba(148, 163, 184, 0.15);
     border-right: none;
-    padding: 10px 3px;
-    font-size: 9px;
+    padding: 12px 4px;
+    font-size: 10px;
     cursor: pointer;
     background: rgba(15, 23, 42, 0.85);
   }
 
   .tools-sidebar-content {
     background: rgba(15, 23, 42, 0.9);
-    gap: 4px;
+    gap: 6px;
   }
 
   .tool-slot {
-    width: 40px;
-    padding: 4px 3px;
-    gap: 1px;
+    width: 46px;
+    padding: 5px 4px;
+    gap: 2px;
   }
 
   .tool-slot-icon {
-    font-size: 15px;
+    font-size: 18px;
   }
 
   .tool-slot-label {
-    font-size: 7px;
+    font-size: 8px;
   }
 
   /* ─ Crafting hint ─ */
@@ -2236,12 +2300,19 @@ button.secondary {
 /* ── Small landscape (≤568px height or ≤568px width) ── */
 @media (max-width: 568px) and (orientation: landscape) {
   .hearth-wrapper {
-    width: 200px;
-    max-width: 200px;
+    width: calc(100% - 32px);
+    max-width: 320px;
   }
 
   .hearth-opening {
-    min-height: 32px;
+    height: 50px;
+    min-height: unset;
+  }
+
+  .hearth-fire {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 0;
   }
 
   .workers-panel {
@@ -2410,7 +2481,7 @@ button.secondary {
     width: 100% !important;
     height: 100% !important;
     transform: none !important;
-    z-index: 200 !important;
+    z-index: 700 !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2509,7 +2580,7 @@ button.secondary {
     max-width: none;
     height: var(--basket-height);
     border-radius: 12px 12px 0 0;
-    z-index: 97;
+    z-index: 100;
   }
 
   .letter-basket .letter-board {
@@ -2527,15 +2598,14 @@ button.secondary {
     position: fixed;
     left: 0;
     right: auto;
-    top: 40%;
+    top: 28%;
     transform: translateY(-50%);
     width: auto;
     min-width: unset;
     max-width: none;
-    right: 0;
-    /* Position well above the letter basket / hearth zone */
-    bottom: calc(50% + 100px);
-    z-index: 98;
+    /* Keep the viewport from being height-constrained in portrait */
+    bottom: auto;
+    z-index: 505;
     display: flex;
     flex-direction: row-reverse;
     justify-content: flex-start;
@@ -2636,7 +2706,7 @@ button.secondary {
     top: 50%;
     transform: translateY(-50%);
     flex-direction: row;
-    z-index: 98;
+    z-index: 90;
   }
 
   .tools-sidebar:hover {
@@ -3302,7 +3372,7 @@ body.book-overlay-active .magic-book {
   right: 0;
   top: 50%;
   transform: translateY(-50%) translateX(calc(100% - 18px));
-  z-index: 96;
+  z-index: 90;
   display: flex;
   flex-direction: row;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);

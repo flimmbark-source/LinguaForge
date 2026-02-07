@@ -6,6 +6,7 @@
 import { isHearthHeated, getHearthBounds, getHearthLevel } from './RuneHearth.js?v=9';
 import { gameState } from './state.js?v=9';
 import { playHammerClank } from './audio.js?v=9';
+import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 
 export class HammerSystem {
   constructor(canvas) {
@@ -86,6 +87,9 @@ export class HammerSystem {
     this.onPointerMove = this.onPointerMove.bind(this);
     this.onPointerUp = this.onPointerUp.bind(this);
 
+    // Cached gradients (rebuilt on resize)
+    this._cachedGradients = {};
+
     // Initialize
     this.resize();
     this.setupEventListeners();
@@ -116,8 +120,8 @@ export class HammerSystem {
     let anvilBottom;
     if (hearthEl) {
       const hearthRect = hearthEl.getBoundingClientRect();
-      // anvil bottom = hearth top in canvas coordinates, with a small gap
-      anvilBottom = hearthRect.top - canvasRect.top + 20;
+      // anvil bottom = hearth top in canvas coordinates
+      anvilBottom = hearthRect.top - canvasRect.top;
     } else {
       // fallback
       const letterPoolBarHeight = isMobile ? 110 : 160;
@@ -133,9 +137,13 @@ export class HammerSystem {
 
     // On mobile portrait (<=768px), sit the anvil directly on top of the hearth
     const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
+    const isMobileLandscape = window.innerWidth <= 768 && window.innerWidth > window.innerHeight;
     if (isMobilePortrait) {
       // Hearth top is at 100vh - 164px; overlap anvil base onto hearth mantle
       this.anvil.y = this.height - 164 - this.anvil.height + 4;
+    } else if (isMobileLandscape && typeof anvilBottom === 'number') {
+      // Sit the anvil directly on the hearth in landscape
+      this.anvil.y = anvilBottom - this.anvil.height;
     } else {
       this.anvil.y = this.height - letterPoolBarHeight - this.anvil.height - 10;
     }
@@ -157,6 +165,20 @@ export class HammerSystem {
     this.hammer.angle = Math.PI / 2;
     this.hammer.headVx = 0;
     this.hammer.headVy = 0;
+
+    // Rebuild cached gradients for the anvil (dimensions are stable per resize)
+    this._rebuildAnvilGradients();
+  }
+
+  /** Pre-build anvil gradients so we don't recreate them every frame */
+  _rebuildAnvilGradients() {
+    const ctx = this.ctx;
+    const anvil = this.anvil;
+    const g = ctx.createLinearGradient(0, 0, 0, anvil.height);
+    g.addColorStop(0, '#e5e7eb');
+    g.addColorStop(0.3, '#64748b');
+    g.addColorStop(1, '#020617');
+    this._cachedGradients.anvilBody = g;
   }
 
  /**
@@ -289,15 +311,17 @@ onPointerDown(e) {
    * Handle pointer move event
    */
   onPointerMove(e) {
-     const rect = this.canvas.getBoundingClientRect(); 
-     const client = e.touches ? e.touches[0] : e; 
-      this.input.mouseX = client.clientX - rect.left; 
-      this.input.mouseY = client.clientY - rect.top; 
+     const rect = this.canvas.getBoundingClientRect();
+     const client = e.touches ? e.touches[0] : e;
+      this.input.mouseX = client.clientX - rect.left;
+      this.input.mouseY = client.clientY - rect.top;
     if (this.hammer.isHeld && this.input.isDown) {
-       e.preventDefault(); 
-       e.stopPropagation(); 
-       this.hammer.pivotX = this.input.mouseX; 
-       this.hammer.pivotY = this.input.mouseY; 
+       e.preventDefault();
+       e.stopPropagation();
+       this.hammer.pivotX = this.input.mouseX;
+       this.hammer.pivotY = this.input.mouseY;
+       // Open sidebar when dragging near the tab
+       handleToolDragNearSidebar(client.clientX);
       }
     }
 
@@ -310,21 +334,16 @@ onPointerDown(e) {
       e.preventDefault();
       e.stopPropagation();
 
-      // If released near the right edge / sidebar, put the tool away
+      // Only put tool away if released over the open sidebar content
       const client = e.changedTouches ? e.changedTouches[0] : e;
-      const sidebar = document.getElementById('toolsSidebar');
-      const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
-      const nearRightEdge = client.clientX >= (window.innerWidth - 100);
-      const inSidebar = sidebarRect &&
-        client.clientX >= sidebarRect.left &&
-        client.clientY >= sidebarRect.top &&
-        client.clientY <= sidebarRect.bottom;
-      if ((nearRightEdge || inSidebar) && this.onPutAway) {
+      if (shouldPutToolAway(client.clientX, client.clientY) && this.onPutAway) {
+        cleanupToolDragSidebar();
         this.input.isDown = false;
         this.hammer.isHeld = false;
         this.onPutAway();
         return;
       }
+      cleanupToolDragSidebar();
     }
     this.input.isDown = false;
     this.hammer.isHeld = false;
@@ -403,11 +422,19 @@ onPointerDown(e) {
  */
 spawnSparks(x, y, power, options = {}) {
   const isRip = !!options.isRip;
-  const count = 16 + Math.floor(power * 8);
+  // Cap sparks: limit total active to avoid buildup on mobile
+  const MAX_SPARKS = 40;
+  const count = Math.min(8 + Math.floor(power * 4), MAX_SPARKS - this.sparks.length);
 
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI - Math.PI;
     const speed = 0.5 + Math.random() * 2 * power;
+
+    // Pre-compute color at spawn time (avoids HSL string-build per frame)
+    const hueBase = isRip ? 17 : 40;
+    const hue = hueBase + Math.random() * (isRip ? 8 : 20);
+    const light = (isRip ? 55 : 60) + Math.random() * (isRip ? 8 : 15);
+    const sat = isRip ? 100 : 95;
 
     this.sparks.push({
       x,
@@ -416,14 +443,7 @@ spawnSparks(x, y, power, options = {}) {
       vy: Math.sin(angle) * speed - power * 2,
       life: 0.4 + Math.random() * 0.2,
       age: 0,
-
-      // NEW: color hint
-      isRip,
-      hueBase: isRip ? 17 : 40,          // 0 = red, 35 = warm yellow/orange
-      hueSpread: isRip ? 8 : 20,
-      sat: isRip ? 100 : 95,
-      lightBase: isRip ? 55 : 60,
-      lightSpread: isRip ? 8 : 15
+      color: `hsl(${hue|0}, ${sat}%, ${light|0}%)`
     });
   }
 }
@@ -1053,13 +1073,8 @@ drawHammer(ctx, hammer) {
   const headWidth = hammer.width;
   const headHeight = 42;
 
-  // Draw hammer head with heat level effects
+  // Draw hammer head with heat level effects (no canvas shadow for perf)
   if (hammer.heatLevel > 0) {
-    // Red-hot glow - intensity increases with heat level
-    const glowIntensity = 20 + (hammer.heatLevel * 10);
-    ctx.shadowColor = hammer.heatLevel >= 3 ? '#fef3c7' : hammer.heatLevel >= 2 ? '#f97316' : '#dc2626';
-    ctx.shadowBlur = glowIntensity;
-
     const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
 
     // More intense colors for higher heat levels
@@ -1092,14 +1107,8 @@ drawHammer(ctx, hammer) {
   ctx.roundRect(-headWidth / 2, -headHeight, headWidth, headHeight, 10);
   ctx.fill();
 
-  // Reset shadow
-  ctx.shadowBlur = 0;
-
     // If hammer is heated, draw red-hot effect
     if (hammer.isHeated) {
-      // Red-hot glow
-      ctx.shadowColor = '#dc2626';
-      ctx.shadowBlur = 20;
       
     if (!hammer.isHeated && hammer.heatingTimer > 0) {
       const progress = Math.min(1, hammer.heatingTimer / hammer.heatingRequired);
@@ -1163,25 +1172,10 @@ drawHammer(ctx, hammer) {
    */
   drawAnvil(ctx, anvil) {
     ctx.save();
-    ctx.translate(anvil.x + anvil.width / 2, anvil.y + anvil.height);
+    ctx.translate(anvil.x, anvil.y);
 
-    // Glow effect
-    const glowGradient = ctx.createRadialGradient(0, 4, 8, 0, 0, 120);
-    glowGradient.addColorStop(0, 'rgba(251, 113, 133, 0.28)');
-    glowGradient.addColorStop(1, 'rgba(15,23,42,0)');
-    ctx.fillStyle = glowGradient;
-    ctx.beginPath();
-    ctx.ellipse(0, 6, anvil.width * 0.7, 26, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.translate(-anvil.width / 2, -anvil.height);
-
-    // Anvil body gradient
-    const g = ctx.createLinearGradient(0, 0, 0, anvil.height);
-    g.addColorStop(0, '#e5e7eb');
-    g.addColorStop(0.3, '#64748b');
-    g.addColorStop(1, '#020617');
-    ctx.fillStyle = g;
+    // Use cached body gradient
+    ctx.fillStyle = this._cachedGradients.anvilBody || '#64748b';
 
     // Top surface
     const topHeight = anvil.height * 0.35;
@@ -1225,20 +1219,12 @@ drawHammer(ctx, hammer) {
     const alpha = Math.max(0, 1 - t);
     const size = 2 + (1 - t) * 2;
 
-    const hueBase   = s.hueBase   ?? 35;
-    const hueSpread = s.hueSpread ?? 20;
-    const sat       = s.sat       ?? 95;
-    const lightBase = s.lightBase ?? 60;
-    const lightSpread = s.lightSpread ?? 15;
-
-    const hue = hueBase + Math.random() * hueSpread;
-    const light = lightBase + Math.random() * lightSpread;
-
-    ctx.fillStyle = `hsla(${hue}, ${sat}%, ${light}%, ${alpha})`;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, size, 0, Math.PI * 2);
-    ctx.fill();
+    // Use color baked at spawn time (s.color) for perf; fall back to orange
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = s.color || '#f97316';
+    ctx.fillRect(s.x - size, s.y - size, size * 2, size * 2);
   }
+  ctx.globalAlpha = 1;
   ctx.restore();
 }
 
@@ -1248,51 +1234,24 @@ drawHammer(ctx, hammer) {
   drawClankWords(ctx, words) {
     ctx.save();
     for (const word of words) {
+      const fontSize = Math.max(9, Math.round(word.size));
+      ctx.font = `bold ${fontSize}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
       ctx.save();
       ctx.translate(word.x, word.y);
       ctx.rotate(word.rot || 0);
 
-      // Draw text with grey color and transparency
-      const fontSize = Math.max(9, Math.round(word.size));
-      ctx.font = `bold ${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      // Soft drop shadow for contrast
-      ctx.shadowColor = `rgba(0,0,0,${Math.min(0.5, word.alpha * 0.6)})`;
-      ctx.shadowBlur = Math.max(1, Math.round(fontSize * 0.03));
-
-      // Metallic gradient fill (light -> mid -> dark)
-      const g = ctx.createLinearGradient(-fontSize, -fontSize, fontSize, fontSize);
-      g.addColorStop(0, `rgba(255,255,255,${0.95 * word.alpha})`);
-      g.addColorStop(0.15, `rgba(236,239,241,${0.95 * word.alpha})`);
-      g.addColorStop(0.5, `rgba(209,213,219,${0.95 * word.alpha})`);
-      g.addColorStop(0.85, `rgba(107,114,128,${0.95 * word.alpha})`);
-      g.addColorStop(1, `rgba(30,41,59,${0.9 * word.alpha})`);
-
-      // Thin dark outline for readability
+      // Simple outline + fill (no gradient, no shadow, no composite blend)
       ctx.lineWidth = Math.max(1, fontSize * 0.06);
-      ctx.strokeStyle = `rgba(12,14,18,${Math.min(0.9, word.alpha)})`;
       ctx.lineJoin = 'round';
+      ctx.strokeStyle = `rgba(12,14,18,${Math.min(0.9, word.alpha)})`;
       ctx.strokeText(word.word, 0, 0);
 
-      // Fill with metallic gradient
-      ctx.fillStyle = g;
+      ctx.fillStyle = `rgba(220,220,230,${0.95 * word.alpha})`;
       ctx.fillText(word.word, 0, 0);
 
-      // Specular highlight: draw a faint white thin stroke over the top-left
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 0.18 * word.alpha;
-      ctx.lineWidth = Math.max(0.6, fontSize * 0.02);
-      ctx.strokeStyle = 'white';
-      ctx.strokeText(word.word, -Math.max(0.5, fontSize * 0.03), -Math.max(0.5, fontSize * 0.03));
-      ctx.restore();
-
-      // Reset shadow (will also be reset by ctx.restore)
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = 'transparent';
-      
       ctx.restore();
     }
     ctx.restore();

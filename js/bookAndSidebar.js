@@ -350,13 +350,11 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
 
   if (wasDragged) {
     const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
-    const nearRightEdge = e.clientX >= (window.innerWidth - 100);
-    const inSidebarRect = sidebarRect &&
+    droppedInSidebar = sidebarRect &&
       e.clientX >= sidebarRect.left &&
       e.clientX <= sidebarRect.right &&
       e.clientY >= sidebarRect.top &&
       e.clientY <= sidebarRect.bottom;
-    droppedInSidebar = nearRightEdge || inSidebarRect;
   }
 
   // Unpin the sidebar
@@ -452,13 +450,6 @@ export function initMoldSidebarTab() {
 
   tab.addEventListener('click', toggle);
   tab.addEventListener('touchend', toggle);
-
-  // Close when tapping outside
-  document.addEventListener('touchstart', (e) => {
-    if (wrapper.classList.contains('open') && !wrapper.contains(e.target)) {
-      wrapper.classList.remove('open');
-    }
-  }, { passive: true });
 
   // Stop mousedown from reaching canvas
   wrapper.addEventListener('mousedown', (e) => {
