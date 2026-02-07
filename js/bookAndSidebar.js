@@ -453,6 +453,7 @@ export function initMoldSidebarTab() {
 
   // Close when tapping outside
   document.addEventListener('touchstart', (e) => {
+    if (wrapper.dataset.dragHold === 'true') return;
     if (wrapper.classList.contains('open') && !wrapper.contains(e.target)) {
       wrapper.classList.remove('open');
     }
