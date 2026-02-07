@@ -1171,7 +1171,15 @@ button.secondary {
   z-index: 500;
 }
 
+.letter-block-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 510;
+}
+
 #craftingCanvas,
+#letterBlocksCanvas,
 #chipCanvas {
   position: absolute;
   inset: 0;
