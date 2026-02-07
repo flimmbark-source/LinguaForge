@@ -354,7 +354,7 @@ button.secondary {
   left: 13px; /* match letter-basket or column edge */
   top: 290px;
   width: calc((100% - 32px) / 3); /* same as a column / basket width */
-  z-index: 95;
+  z-index: 505;
   pointer-events: auto;
 
   display: flex;
@@ -2106,7 +2106,7 @@ button.secondary {
     width: auto;
     min-width: unset;
     max-width: none;
-    z-index: 95;
+    z-index: 505;
     display: flex;
     flex-direction: row-reverse;
     justify-content: flex-start;
@@ -2605,7 +2605,7 @@ button.secondary {
     max-width: none;
     /* Keep the viewport from being height-constrained in portrait */
     bottom: auto;
-    z-index: 95;
+    z-index: 505;
     display: flex;
     flex-direction: row-reverse;
     justify-content: flex-start;
