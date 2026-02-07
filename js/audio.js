@@ -11,7 +11,9 @@
 // Set a path to `null` to fall back to the procedural placeholder.
 const SOUND_FILES = {
   // Background
-  bgMusic: null, // e.g. './audio/bg-ambient.mp3'
+  bgMusic1: null, // e.g. './audio/bg-ambient.mp3'
+  bgMusic2: null,
+  bgMusic3: null,
 
   // Hammer / anvil
   hammerClank1: null, // e.g. './audio/hammer-clank-1.mp3'
