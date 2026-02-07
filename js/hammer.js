@@ -116,7 +116,7 @@ export class HammerSystem {
     if (hearthEl) {
       const hearthRect = hearthEl.getBoundingClientRect();
       // anvil bottom = hearth top in canvas coordinates, with a small gap
-      anvilBottom = hearthRect.top - canvasRect.top - 4;
+      anvilBottom = hearthRect.top - canvasRect.top + 20;
     } else {
       // fallback
       const letterPoolBarHeight = isMobile ? 110 : 160;
