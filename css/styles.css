@@ -1896,7 +1896,7 @@ button.secondary {
   }
 
   .magic-book .book-toggle-btn {
-    display: none;
+    display: flex;
   }
 
   .magic-book .book-close-btn {
@@ -2003,6 +2003,8 @@ button.secondary {
     position: fixed;
     left: 0;
     right: auto;
+    top: 50%;
+    transform: translateY(-50%);
     width: auto;
     min-width: unset;
     max-width: none;
@@ -2373,7 +2375,7 @@ button.secondary {
   }
 
   .magic-book .book-toggle-btn {
-    display: none;
+    display: flex;
   }
 
   .magic-book .book-close-btn {

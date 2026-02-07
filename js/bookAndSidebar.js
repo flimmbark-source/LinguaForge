@@ -59,7 +59,7 @@ export function initMagicBook() {
   const closeBtn = document.getElementById('bookCloseBtn');
   if (!book || !toggleBtn) return;
 
-  // Toggle open/close (desktop only — on mobile, toggle btn is hidden)
+  // Toggle open/close
   toggleBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     const isOpen = book.classList.contains('open');
@@ -78,15 +78,14 @@ export function initMagicBook() {
 
   // Mobile close button
   if (closeBtn) {
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
+    const closeOverlay = (e) => {
+      if (e?.preventDefault) e.preventDefault();
+      if (e?.stopPropagation) e.stopPropagation();
       hideBookMobile();
-    });
-    closeBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      hideBookMobile();
-    });
+    };
+    closeBtn.addEventListener('click', closeOverlay);
+    closeBtn.addEventListener('touchend', closeOverlay);
+    closeBtn.addEventListener('pointerup', closeOverlay);
   }
 
   // Tap the backdrop (the .magic-book overlay itself) to close on mobile
