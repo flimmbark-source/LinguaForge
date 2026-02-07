@@ -1760,7 +1760,7 @@ button.secondary {
   }
 }
 
-/* ── Mobile landscape layout (≤768px) ── */
+── Mobile landscape layout (≤768px) ── */
 @media (max-width: 768px) and (orientation: landscape) {
   :root {
     --basket-height: 50px;
