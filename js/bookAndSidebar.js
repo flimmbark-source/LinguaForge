@@ -147,9 +147,47 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
     e.stopPropagation();
   });
 
+  // Mobile: tap the tab to toggle sidebar open/closed
+  const tab = sidebar.querySelector('.tools-sidebar-tab');
+  if (tab) {
+    tab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sidebar.classList.toggle('open');
+    });
+    // Also handle touch to prevent the click-through delay
+    tab.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      sidebar.classList.toggle('open');
+    });
+  }
+
+  // Close sidebar when tapping outside of it (mobile)
+  document.addEventListener('touchstart', (e) => {
+    if (sidebar.classList.contains('open') && !sidebar.contains(e.target)) {
+      sidebar.classList.remove('open');
+    }
+  }, { passive: true });
+
   const slots = sidebar.querySelectorAll('.tool-slot');
   slots.forEach(slot => {
     slot.addEventListener('mousedown', (e) => onToolSlotMouseDown(e, slot, onToolSelected));
+    // Mobile: tap a tool slot to activate it
+    slot.addEventListener('touchend', (e) => {
+      if (slot.classList.contains('locked-hidden')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const tool = slot.dataset.tool;
+      const isActive = slot.classList.contains('active') ||
+        (tool === 'book' && document.getElementById('magicBook')?.style.display !== 'none');
+      if (isActive) {
+        putToolAway(tool, slot, onToolPutAway);
+      } else {
+        activateTool(tool, e, onToolSelected);
+      }
+      // Close the sidebar after selecting a tool on mobile
+      sidebar.classList.remove('open');
+    });
   });
 
   document.addEventListener('mousemove', onToolSlotMouseMove);

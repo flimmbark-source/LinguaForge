@@ -9,7 +9,7 @@ import {
   SCRIBE_INK_PER_BATCH,
   SCRIBE_CYCLE_SECONDS,
   SCRIBE_GHOST_LIFETIME,
-} from './config.js?v=5';
+} from './config.js?v=6';
 import {
   gameState,
   spendLetters,
@@ -18,8 +18,8 @@ import {
   addScribeGhost,
   updateScribeGhosts,
   getNextScribeId,
-} from './state.js?v=5';
-import { spawnLetter } from './letters.js?v=5';
+} from './state.js?v=6';
+import { spawnLetter } from './letters.js?v=6';
 
 /**
  * Hire a new scribe (if player can afford it)

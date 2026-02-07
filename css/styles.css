@@ -1759,6 +1759,9 @@ button.secondary {
 @media (max-width: 768px) {
   :root {
     --letter-basket-height: 120px;
+    --bottom-row-height: 150px;  /* height of basket/hearth row */
+    --mold-row-height: 70px;     /* approx mold height */
+    --bottom-gap: 8px;           /* gap between bottom elements */
   }
 
   body {
@@ -1893,22 +1896,22 @@ button.secondary {
     height: 190px;
   }
 
-  /* ─ Mold viewport: above letter basket ─ */
+  /* ─ Mold viewport: full width, sits above basket/hearth row ─ */
   .mold-viewport-wrapper {
-    width: calc(50% - 16px);
-    min-width: 200px;
-    max-width: 320px;
+    width: calc(100% - 16px);
+    min-width: unset;
+    max-width: none;
     left: 8px;
     top: auto;
-    bottom: calc(var(--letter-basket-height) + 60px);
+    bottom: calc(var(--bottom-row-height) + var(--bottom-gap) + var(--bottom-gap));
   }
 
-  /* ─ Letter basket: smaller, bottom-left ─ */
+  /* ─ Letter basket: bottom-left ─ */
   .letter-basket {
     left: 8px;
-    bottom: 40px;
-    width: calc(50% - 16px);
-    min-width: 180px;
+    bottom: var(--bottom-gap);
+    width: calc(50% - 12px);
+    min-width: 150px;
     max-width: 280px;
     height: var(--letter-basket-height);
   }
@@ -1919,13 +1922,13 @@ button.secondary {
     font-size: 16px;
   }
 
-  /* ─ Hearth: smaller, bottom-right on mobile ─ */
+  /* ─ Hearth: bottom-right, same row as basket ─ */
   .hearth-wrapper {
     left: auto;
     right: 8px;
-    bottom: 40px;
+    bottom: var(--bottom-gap);
     transform: none;
-    width: calc(45% - 8px);
+    width: calc(50% - 12px);
     max-width: 260px;
   }
 
@@ -1938,15 +1941,30 @@ button.secondary {
     min-height: 65px;
   }
 
-  /* ─ Workers panel: bottom-right, above hearth ─ */
+  /* ─ Workers panel: top-right area, below upgrades button ─ */
   .workers-panel {
     position: fixed;
     right: 8px;
-    top: auto;
-    bottom: calc(40px + 200px);
-    width: calc(45% - 8px);
-    min-width: 160px;
-    max-width: 260px;
+    top: 56px;
+    bottom: auto;
+    width: 180px;
+    min-width: 150px;
+    max-width: 220px;
+  }
+
+  .workers-panel h2 {
+    font-size: 13px;
+    margin: 0 0 2px 0;
+  }
+
+  .workers-panel h3 {
+    font-size: 11px;
+    margin: 2px 0;
+  }
+
+  .workers-panel .row {
+    font-size: 11px;
+    gap: 4px;
   }
 
   .scribe-block {
@@ -1959,28 +1977,64 @@ button.secondary {
     font-size: 14px;
   }
 
-  /* ─ Tools sidebar: horizontal bar at top ─ */
+  /* ─ Tools sidebar: horizontal dropdown from top center ─ */
   .tools-sidebar {
-    top: 8px;
+    top: 0;
     right: auto;
     left: 50%;
-    transform: translateX(-50%) translateY(calc(-100% + 18px));
+    transform: translateX(-50%);
     flex-direction: column;
+    z-index: 98;
   }
 
-  .tools-sidebar:hover,
-  .tools-sidebar.pinned {
-    transform: translateX(-50%) translateY(0);
+  /* On mobile, hide content by default, show tab handle always */
+  .tools-sidebar .tools-sidebar-content {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 8px;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+  }
+
+  /* Expand when .open or .pinned */
+  .tools-sidebar.open .tools-sidebar-content,
+  .tools-sidebar.pinned .tools-sidebar-content {
+    max-height: 80px;
+    padding: 6px 8px;
+    opacity: 1;
+  }
+
+  /* Disable hover behavior on mobile */
+  .tools-sidebar:hover {
+    transform: translateX(-50%);
+  }
+
+  .tools-sidebar:hover .tools-sidebar-content {
+    max-height: 0;
+    padding: 0 8px;
+    opacity: 0;
+  }
+
+  /* Re-enable for .open and .pinned (higher specificity) */
+  .tools-sidebar.open:hover .tools-sidebar-content,
+  .tools-sidebar.pinned:hover .tools-sidebar-content {
+    max-height: 80px;
+    padding: 6px 8px;
+    opacity: 1;
   }
 
   .tools-sidebar-tab {
     writing-mode: horizontal-tb;
     text-orientation: initial;
     border-radius: 0 0 8px 8px;
-    border: 1px solid rgba(148, 163, 184, 0.1);
+    border: 1px solid rgba(148, 163, 184, 0.15);
     border-top: none;
-    padding: 3px 12px;
+    padding: 4px 16px;
     font-size: 10px;
+    cursor: pointer;
+    text-align: center;
+    order: 1; /* tab below content */
+    background: rgba(15, 23, 42, 0.85);
   }
 
   .tools-sidebar-content {
@@ -1988,9 +2042,10 @@ button.secondary {
     border-radius: 0 0 10px 10px;
     border: 1px solid rgba(148, 163, 184, 0.12);
     border-top: none;
-    padding: 6px 8px;
     min-width: auto;
     gap: 6px;
+    order: 0; /* content above tab */
+    background: rgba(15, 23, 42, 0.9);
   }
 
   .tool-slot {
@@ -2007,7 +2062,7 @@ button.secondary {
     font-size: 8px;
   }
 
-  /* ─ Crafting hint: smaller ─ */
+  /* ─ Crafting hint: below tools area ─ */
   .crafting-hint {
     bottom: auto;
     top: 70px;
@@ -2020,10 +2075,13 @@ button.secondary {
 @media (max-width: 480px) {
   :root {
     --letter-basket-height: 100px;
+    --bottom-row-height: 130px;
+    --mold-row-height: 60px;
+    --bottom-gap: 6px;
   }
 
   .core-stats-float {
-    width: 130px;
+    width: 120px;
   }
 
   .stat-row {
@@ -2069,19 +2127,20 @@ button.secondary {
     height: 160px;
   }
 
-  /* Letter basket and hearth: stack vertically at bottom */
+  /* Letter basket: bottom-left */
   .letter-basket {
     left: 4px;
     right: auto;
-    bottom: 35px;
-    width: calc(48% - 4px);
-    min-width: 150px;
+    bottom: var(--bottom-gap);
+    width: calc(50% - 6px);
+    min-width: 140px;
   }
 
+  /* Hearth: bottom-right */
   .hearth-wrapper {
     right: 4px;
-    bottom: 35px;
-    width: calc(48% - 4px);
+    bottom: var(--bottom-gap);
+    width: calc(50% - 6px);
     max-width: 200px;
   }
 
@@ -2093,21 +2152,30 @@ button.secondary {
     display: none;
   }
 
-  /* Mold viewport: full width above bottom elements */
+  /* Mold viewport: full width above bottom row */
   .mold-viewport-wrapper {
     left: 4px;
     width: calc(100% - 8px);
     max-width: none;
-    bottom: calc(var(--letter-basket-height) + 50px);
+    bottom: calc(var(--bottom-row-height) + var(--bottom-gap) + var(--bottom-gap));
   }
 
-  /* Workers panel */
+  /* Workers panel: compact, top-right */
   .workers-panel {
     right: 4px;
-    width: calc(48% - 4px);
-    min-width: 140px;
-    max-width: 200px;
-    bottom: calc(35px + 170px);
+    top: 52px;
+    bottom: auto;
+    width: 160px;
+    min-width: 130px;
+    max-width: 180px;
+  }
+
+  .workers-panel h2 {
+    font-size: 12px;
+  }
+
+  .workers-panel h3 {
+    font-size: 10px;
   }
 
   .scribe-block {
@@ -2440,7 +2508,8 @@ button.secondary {
 }
 
 .tools-sidebar:hover,
-.tools-sidebar.pinned {
+.tools-sidebar.pinned,
+.tools-sidebar.open {
   transform: translateY(-50%) translateX(0);
 }
 

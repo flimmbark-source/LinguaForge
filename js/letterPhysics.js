@@ -4,8 +4,8 @@
  * wall/floor collision, mold-slot auto-fill, and tool interaction.
  */
 
-import { gameState } from './state.js?v=5';
-import { canPlaceInHearth, heatHearth } from './hearth.js?v=5';
+import { gameState } from './state.js?v=6';
+import { canPlaceInHearth, heatHearth } from './hearth.js?v=6';
 
 // ─── Physics constants ───────────────────────────────────────
 const GRAVITY        = 2000;   // px/s²

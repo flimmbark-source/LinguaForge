@@ -3,7 +3,7 @@
  * Handles verse assembly, grammar checking, and line completion
  */
 
-import { GRAMMAR_LEXICON, SOLUTION_HEBREW_ORDER, VERSE_COMPLETION_REWARD } from './config.js?v=5';
+import { GRAMMAR_LEXICON, SOLUTION_HEBREW_ORDER, VERSE_COMPLETION_REWARD } from './config.js?v=6';
 import {
   gameState,
   findWord,
@@ -13,7 +13,7 @@ import {
   clearVerseWords,
   addInk,
   incrementLinesCompleted,
-} from './state.js?v=5';
+} from './state.js?v=6';
 
 /**
  * Evaluate the current verse

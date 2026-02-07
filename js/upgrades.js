@@ -3,8 +3,8 @@
  * Node-based skill tree with progressive unlock and reveal
  */
 
-import { gameState, spendLetters, spendInk } from './state.js?v=5';
-import { updateHearthVisuals } from './hearth.js?v=5';
+import { gameState, spendLetters, spendInk } from './state.js?v=6';
+import { updateHearthVisuals } from './hearth.js?v=6';
 
 // ===============================================
 // Column / tool classification for every upgrade
