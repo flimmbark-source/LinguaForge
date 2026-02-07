@@ -168,7 +168,7 @@ button.secondary {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 120;
+  z-index: 520;
 }
 
 .letter-basket {
@@ -1168,7 +1168,7 @@ button.secondary {
   top: 0;
   bottom: 0;
   pointer-events: none;
-  z-index: 150;
+  z-index: 500;
 }
 
 #craftingCanvas,
