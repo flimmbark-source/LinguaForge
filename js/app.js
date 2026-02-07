@@ -166,6 +166,13 @@ function spawnMagicalText(word, moldBounds, delay) {
       // On arrival: place word directly into verse (bypass inventory)
       const zoomTime = 700;
       setTimeout(() => {
+        // If this word is already in the verse, skip it
+        const alreadyInVerse = gameState.verseWords.some(w => w.hebrew === word.text);
+        if (alreadyInVerse) {
+          wrapper.remove();
+          return;
+        }
+
         const instanceId = 'vw-' + Date.now() + '-' + Math.random();
         addVerseWord({ instanceId, hebrew: word.text }, gameState.verseWords.length);
         updateUI();
