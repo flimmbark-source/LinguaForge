@@ -53,6 +53,10 @@ const COLUMN_TOOLS = {
 // Current active filter per column
 let activeFilter = { workshop: 'all', forgecraft: 'all' };
 
+// Node shape and color constants (used by UPGRADE_TREE data)
+const NODE_SHAPES = { CIRCLE: 'circle', SQUARE: 'square' };
+const NODE_COLORS = { TEAL: 'teal', PINK: 'pink', YELLOW: 'yellow' };
+
 /**
  * Upgrade tree data structure
  * Each upgrade has:
