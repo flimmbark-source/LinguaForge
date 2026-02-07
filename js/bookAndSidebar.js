@@ -12,12 +12,53 @@ let bookDragging = false;
 let bookOffsetX = 0;
 let bookOffsetY = 0;
 
+/** Check if we're on a mobile-sized screen */
+function isMobileScreen() {
+  return window.innerWidth <= 768;
+}
+
+/**
+ * Show the book as a full-screen overlay on mobile.
+ * Always opens it (no toggle-close from this function).
+ */
+function showBookMobile() {
+  const book = document.getElementById('magicBook');
+  if (!book) return;
+  book.style.display = '';
+  document.body.classList.add('book-overlay-active');
+  // Always open the book interior on mobile
+  book.classList.remove('closed');
+  book.classList.add('open');
+  // Clear any leftover drag positioning
+  book.style.left = '';
+  book.style.top = '';
+  book.style.right = '';
+  book.style.bottom = '';
+  book.style.width = '';
+  book.style.height = '';
+  book.style.maxWidth = '';
+  book.style.maxHeight = '';
+  book.style.minWidth = '';
+  book.style.minHeight = '';
+  book.style.transform = '';
+  delete book.dataset.wasDragged;
+}
+
+/** Hide the book on mobile (dismiss the overlay) */
+function hideBookMobile() {
+  const book = document.getElementById('magicBook');
+  if (!book) return;
+  book.style.display = 'none';
+  document.body.classList.remove('book-overlay-active');
+}
+
 /**
  * Initialize the magic book: toggle button + dragging
  */
 export function initMagicBook() {
   const book = document.getElementById('magicBook');
   const toggleBtn = document.getElementById('bookToggleBtn');
+  const closeBtn = document.getElementById('bookCloseBtn');
   if (!book || !toggleBtn) return;
 
   // Toggle open/close
@@ -37,15 +78,38 @@ export function initMagicBook() {
     }
   });
 
-  // Start book drag on mousedown (no stopPropagation so canvas tools still work)
+  // Mobile close button
+  if (closeBtn) {
+    const closeOverlay = (e) => {
+      if (e?.preventDefault) e.preventDefault();
+      if (e?.stopPropagation) e.stopPropagation();
+      hideBookMobile();
+    };
+    closeBtn.addEventListener('click', closeOverlay);
+    closeBtn.addEventListener('touchend', closeOverlay);
+    closeBtn.addEventListener('pointerup', closeOverlay);
+  }
+
+  // Tap the backdrop (the .magic-book overlay itself) to close on mobile
+  book.addEventListener('click', (e) => {
+    if (!isMobileScreen()) return;
+    // Only close if the click was on the dark backdrop, not on book content
+    if (e.target === book) {
+      hideBookMobile();
+    }
+  });
+
+  // Start book drag on mousedown — desktop only
   book.addEventListener('mousedown', (e) => {
+    if (isMobileScreen()) return;
     onBookMouseDown(e);
   });
   document.addEventListener('mousemove', onBookMouseMove);
   document.addEventListener('mouseup', onBookMouseUp);
 
-  // Touch support for mobile book dragging
+  // Touch support for mobile book dragging — disabled on mobile
   book.addEventListener('touchstart', (e) => {
+    if (isMobileScreen()) return;
     const touch = e.touches[0];
     onBookMouseDown({ target: e.target, clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => e.preventDefault() });
   }, { passive: false });
@@ -76,8 +140,12 @@ function isInteractiveElement(el) {
 }
 
 function onBookMouseDown(e) {
+  if (isMobileScreen()) return;
   // Don't drag from interactive elements
   if (isInteractiveElement(e.target)) return;
+  // If an active tool (hammer/pestle/shovel) is under the pointer, let the
+  // tool handle the click instead of starting a book drag.
+  if (window.isPointOnActiveTool && window.isPointOnActiveTool(e.clientX, e.clientY)) return;
   // Only drag from book headers, pages background, or cover
   const book = document.getElementById('magicBook');
   if (!book) return;
@@ -256,9 +324,13 @@ function onToolSlotMouseMove(e) {
 function putToolAway(tool, source, onToolPutAway) {
   console.log('putToolAway called for:', tool);
   if (tool === 'book') {
-    const book = document.getElementById('magicBook');
-    if (book) {
-      book.style.display = 'none';
+    if (isMobileScreen()) {
+      hideBookMobile();
+    } else {
+      const book = document.getElementById('magicBook');
+      if (book) {
+        book.style.display = 'none';
+      }
     }
   } else {
     if (onToolPutAway) onToolPutAway(tool);
@@ -331,16 +403,20 @@ function activateTool(tool, e, onToolSelected) {
   if (tool === 'book') {
     const book = document.getElementById('magicBook');
     if (book && book.style.display === 'none') {
-      book.style.display = '';
-      book.classList.remove('open');
-      book.classList.add('closed');
-      book.style.transform = 'none';
-      book.style.left = (e.clientX - 90) + 'px';
-      book.style.top = (e.clientY - 120) + 'px';
-      const btn = document.getElementById('bookToggleBtn');
-      if (btn) {
-        btn.textContent = '📖';
-        btn.title = 'Open Book';
+      if (isMobileScreen()) {
+        showBookMobile();
+      } else {
+        book.style.display = '';
+        book.classList.remove('open');
+        book.classList.add('closed');
+        book.style.transform = 'none';
+        book.style.left = (e.clientX - 90) + 'px';
+        book.style.top = (e.clientY - 120) + 'px';
+        const btn = document.getElementById('bookToggleBtn');
+        if (btn) {
+          btn.textContent = '📖';
+          btn.title = 'Open Book';
+        }
       }
     }
   } else {
