@@ -38,10 +38,10 @@ const UPGRADE_META = {
 
 // Tool blocks shown in the Workshop column (clickable to filter Forgecraft)
 const WORKSHOP_TOOLS = [
-  { id: 'forge',   label: 'Anvil',   icon: '🔨', upgradeId: 'activateHearth', alwaysVisible: true },
   { id: 'fist',    label: 'Fist',    icon: '💪', upgradeId: null,             alwaysVisible: true },
-  { id: 'scribes', label: 'Scribes', icon: '✍️', upgradeId: 'hireScribes',   visibleWhen: 'activateHearth' },
+  { id: 'forge',   label: 'Anvil',   icon: '🔨', upgradeId: 'activateHearth', alwaysVisible: true },
   { id: 'pestle',  label: 'Pestle',  icon: '🥄', upgradeId: 'unlockPestle',  visibleWhen: 'activateHearth' },
+  { id: 'scribes', label: 'Scribes', icon: '✍️', upgradeId: 'hireScribes',   visibleWhen: 'unlockPestle' },
   { id: 'shovel',  label: 'Shovel',  icon: '🧰', upgradeId: 'unlockShovel',  visibleWhen: 'unlockPestle' },
 ];
 
@@ -82,7 +82,7 @@ export const UPGRADE_TREE = {
     costPerLevel: { renown: 0, ink: 0 },
     prerequisites: [],
     position: { x: 0, y: 0 },
-    connections: ['gripStrength','heatLevel', 'hireScribes', 'unlockPestle'],
+    connections: ['gripStrength','heatLevel', 'unlockPestle'],
     nodeShape: NODE_SHAPES.CIRCLE,
     nodeColor: NODE_COLORS.PINK,
     onPurchase: () => {
@@ -122,7 +122,7 @@ gripStrength: {
     maxLevel: 1,
     baseCost: { renown: 25, ink: 0 },
     costPerLevel: { renown: 0, ink: 0 },
-    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
+    prerequisites: [{ id: 'unlockPestle', minLevel: 1 }],
     position: { x: 0, y: 1.5 },
     connections: ['scribeUse', 'scribeSpeed', 'scribeCapacity'],
     nodeShape: NODE_SHAPES.CIRCLE,
@@ -142,7 +142,7 @@ gripStrength: {
     costPerLevel: { renown: 0, ink: 0 },
     prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
     position: { x: 2, y: 1 },
-    connections: ['increasePestleCap', 'unlockShovel'],
+    connections: ['increasePestleCap', 'unlockShovel', 'hireScribes'],
     nodeShape: NODE_SHAPES.SQUARE,
     nodeColor: NODE_COLORS.YELLOW,
     onPurchase: () => {
