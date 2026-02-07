@@ -21,6 +21,7 @@ import { initializeHearth, updateHearth } from './hearth.js';
 import { addInk /*, whatever else you need */ } from './state.js';
 import { showUpgradeScreen, hideUpgradeScreen } from './upgrades.js';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js';
+import { initMagicBook, initToolsSidebar, updateSidebarToolVisibility } from './bookAndSidebar.js';
 
 // Global crafting system references
 let hammerSystem = null;
@@ -73,6 +74,73 @@ function initializeGame() {
 
   // Setup tool selection
   setupToolSelection();
+
+  // Initialize magic book and tools sidebar
+  initMagicBook();
+  initToolsSidebar(
+    // onToolSelected: pull a tool out to use it
+    (toolName, dropX, dropY) => {
+      const btnMap = {
+        hammer: document.getElementById('selectHammer'),
+        pestle: document.getElementById('selectPestle'),
+        shovel: document.getElementById('selectShovel')
+      };
+      const btn = btnMap[toolName];
+      if (btn) btn.click();
+
+      // Position the tool at the drop location (convert screen coords to canvas coords)
+      const craftingCanvas = document.getElementById('craftingCanvas');
+      if (craftingCanvas && dropX != null && dropY != null) {
+        const rect = craftingCanvas.getBoundingClientRect();
+        const canvasX = dropX - rect.left;
+        const canvasY = dropY - rect.top;
+
+        if (toolName === 'hammer' && hammerSystem) {
+          hammerSystem.hammer.pivotX = canvasX;
+          hammerSystem.hammer.pivotY = canvasY;
+          hammerSystem.hammer.headX = canvasX;
+          hammerSystem.hammer.headY = canvasY + hammerSystem.hammer.length;
+          hammerSystem.hammer.prevHeadX = hammerSystem.hammer.headX;
+          hammerSystem.hammer.prevHeadY = hammerSystem.hammer.headY;
+        }
+        if (toolName === 'pestle' && pestleSystem) {
+          pestleSystem.pestle.pivotX = canvasX;
+          pestleSystem.pestle.pivotY = canvasY;
+          pestleSystem.pestle.headX = canvasX;
+          pestleSystem.pestle.headY = canvasY + pestleSystem.pestle.constantLength;
+          pestleSystem.pestle.prevHeadX = pestleSystem.pestle.headX;
+          pestleSystem.pestle.prevHeadY = pestleSystem.pestle.headY;
+        }
+        if (toolName === 'shovel' && shovelSystem) {
+          shovelSystem.shovel.pivotX = canvasX;
+          shovelSystem.shovel.pivotY = canvasY;
+          shovelSystem.shovel.headX = canvasX;
+          shovelSystem.shovel.headY = canvasY + (shovelSystem.shovel.length || 120);
+        }
+      }
+    },
+    // onToolPutAway: drop a tool back in the sidebar to stow it
+    (toolName) => {
+      if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
+      if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
+      if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
+
+      // Clear the active tool if we just put away the one that was active
+      if (activeTool === toolName) {
+        activeTool = null;
+      }
+
+      // Also clear active state on hidden tool buttons
+      const btn = document.getElementById(
+        toolName === 'hammer' ? 'selectHammer' :
+        toolName === 'pestle' ? 'selectPestle' :
+        toolName === 'shovel' ? 'selectShovel' : ''
+      );
+      if (btn) btn.classList.remove('active');
+
+      console.log('Put away tool:', toolName);
+    }
+  );
 
   // Spawn starting letters
   for (let i = 0; i < STARTING_LETTERS; i++) {
@@ -262,6 +330,33 @@ function initializeCraftingSystems() {
   shovelSystem = new ShovelSystem(craftingCanvas);
   shovelSystem.setOverlayRenderer(renderChips);
   // do not start shovel until selected
+
+  // Wire up put-away callbacks: when a tool is released near the sidebar, stow it
+  function makePutAwayHandler(toolName) {
+    return () => {
+      console.log('Tool put away via canvas drag:', toolName);
+      if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
+      if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
+      if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
+      if (activeTool === toolName) activeTool = null;
+      // Update sidebar slot
+      const slotId = toolName === 'hammer' ? 'toolSlotHammer' :
+                     toolName === 'pestle' ? 'toolSlotPestle' :
+                     toolName === 'shovel' ? 'toolSlotShovel' : '';
+      const slot = document.getElementById(slotId);
+      if (slot) slot.classList.remove('active');
+      // Update hidden button
+      const btnId = toolName === 'hammer' ? 'selectHammer' :
+                    toolName === 'pestle' ? 'selectPestle' :
+                    toolName === 'shovel' ? 'selectShovel' : '';
+      const btn = document.getElementById(btnId);
+      if (btn) btn.classList.remove('active');
+    };
+  }
+  hammerSystem.onPutAway = makePutAwayHandler('hammer');
+  pestleSystem.onPutAway = makePutAwayHandler('pestle');
+  shovelSystem.onPutAway = makePutAwayHandler('shovel');
+
   console.log('Crafting systems initialized');
 }
 

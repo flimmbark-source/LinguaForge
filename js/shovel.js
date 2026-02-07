@@ -189,6 +189,31 @@ resize() {
   onPointerUp(e) {
     if (!this.isRunning) return;
     this.input.isDown = false;
+
+    // If released near the right edge / sidebar, put the tool away
+    const client = e.changedTouches ? e.changedTouches[0] : e;
+    const sidebar = document.getElementById('toolsSidebar');
+    const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
+    const nearRightEdge = client.clientX >= (window.innerWidth - 100);
+    const inSidebar = sidebarRect &&
+      client.clientX >= sidebarRect.left &&
+      client.clientY >= sidebarRect.top &&
+      client.clientY <= sidebarRect.bottom;
+    if ((nearRightEdge || inSidebar) && this.onPutAway) {
+      // Return any collected letters before putting away
+      const pool = document.getElementById('letterPool');
+      if (pool) {
+        for (const ch of this.collected) {
+          const tile = createLetterTile(ch, null);
+          pool.appendChild(tile);
+        }
+      }
+      this.collected = [];
+      this.shovel.isHeld = false;
+      this.onPutAway();
+      return;
+    }
+
     // on release, drop collected letters into hearth if over hearth, else return to basket
     const { bounds: headBounds } = this.computeHeadGeometry();
 
@@ -258,6 +283,9 @@ resize() {
     this.shovel.isHeld = false;
     this.collected = []; // clear shovel on tool switch
     this.canvas.style.pointerEvents = 'none';
+    // Clear the canvas so the shovel doesn't remain visible when put away
+    const ctx = this.canvas.getContext('2d');
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
   // Set a renderer to draw after the shovel (e.g., word chips)
@@ -266,6 +294,7 @@ resize() {
   }
 
   loop(timestamp) {
+    if (!this.isRunning) return; // Don't render after stop()
     if (!this.lastTime) this.lastTime = timestamp;
     const dt = Math.min(0.04, (timestamp - this.lastTime) / 1000);
     this.lastTime = timestamp;

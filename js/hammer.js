@@ -210,6 +210,7 @@ export class HammerSystem {
    * Handle pointer down event
    */
 onPointerDown(e) {
+  if (!this.isRunning) return;
   const rect = this.canvas.getBoundingClientRect();
   const client = e.touches ? e.touches[0] : e;
   this.input.mouseX = client.clientX - rect.left;
@@ -280,6 +281,22 @@ onPointerDown(e) {
     if (this.hammer.isHeld) {
       e.preventDefault();
       e.stopPropagation();
+
+      // If released near the right edge / sidebar, put the tool away
+      const client = e.changedTouches ? e.changedTouches[0] : e;
+      const sidebar = document.getElementById('toolsSidebar');
+      const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
+      const nearRightEdge = client.clientX >= (window.innerWidth - 100);
+      const inSidebar = sidebarRect &&
+        client.clientX >= sidebarRect.left &&
+        client.clientY >= sidebarRect.top &&
+        client.clientY <= sidebarRect.bottom;
+      if ((nearRightEdge || inSidebar) && this.onPutAway) {
+        this.input.isDown = false;
+        this.hammer.isHeld = false;
+        this.onPutAway();
+        return;
+      }
     }
     this.input.isDown = false;
     this.hammer.isHeld = false;
@@ -1321,6 +1338,7 @@ drawHammer(ctx, hammer) {
    * Main game loop
    */
   loop(timestamp) {
+    if (!this.isRunning) return; // Don't render after stop()
     if (!this.lastTime) this.lastTime = timestamp;
     const dt = Math.min(0.04, (timestamp - this.lastTime) / 1000);
     this.lastTime = timestamp;
@@ -1359,6 +1377,8 @@ drawHammer(ctx, hammer) {
    */
   stop() {
     this.isRunning = false;
+    // Clear the canvas so the hammer doesn't remain visible when put away
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
   /**
