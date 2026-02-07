@@ -12,15 +12,45 @@ let bookDragging = false;
 let bookOffsetX = 0;
 let bookOffsetY = 0;
 
+/** Check if we're on a mobile-sized screen */
+function isMobileScreen() {
+  return window.innerWidth <= 768;
+}
+
+/**
+ * Show the book as a full-screen overlay on mobile.
+ * Always opens it (no toggle-close from this function).
+ */
+function showBookMobile() {
+  const book = document.getElementById('magicBook');
+  if (!book) return;
+  book.style.display = '';
+  // Always open the book interior on mobile
+  book.classList.remove('closed');
+  book.classList.add('open');
+  // Clear any leftover drag positioning
+  book.style.left = '';
+  book.style.top = '';
+  book.style.transform = '';
+}
+
+/** Hide the book on mobile (dismiss the overlay) */
+function hideBookMobile() {
+  const book = document.getElementById('magicBook');
+  if (!book) return;
+  book.style.display = 'none';
+}
+
 /**
  * Initialize the magic book: toggle button + dragging
  */
 export function initMagicBook() {
   const book = document.getElementById('magicBook');
   const toggleBtn = document.getElementById('bookToggleBtn');
+  const closeBtn = document.getElementById('bookCloseBtn');
   if (!book || !toggleBtn) return;
 
-  // Toggle open/close
+  // Toggle open/close (desktop only — on mobile, toggle btn is hidden)
   toggleBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     const isOpen = book.classList.contains('open');
@@ -37,15 +67,39 @@ export function initMagicBook() {
     }
   });
 
-  // Start book drag on mousedown (no stopPropagation so canvas tools still work)
+  // Mobile close button
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hideBookMobile();
+    });
+    closeBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideBookMobile();
+    });
+  }
+
+  // Tap the backdrop (the .magic-book overlay itself) to close on mobile
+  book.addEventListener('click', (e) => {
+    if (!isMobileScreen()) return;
+    // Only close if the click was on the dark backdrop, not on book content
+    if (e.target === book) {
+      hideBookMobile();
+    }
+  });
+
+  // Start book drag on mousedown — desktop only
   book.addEventListener('mousedown', (e) => {
+    if (isMobileScreen()) return;
     onBookMouseDown(e);
   });
   document.addEventListener('mousemove', onBookMouseMove);
   document.addEventListener('mouseup', onBookMouseUp);
 
-  // Touch support for mobile book dragging
+  // Touch support for mobile book dragging — disabled on mobile
   book.addEventListener('touchstart', (e) => {
+    if (isMobileScreen()) return;
     const touch = e.touches[0];
     onBookMouseDown({ target: e.target, clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => e.preventDefault() });
   }, { passive: false });
@@ -259,9 +313,13 @@ function onToolSlotMouseMove(e) {
 function putToolAway(tool, source, onToolPutAway) {
   console.log('putToolAway called for:', tool);
   if (tool === 'book') {
-    const book = document.getElementById('magicBook');
-    if (book) {
-      book.style.display = 'none';
+    if (isMobileScreen()) {
+      hideBookMobile();
+    } else {
+      const book = document.getElementById('magicBook');
+      if (book) {
+        book.style.display = 'none';
+      }
     }
   } else {
     if (onToolPutAway) onToolPutAway(tool);
@@ -334,16 +392,20 @@ function activateTool(tool, e, onToolSelected) {
   if (tool === 'book') {
     const book = document.getElementById('magicBook');
     if (book && book.style.display === 'none') {
-      book.style.display = '';
-      book.classList.remove('open');
-      book.classList.add('closed');
-      book.style.transform = 'none';
-      book.style.left = (e.clientX - 90) + 'px';
-      book.style.top = (e.clientY - 120) + 'px';
-      const btn = document.getElementById('bookToggleBtn');
-      if (btn) {
-        btn.textContent = '📖';
-        btn.title = 'Open Book';
+      if (isMobileScreen()) {
+        showBookMobile();
+      } else {
+        book.style.display = '';
+        book.classList.remove('open');
+        book.classList.add('closed');
+        book.style.transform = 'none';
+        book.style.left = (e.clientX - 90) + 'px';
+        book.style.top = (e.clientY - 120) + 'px';
+        const btn = document.getElementById('bookToggleBtn');
+        if (btn) {
+          btn.textContent = '📖';
+          btn.title = 'Open Book';
+        }
       }
     }
   } else {

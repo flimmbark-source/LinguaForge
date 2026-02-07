@@ -1877,14 +1877,37 @@ button.secondary {
     font-size: 11px;
   }
 
-  /* ─ Magic book: sized for landscape ─ */
+  /* ─ Magic book: full-screen overlay on landscape mobile ─ */
   .magic-book {
-    top: 36px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    transform: none;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+  }
+
+  .magic-book .book-toggle-btn {
+    display: none;
+  }
+
+  .magic-book .book-close-btn {
+    display: flex;
   }
 
   .book-interior {
-    width: min(60vw, 400px);
-    min-height: 160px;
+    width: min(70vw, 500px);
+    min-height: 50vh;
+    max-height: 85vh;
+    overflow-y: auto;
   }
 
   .book-page {
@@ -1975,12 +1998,12 @@ button.secondary {
     gap: 3px;
   }
 
-  /* ─ Mold viewport: left side ─ */
+  /* ─ Mold viewport: left side, extends full height when open ─ */
   .mold-viewport-wrapper {
     position: fixed;
     left: 0;
     right: auto;
-    top: auto;
+    top: 34px;
     bottom: calc(var(--basket-height) + 8px);
     width: auto;
     min-width: unset;
@@ -1989,6 +2012,7 @@ button.secondary {
     display: flex;
     flex-direction: row-reverse;
     justify-content: flex-start;
+    align-items: stretch;
     pointer-events: auto;
   }
 
@@ -2011,6 +2035,7 @@ button.secondary {
     cursor: pointer;
     backdrop-filter: blur(8px);
     flex-shrink: 0;
+    align-self: center;
   }
 
   .mold-viewport-wrapper .mold-panel {
@@ -2023,6 +2048,8 @@ button.secondary {
     border-left: none;
     min-width: 0;
     margin: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .mold-viewport-wrapper.open .mold-panel {
@@ -2035,6 +2062,8 @@ button.secondary {
 
   .mold-viewport-wrapper .mold-viewport {
     width: 190px;
+    flex: 1;
+    overflow-y: auto;
   }
 
   /* ─ Workers panel: below stats on left ─ */
@@ -2328,38 +2357,62 @@ button.secondary {
     font-size: 17px;
   }
 
-  /* ─ Magic book: positioned below top bar with clearance ─ */
+  /* ─ Magic book: full-screen overlay on mobile ─ */
   .magic-book {
-    top: 48px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    transform: none;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+  }
+
+  .magic-book .book-toggle-btn {
+    display: none;
+  }
+
+  .magic-book .book-close-btn {
+    display: flex;
   }
 
   .book-interior {
-    width: calc(100vw - 32px);
-    max-width: 400px;
-    min-height: 200px;
+    width: calc(100vw - 24px);
+    max-width: 440px;
+    min-height: 60vh;
+    max-height: 85vh;
+    overflow-y: auto;
   }
 
   .book-page {
-    padding: 8px;
+    padding: 12px;
+    flex: 1;
   }
 
   .book-page-header {
-    font-size: 10px;
-    margin-bottom: 4px;
+    font-size: 12px;
+    margin-bottom: 6px;
     padding-bottom: 4px;
   }
 
   .book-page-content {
-    font-size: 11px;
+    font-size: 13px;
   }
 
   .book-cover {
-    width: 120px;
-    height: 160px;
+    width: 160px;
+    height: 220px;
   }
 
   .book-spine {
-    width: 12px;
+    width: 14px;
   }
 
   /* ─ Hearth: tight against letter basket, no gap ─ */
@@ -2422,20 +2475,21 @@ button.secondary {
     font-size: 15px;
   }
 
-  /* ─ Mold viewport: right-edge tab, positioned to not overlap tools ─ */
+  /* ─ Mold viewport: right-edge tab, extends full height when open ─ */
   .mold-viewport-wrapper {
     position: fixed;
     left: auto;
-    top: auto;
+    right: 0;
+    top: 44px;
+    bottom: calc(var(--basket-height) + 8px);
     width: auto;
     min-width: unset;
     max-width: none;
-    right: 0;
-    bottom: calc(50% + 90px);
     z-index: 98;
     display: flex;
     flex-direction: row;
     justify-content: flex-end;
+    align-items: stretch;
     pointer-events: auto;
   }
 
@@ -2459,6 +2513,7 @@ button.secondary {
     cursor: pointer;
     backdrop-filter: blur(8px);
     flex-shrink: 0;
+    align-self: center;
   }
 
   /* Mold panel content: hidden by default, slides out on tap */
@@ -2472,6 +2527,8 @@ button.secondary {
     border-right: none;
     min-width: 0;
     margin: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .mold-viewport-wrapper.open .mold-panel {
@@ -2485,6 +2542,8 @@ button.secondary {
   .mold-viewport-wrapper .mold-viewport {
     width: 220px;
     max-width: 220px;
+    flex: 1;
+    overflow-y: auto;
   }
 
   /* ─ Workers panel: below upgrades btn with proper spacing ─ */
@@ -2931,6 +2990,27 @@ button.secondary {
   z-index: 95;
   user-select: none;
   transition: width 0.4s ease, height 0.4s ease;
+}
+
+/* Close button for mobile full-screen book (hidden on desktop) */
+.book-close-btn {
+  display: none;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #3d2a12;
+  border: 2px solid #8b6914;
+  color: #fcd34d;
+  font-size: 18px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 210;
+  padding: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 /* Toggle button - centered on left (spine) edge */
