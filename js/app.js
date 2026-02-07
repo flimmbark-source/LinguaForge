@@ -683,6 +683,29 @@ function gameLoop(timestamp) {
       letterPhysics.update(dt, window.innerWidth, window.innerHeight);
       letterPhysics.checkMoldSlots();
       letterPhysics.checkHearth();
+      letterPhysics.checkBasket((char) => {
+        // Return the letter to the basket DOM as a tile
+        addLetters(1);
+        const letterPoolDiv = document.getElementById('letterPool');
+        if (!letterPoolDiv) return;
+        const existing = Array.from(letterPoolDiv.children).find(
+          el => el.classList && el.classList.contains('letter-tile') && el.dataset.letterChar === char
+        );
+        if (existing) {
+          const current = parseInt(existing.dataset.count || '1', 10);
+          existing.dataset.count = String(current + 1);
+          existing.innerHTML = '<span>' + (existing.dataset.letterChar || '') + '</span>';
+          if (current + 1 > 1) {
+            const badge = document.createElement('span');
+            badge.className = 'letter-count';
+            badge.textContent = 'x' + (current + 1);
+            existing.appendChild(badge);
+          }
+        } else {
+          const tile = createLetterTile(char, handleMoldSlotFilled);
+          letterPoolDiv.appendChild(tile);
+        }
+      });
 
       // Hammer pushes nearby physics letters
       if (hammerSystem && hammerSystem.isRunning && craftingCanvasRef) {

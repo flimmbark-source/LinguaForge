@@ -200,6 +200,31 @@ export class LetterPhysicsSystem {
     }
   }
 
+  // ─── Basket return ─────────────────────────────────────
+
+  /**
+   * Check if any non-held physics letters have entered the letter basket.
+   * If so, mark them consumed and call the callback to return them to inventory.
+   * @param {Function} onReturnToBasket - callback(char) when a letter returns to basket
+   */
+  checkBasket(onReturnToBasket) {
+    const basketDiv = document.getElementById('letterPool');
+    if (!basketDiv) return;
+    const basketContainer = basketDiv.closest('.letter-basket');
+    if (!basketContainer) return;
+
+    const br = basketContainer.getBoundingClientRect();
+
+    for (const l of this.letters) {
+      if (l.consumed || l.isHeld) continue;
+      // Check if letter center is inside the basket
+      if (l.x >= br.left && l.x <= br.right && l.y >= br.top && l.y <= br.bottom) {
+        l.consumed = true;
+        if (onReturnToBasket) onReturnToBasket(l.char);
+      }
+    }
+  }
+
   // ─── Tool interaction helpers ────────────────────────────
 
   /**

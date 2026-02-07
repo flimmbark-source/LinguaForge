@@ -11,6 +11,38 @@ import { canPlaceInHearth, heatHearth } from './hearth.js?v=9';
 let _heldLetter = null;
 let _mouseHist = [];
 
+// Pick up physics letters from the canvas by clicking/tapping on them
+document.addEventListener('pointerdown', e => {
+  if (_heldLetter) return;
+  if (!window.letterPhysics) return;
+  // Don't intercept if we're interacting with a DOM letter tile or UI element
+  const tag = e.target.tagName.toLowerCase();
+  if (tag === 'button' || tag === 'input' || tag === 'select') return;
+  if (e.target.classList && e.target.classList.contains('letter-tile')) return;
+  if (e.target.closest && e.target.closest('.letter-tile')) return;
+  // Only pick up from the canvas or body (not from UI panels)
+  if (e.target.closest && (
+    e.target.closest('.workers-panel') ||
+    e.target.closest('.tools-sidebar') ||
+    e.target.closest('.mold-viewport-wrapper') ||
+    e.target.closest('.upgrade-modal') ||
+    e.target.closest('.stats-wrap') ||
+    e.target.closest('.upgrades-btn') ||
+    e.target.closest('.letter-basket') ||
+    e.target.closest('.magic-book')
+  )) return;
+
+  const letter = window.letterPhysics.pickupNearest(e.clientX, e.clientY, 30);
+  if (letter) {
+    e.preventDefault();
+    letter.isHeld = true;
+    letter.settled = false;
+    _heldLetter = letter;
+    _mouseHist = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
+    gameState.activeLetterDrag = { isPhysics: true };
+  }
+});
+
 document.addEventListener('pointermove', e => {
   if (!_heldLetter) return;
   _heldLetter.x = e.clientX;
