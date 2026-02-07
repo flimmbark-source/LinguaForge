@@ -9,7 +9,7 @@ import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD } from '
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js';
 import { setMoldViewportWidth, navigatePreviousMold, navigateNextMold, forgeWords } from './molds.js';
 import { hireScribe, updateScribes } from './scribes.js';
-import { setupVerseAreaDrop, completeVerse } from './grammar.js';
+import { setupVerseAreaDrop, completeVerse, placeWordInVerse } from './grammar.js';
 import { initializeElements, updateUI } from './ui.js';
 import { gameState } from './state.js';
 import { addLetters } from './state.js';
@@ -44,6 +44,102 @@ function handleMoldSlotFilled(slotEl) {
   }
 
   updateUI();
+}
+
+/**
+ * Spawn a "Magical Text" element that pops up from the mold, sparkles and glitters,
+ * expands slightly, then shrinks and zooms into the verse book assembly area.
+ * The word is placed directly into the verse upon arrival.
+ * @param {Object} word - The forged word object { id, text, english, length, power }
+ * @param {DOMRect} moldBounds - Bounding rect of the mold viewport
+ * @param {number} delay - Stagger delay in ms
+ */
+function spawnMagicalText(word, moldBounds, delay) {
+  setTimeout(() => {
+    const el = document.createElement('div');
+    el.className = 'magical-text phase-emerge';
+    el.textContent = word.text;
+
+    // Position at center-top of mold viewport
+    const startX = moldBounds.left + moldBounds.width / 2;
+    const startY = moldBounds.top;
+    el.style.left = startX + 'px';
+    el.style.top = startY + 'px';
+    el.style.transform = 'translate(-50%, -50%)';
+
+    // Spawn sparkle particles around the text
+    const sparkleCount = 8 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < sparkleCount; i++) {
+      const sparkle = document.createElement('div');
+      sparkle.className = 'magical-sparkle';
+      const angle = (Math.PI * 2 * i) / sparkleCount + (Math.random() - 0.5) * 0.5;
+      const dist = 20 + Math.random() * 30;
+      sparkle.style.setProperty('--sparkle-dx', Math.cos(angle) * dist + 'px');
+      sparkle.style.setProperty('--sparkle-dy', Math.sin(angle) * dist + 'px');
+      sparkle.style.setProperty('--sparkle-duration', (0.6 + Math.random() * 0.5) + 's');
+      sparkle.style.left = '50%';
+      sparkle.style.top = '50%';
+      sparkle.style.animationDelay = (Math.random() * 0.3) + 's';
+      el.appendChild(sparkle);
+    }
+
+    document.body.appendChild(el);
+
+    // Phase 2: After emerge animation ends, shrink and zoom to verse book
+    const emergeTime = 800; // matches CSS animation duration
+    setTimeout(() => {
+      // Find the verse assembly area target
+      const verseArea = document.getElementById('grammarHebrewLine');
+      if (!verseArea) {
+        el.remove();
+        return;
+      }
+      const verseBounds = verseArea.getBoundingClientRect();
+      const targetX = verseBounds.left + verseBounds.width / 2;
+      const targetY = verseBounds.top + verseBounds.height / 2;
+
+      // Transition position to target while playing zoom animation
+      el.classList.remove('phase-emerge');
+      el.classList.add('phase-zoom');
+      el.style.transition = 'left 0.7s cubic-bezier(0.5, 0, 0.75, 0), top 0.7s cubic-bezier(0.5, 0, 0.75, 0)';
+      el.style.left = targetX + 'px';
+      el.style.top = targetY + 'px';
+
+      // Spawn a second burst of sparkles for the zoom trail
+      for (let i = 0; i < 6; i++) {
+        const sparkle = document.createElement('div');
+        sparkle.className = 'magical-sparkle';
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 15 + Math.random() * 25;
+        sparkle.style.setProperty('--sparkle-dx', Math.cos(angle) * dist + 'px');
+        sparkle.style.setProperty('--sparkle-dy', Math.sin(angle) * dist + 'px');
+        sparkle.style.setProperty('--sparkle-duration', (0.4 + Math.random() * 0.3) + 's');
+        sparkle.style.left = '50%';
+        sparkle.style.top = '50%';
+        el.appendChild(sparkle);
+      }
+
+      // On arrival: place word in verse and clean up
+      const zoomTime = 700;
+      setTimeout(() => {
+        // Place the word into the verse assembly at the end
+        placeWordInVerse(word.id, gameState.verseWords.length);
+        updateUI();
+
+        // Add a flash effect to the newly added verse chip
+        const verseChips = verseArea.querySelectorAll('.line-word-chip');
+        const lastChip = verseChips[verseChips.length - 1];
+        if (lastChip) {
+          lastChip.classList.add('verse-arrival-flash');
+          lastChip.addEventListener('animationend', () => {
+            lastChip.classList.remove('verse-arrival-flash');
+          }, { once: true });
+        }
+
+        el.remove();
+      }, zoomTime);
+    }, emergeTime);
+  }, delay);
 }
 
 /**
@@ -268,20 +364,25 @@ function initializeCraftingSystems() {
     updateUI();
   };
 
-  // Callback when red-hot hammer strikes mold viewport - forge words and spawn chips
+  // Callback when red-hot hammer strikes mold viewport - forge words as magical text
   hammerSystem.onForgeTriggered = () => {
     const forgedWords = forgeWords();
 
-    // Spawn physics chips for each forged word
-    if (forgedWords.length > 0 && chipSystem) {
+    // Spawn magical text animations that fly into the verse book
+    if (forgedWords.length > 0) {
       const moldViewport = document.querySelector('.mold-viewport');
       if (moldViewport) {
         const moldBounds = moldViewport.getBoundingClientRect();
         forgedWords.forEach((word, index) => {
-          // Stagger spawns so chips pop out one at a time instead of overlapping
-          setTimeout(() => {
-            chipSystem.spawnChip(word, moldBounds);
-          }, index * 120);
+          // Grant renown (same as chip system did)
+          const renownGained = word.length * 2;
+          addLetters(renownGained);
+          const screenX = moldBounds.left + moldBounds.width / 2;
+          const screenY = moldBounds.top;
+          spawnResourceGain(screenX, screenY, renownGained, 'renown');
+
+          // Spawn magical text with stagger
+          spawnMagicalText(word, moldBounds, index * 300);
         });
       }
     }
