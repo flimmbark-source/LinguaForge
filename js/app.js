@@ -688,6 +688,12 @@ function setupEventHandlers() {
  * Game loop - runs every frame
  */
 let lastTime = performance.now();
+let uiThrottleAcc = 0;       // accumulate time between UI updates
+const UI_INTERVAL = 0.25;    // update UI at most 4×/sec
+let cachedCanvasRect = null;
+let canvasRectAge = 0;
+const RECT_CACHE_MS = 200;   // refresh canvas rect every 200ms
+
 function gameLoop(timestamp) {
   const dt = (timestamp - lastTime) / 1000;
   lastTime = timestamp;
@@ -730,11 +736,17 @@ function gameLoop(timestamp) {
         }
       });
 
+      // Cache canvas rect (avoid per-frame getBoundingClientRect)
+      canvasRectAge += dt * 1000;
+      if (!cachedCanvasRect || canvasRectAge > RECT_CACHE_MS) {
+        if (craftingCanvasRef) cachedCanvasRect = craftingCanvasRef.getBoundingClientRect();
+        canvasRectAge = 0;
+      }
+
       // Hammer pushes nearby physics letters
-      if (hammerSystem && hammerSystem.isRunning && craftingCanvasRef) {
-        const cr = craftingCanvasRef.getBoundingClientRect();
-        const hx = cr.left + hammerSystem.hammer.headX;
-        const hy = cr.top + hammerSystem.hammer.headY;
+      if (hammerSystem && hammerSystem.isRunning && cachedCanvasRect) {
+        const hx = cachedCanvasRect.left + hammerSystem.hammer.headX;
+        const hy = cachedCanvasRect.top + hammerSystem.hammer.headY;
         letterPhysics.pushFrom(hx, hy, 45, hammerSystem.hammer.headVx || 0, hammerSystem.hammer.headVy || 0);
       }
 
@@ -743,10 +755,8 @@ function gameLoop(timestamp) {
         const anyToolRunning = hammerSystem?.isRunning || pestleSystem?.isRunning || shovelSystem?.isRunning;
         if (!anyToolRunning) {
           const ctx = craftingCanvasRef.getContext('2d');
-          ctx.save();
-          ctx.clearRect(0, 0, craftingCanvasRef.clientWidth, craftingCanvasRef.clientHeight);
+          ctx.clearRect(0, 0, craftingCanvasRef.width, craftingCanvasRef.height);
           letterPhysics.render(ctx);
-          ctx.restore();
         }
       }
     } catch (e) {
@@ -757,9 +767,13 @@ function gameLoop(timestamp) {
   // Update resource gain feedback
   updateResourceFeedback(dt);
 
-  // Update UI
-  updateUI();
-  updateUpgradeHeaderStats();
+  // Throttle UI updates (expensive DOM reads) to ~4×/sec
+  uiThrottleAcc += dt;
+  if (uiThrottleAcc >= UI_INTERVAL) {
+    uiThrottleAcc = 0;
+    updateUI();
+    updateUpgradeHeaderStats();
+  }
 
   // Continue loop
   requestAnimationFrame(gameLoop);

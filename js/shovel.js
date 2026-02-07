@@ -347,13 +347,11 @@ resize() {
 
     const { bounds: headBounds } = this.computeHeadGeometry();
 
-    const tiles = Array.from(
-      letterPool.querySelectorAll(
-        '.letter-tile, [data-letter-char], [data-letter], [data-char], [data-symbol]'
-      )
-    );
-
-    for (const tile of tiles) {
+    // Use simple class check instead of expensive compound selector
+    const children = letterPool.children;
+    for (let i = 0; i < children.length; i++) {
+      const tile = children[i];
+      if (!tile.classList || !tile.classList.contains('letter-tile')) continue;
       const r = tile.getBoundingClientRect();
       const overlapsHead =
         r.left <= headBounds.right &&
