@@ -45,37 +45,44 @@ function handleMoldSlotFilled(slotEl) {
 }
 
 /**
- * Ensure the magic book is visible and open so the verse area is ready.
- * Handles all book states: hidden (stowed), closed, or already open.
+ * Find the fly-to target for the magical text based on the book's current state.
+ *  - Book open & visible  → verse assembly area (#grammarHebrewLine)
+ *  - Book out but closed   → the closed book cover
+ *  - Book stowed / hidden  → the book's tool-sidebar slot (#toolSlotBook)
+ * Returns { x, y } in viewport coordinates.
  */
-function ensureBookOpenAndVisible() {
+function getMagicalTextTarget() {
   const book = document.getElementById('magicBook');
-  if (!book) return;
+  const isHidden = !book || book.style.display === 'none';
 
-  // If the book was stowed (display:none), bring it back
-  if (book.style.display === 'none') {
-    book.style.display = '';
-    // If it was never dragged, re-centre it
-    if (book.dataset.wasDragged !== 'true') {
-      book.style.transform = '';
+  if (isHidden) {
+    // Book is stowed — fly to the sidebar slot
+    const slot = document.getElementById('toolSlotBook');
+    if (slot) {
+      const r = slot.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }
+    // Last resort: top-right corner
+    return { x: window.innerWidth - 40, y: window.innerHeight / 2 };
+  }
+
+  // Book is visible — if open, target the verse area; if closed, target the cover
+  if (book.classList.contains('open')) {
+    const verseArea = document.getElementById('grammarHebrewLine');
+    if (verseArea && verseArea.offsetParent !== null) {
+      const r = verseArea.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     }
   }
 
-  // If the book is closed, open it
-  if (book.classList.contains('closed')) {
-    book.classList.remove('closed');
-    book.classList.add('open');
-    const btn = document.getElementById('bookToggleBtn');
-    if (btn) {
-      btn.textContent = '📕';
-      btn.title = 'Close Book';
-    }
-  }
+  // Closed or fallback — target the book element itself
+  const r = book.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
 /**
  * Spawn a "Magical Text" element that pops up above the mold, sparkles and glitters,
- * expands slightly, then shrinks and zooms into the verse book assembly area.
+ * expands slightly, then shrinks and zooms into the verse book (or its sidebar slot).
  * The word is placed directly into the verse upon arrival (bypasses inventory).
  * @param {Object} word - The forged word object { text, english, length }
  * @param {DOMRect} moldBounds - Bounding rect of the mold viewport
@@ -116,38 +123,17 @@ function spawnMagicalText(word, moldBounds, delay) {
 
     document.body.appendChild(wrapper);
 
-    // Phase 2: After emerge animation ends, shrink and zoom to verse book
+    // Phase 2: After emerge animation ends, shrink and zoom to target
     const emergeTime = 800;
     setTimeout(() => {
-      // Ensure the book is visible and open before we fly to it
-      ensureBookOpenAndVisible();
-
-      // Now find the target — try the verse area first, fall back to book element
-      let targetX, targetY;
-      const verseArea = document.getElementById('grammarHebrewLine');
-      if (verseArea && verseArea.offsetParent !== null) {
-        const verseBounds = verseArea.getBoundingClientRect();
-        targetX = verseBounds.left + verseBounds.width / 2;
-        targetY = verseBounds.top + verseBounds.height / 2;
-      } else {
-        // Fall back to the book element itself
-        const book = document.getElementById('magicBook');
-        if (book) {
-          const bookBounds = book.getBoundingClientRect();
-          targetX = bookBounds.left + bookBounds.width / 2;
-          targetY = bookBounds.top + bookBounds.height / 2;
-        } else {
-          wrapper.remove();
-          return;
-        }
-      }
+      const target = getMagicalTextTarget();
 
       // Switch to zoom animation and move wrapper to target
       el.classList.remove('phase-emerge');
       el.classList.add('phase-zoom');
       wrapper.style.transition = 'left 0.7s cubic-bezier(0.5, 0, 0.75, 0), top 0.7s cubic-bezier(0.5, 0, 0.75, 0)';
-      wrapper.style.left = targetX + 'px';
-      wrapper.style.top = targetY + 'px';
+      wrapper.style.left = target.x + 'px';
+      wrapper.style.top = target.y + 'px';
 
       // Spawn a second burst of sparkles for the zoom trail
       for (let i = 0; i < 6; i++) {
