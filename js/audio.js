@@ -11,27 +11,28 @@
 // Set a path to `null` to fall back to the procedural placeholder.
 const SOUND_FILES = {
   // Background
-  bgMusic1: null, // e.g. './audio/bg-ambient.mp3'
-  bgMusic2: null,
-  bgMusic3: null,
+  bgMusic1: './audio/bg-ambient1.mp3',
+  bgMusic2: './audio/bg-ambient2.mp3',
+  bgMusic3: './audio/bg-ambient3.mp3',
+  bgMusic4: './audio/bg-ambient4.mp3',
 
   // Hammer / anvil
-  hammerClank1: null, // e.g. './audio/hammer-clank-1.mp3'
-  hammerClank2: null,
-  hammerClank3: null,
+  hammerClank1: './audio/hammer-clank-1.mp3',
+  hammerClank2: './audio/hammer-clank-2.mp3',
+  hammerClank3: './audio/hammer-clank-3.mp3',
 
   // Mortar & pestle
-  pestleGrind1: null, // e.g. './audio/pestle-grind-1.mp3'
-  pestleGrind2: null,
+  pestleGrind1: './audio/pestleGrind1.mp3',
+  pestleGrind2: './audio/pestleGrind2.mp3',
   pestleSquelch1: null,
 
   // Shovel
-  shovelScoop: null,  // e.g. './audio/shovel-scoop.mp3'
+  shovelScoop: './audio/shovelScoop.mp3',
   shovelDump: null,
 
   // Hearth
-  hearthIgnite: null, // e.g. './audio/hearth-ignite.mp3'
-  hearthCrackle: null,
+  hearthIgnite: './audio/hearthIgnite.mp3',
+  hearthCrackle: './audio/hearthCrackle.mp3',
 };
 
 // ─── State ───────────────────────────────────────────────────
@@ -318,15 +319,18 @@ export function playHearthIgnite() {
 }
 
 // ─── Background music ────────────────────────────────────────
+const BG_MUSIC_KEYS = ['bgMusic1', 'bgMusic2', 'bgMusic3', 'bgMusic4'];
 
 /** Start looping background ambient track */
 export function startBackgroundMusic() {
   ensureCtx();
   if (bgSource) return; // already playing
 
-  if (bufferCache.bgMusic) {
+  const availableTracks = BG_MUSIC_KEYS.filter((key) => bufferCache[key]);
+  if (availableTracks.length) {
+    const pick = availableTracks[Math.floor(Math.random() * availableTracks.length)];
     bgSource = audioCtx.createBufferSource();
-    bgSource.buffer = bufferCache.bgMusic;
+    bgSource.buffer = bufferCache[pick];
     bgSource.loop = true;
     bgSource.connect(musicGain);
     bgSource.start();
