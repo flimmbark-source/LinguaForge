@@ -20,7 +20,7 @@ import { initAudio, startBackgroundMusic, getMusicVolume, getSfxVolume, setMusic
 import { addInk, addVerseWord /*, whatever else you need */ } from './state.js?v=9';
 import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from './upgrades.js?v=9';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
-import { initMagicBook, initToolsSidebar, initMoldSidebarTab, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
+import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 import { LetterPhysicsSystem } from './letterPhysics.js?v=9';
 
 // Global crafting system references
@@ -244,6 +244,7 @@ function initializeGame() {
   // Initialize magic book, tools sidebar, and mold tab
   initMagicBook();
   initMoldSidebarTab();
+  initFloatingPanels();
   initToolsSidebar(
     // onToolSelected: pull a tool out to use it
     (toolName, dropX, dropY) => {

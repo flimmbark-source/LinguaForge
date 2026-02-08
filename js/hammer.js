@@ -109,6 +109,7 @@ export class HammerSystem {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.width = rect.width;
     this.height = rect.height;
+    this._isMobile = window.innerWidth <= 768;
 
     // Position anvil just above the hearth so they visually stack
     const isMobile = this.width <= 768;
@@ -137,6 +138,9 @@ export class HammerSystem {
     this.anvil.width = Math.min(260, this.width * 0.35);
     this.anvil.height = 70;
     this.anvil.x = this.width * 0.5 - this.anvil.width / 2;
+    if (!this._isMobile) {
+      this.anvil.x -= 300;
+    }
 
     // On mobile portrait (<=768px), sit the anvil directly on top of the hearth
     const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
@@ -152,7 +156,7 @@ export class HammerSystem {
     }
 
     // Position hammer pivot above anvil with enough clearance to swing
-    const pivotX = this.width * 0.5;
+    const pivotX = this.anvil.x + this.anvil.width / 2;
     const hammerLength = isMobile ? 140 : 180;
     const pivotClearance = isMobile ? 100 : 140;
     const pivotY = this.anvil.y - pivotClearance;
@@ -1193,6 +1197,9 @@ drawHammer(ctx, hammer) {
    * Draw anvil
    */
   drawAnvil(ctx, anvil) {
+    if (!this._isMobile) {
+      return;
+    }
     ctx.save();
     ctx.translate(anvil.x, anvil.y);
 
