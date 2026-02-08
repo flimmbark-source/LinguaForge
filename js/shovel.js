@@ -10,6 +10,19 @@ import { gameState } from './state.js?v=9';
 import { playShovelScoop, playShovelDump } from './audio.js?v=9';
 import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 
+const MOBILE_BREAKPOINT = 900;
+function setScreenLocked(locked) {
+  if (window.setScreenLocked) {
+    window.setScreenLocked(locked);
+  }
+}
+
+function setBackgroundDragLocked(locked) {
+  if (window.setBackgroundDragLocked) {
+    window.setBackgroundDragLocked(locked);
+  }
+}
+
 function getLetterFromTile(tile) {
   if (!tile) return '';
 
@@ -156,7 +169,7 @@ resize() {
     const headH = 148;
 
     // Padding for grab area — tighter on mobile
-    const PAD = this.width <= 768 ? 14 : 26;
+    const PAD = this.width <= MOBILE_BREAKPOINT ? 14 : 26;
 
     const withinHandle =
       localX > -handleW / 2 - PAD &&
@@ -176,6 +189,8 @@ resize() {
       this.input.isDown = true;
       this.shovel.isHeld = true;
       if (e.cancelable) e.preventDefault();
+      setScreenLocked(true);
+      setBackgroundDragLocked(true);
     }
     // Else: ignore clicks not on shovel
   }
@@ -210,10 +225,14 @@ resize() {
       this.collected = [];
       this.shovel.isHeld = false;
       cleanupToolDragSidebar();
+      setScreenLocked(false);
+      setBackgroundDragLocked(false);
       this.onPutAway();
       return;
     }
     cleanupToolDragSidebar();
+    setScreenLocked(false);
+    setBackgroundDragLocked(false);
 
     // on release, drop collected letters into hearth if over hearth, else return to basket
     const { bounds: headBounds } = this.computeHeadGeometry();

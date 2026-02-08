@@ -12,6 +12,18 @@ let _heldLetter = null;
 let _mouseHist = [];
 let _moldHoldState = null;
 
+function setScreenLocked(locked) {
+  if (window.setScreenLocked) {
+    window.setScreenLocked(locked);
+  }
+}
+
+function setBackgroundDragLocked(locked) {
+  if (window.setBackgroundDragLocked) {
+    window.setBackgroundDragLocked(locked);
+  }
+}
+
 function setMoldViewportHold(shouldHold) {
   const wrapper = document.querySelector('.mold-viewport-wrapper');
   if (!wrapper) return;
@@ -20,12 +32,8 @@ function setMoldViewportHold(shouldHold) {
     _moldHoldState = {
       wasOpen: wrapper.classList.contains('open'),
     };
-    wrapper.classList.add('open');
     wrapper.dataset.dragHold = 'true';
   } else if (_moldHoldState) {
-    if (!_moldHoldState.wasOpen) {
-      wrapper.classList.remove('open');
-    }
     delete wrapper.dataset.dragHold;
     _moldHoldState = null;
   }
@@ -61,6 +69,8 @@ document.addEventListener('pointerdown', e => {
     _mouseHist = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
     gameState.activeLetterDrag = { isPhysics: true };
     setMoldViewportHold(true);
+    setScreenLocked(true);
+    setBackgroundDragLocked(true);
   }
 });
 
@@ -98,6 +108,8 @@ document.addEventListener('pointerup', e => {
   _mouseHist = [];
   gameState.activeLetterDrag = null;
   setMoldViewportHold(false);
+  setScreenLocked(false);
+  setBackgroundDragLocked(false);
 });
 
 document.addEventListener('pointercancel', () => {
@@ -107,6 +119,8 @@ document.addEventListener('pointercancel', () => {
   _mouseHist = [];
   gameState.activeLetterDrag = null;
   setMoldViewportHold(false);
+  setScreenLocked(false);
+  setBackgroundDragLocked(false);
 });
 
 function getLetterDragOverlay() {
@@ -337,6 +351,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
     tile.style.zIndex = '1000';
     tile.setPointerCapture(e.pointerId);
     setMoldViewportHold(true);
+    setScreenLocked(true);
   });
 
   tile.addEventListener('pointermove', e => {
@@ -357,6 +372,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
     gameState.activeLetterDrag = null;
     handleLetterDrop(e.clientX, e.clientY, tile, dragState, onDrop);
     setMoldViewportHold(false);
+    setScreenLocked(false);
   });
 
   tile.addEventListener('pointercancel', () => {
@@ -369,6 +385,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
     }
     resetLetterTilePosition(tile);
     setMoldViewportHold(false);
+    setScreenLocked(false);
   });
 }
 

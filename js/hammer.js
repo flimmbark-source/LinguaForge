@@ -8,6 +8,19 @@ import { gameState } from './state.js?v=9';
 import { playHammerClank } from './audio.js?v=9';
 import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 
+const MOBILE_BREAKPOINT = 900;
+function setScreenLocked(locked) {
+  if (window.setScreenLocked) {
+    window.setScreenLocked(locked);
+  }
+}
+
+function setBackgroundDragLocked(locked) {
+  if (window.setBackgroundDragLocked) {
+    window.setBackgroundDragLocked(locked);
+  }
+}
+
 export class HammerSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -89,9 +102,11 @@ export class HammerSystem {
 
     // Cached gradients (rebuilt on resize)
     this._cachedGradients = {};
+    this.useBackgroundAnvil = false;
+    this.anvilAnchor = null;
 
     // Mobile detection for performance tuning
-    this._isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    this._isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= MOBILE_BREAKPOINT;
 
     // Initialize
     this.resize();
@@ -109,13 +124,18 @@ export class HammerSystem {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.width = rect.width;
     this.height = rect.height;
-    this._isMobile = window.innerWidth <= 768;
+    this._isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
 
     // Position anvil just above the hearth so they visually stack
-    const isMobile = this.width <= 768;
-    const baseHammerLength = isMobile ? 140 : 180;
+    const isMobile = this.width <= MOBILE_BREAKPOINT;
+    const isMobileLandscape = window.innerWidth <= MOBILE_BREAKPOINT && window.innerWidth > window.innerHeight;
+    const hammerScale = isMobileLandscape ? 0.75 : 1;
+    const baseHammerLength = (isMobile ? 140 : 180) * hammerScale;
     this.hammer.length = baseHammerLength;
     this.hammer.baseLength = baseHammerLength;
+    this.hammer.maxLength = baseHammerLength;
+    this.hammer.width = 90 * hammerScale;
+    this.hammer.handleThickness = 20 * hammerScale;
     this.refreshHandleCaps(true);
 
     // Read the hearth's actual top position so the anvil sits right on it
@@ -143,8 +163,7 @@ export class HammerSystem {
     }
 
     // On mobile portrait (<=768px), sit the anvil directly on top of the hearth
-    const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
-    const isMobileLandscape = window.innerWidth <= 768 && window.innerWidth > window.innerHeight;
+    const isMobilePortrait = window.innerWidth <= MOBILE_BREAKPOINT && window.innerHeight > window.innerWidth;
     if (isMobilePortrait) {
       // Hearth top is at 100vh - 164px; overlap anvil base onto hearth mantle
       this.anvil.y = this.height - 164 - this.anvil.height + 4;
@@ -155,14 +174,15 @@ export class HammerSystem {
       this.anvil.y = this.height - letterPoolBarHeight - this.anvil.height - 10;
     }
 
+    this.applyAnvilAnchor();
+
     // Position hammer pivot above anvil with enough clearance to swing
     const pivotX = this.anvil.x + this.anvil.width / 2;
-    const hammerLength = isMobile ? 140 : 180;
-    const pivotClearance = isMobile ? 100 : 140;
+    const pivotClearance = (isMobile ? 100 : 140) * hammerScale;
     const pivotY = this.anvil.y - pivotClearance;
     this.hammer.pivotX = pivotX;
     this.hammer.pivotY = pivotY;
-    this.hammer.length = hammerLength;
+    this.hammer.length = baseHammerLength;
 
     // Start with hammer hanging down
     this.hammer.headX = pivotX;
@@ -179,6 +199,34 @@ export class HammerSystem {
 
     // Rebuild cached gradients for the anvil (dimensions are stable per resize)
     this._rebuildAnvilGradients();
+  }
+
+  setUseBackgroundAnvil(shouldUse) {
+    this.useBackgroundAnvil = Boolean(shouldUse);
+  }
+
+  setAnvilAnchor(anchor) {
+    this.anvilAnchor = anchor;
+    this.applyAnvilAnchor();
+  }
+
+  applyAnvilAnchor() {
+    if (!this.anvilAnchor || !this._isMobile) return;
+    const canvasRect = this.canvas.getBoundingClientRect();
+    this.anvil.width = this.anvilAnchor.width;
+    this.anvil.height = this.anvilAnchor.height;
+    this.anvil.x = this.anvilAnchor.x - canvasRect.left - this.anvil.width / 2;
+    this.anvil.y = this.anvilAnchor.y - canvasRect.top - this.anvil.height / 2;
+
+    const isMobileLandscape = window.innerWidth <= MOBILE_BREAKPOINT && window.innerWidth > window.innerHeight;
+    const hammerScale = isMobileLandscape ? 0.75 : 1;
+    const pivotClearance = (this._isMobile ? 100 : 140) * hammerScale;
+    this.hammer.pivotX = this.anvil.x + this.anvil.width / 2;
+    this.hammer.pivotY = this.anvil.y - pivotClearance;
+    this.hammer.headX = this.hammer.pivotX;
+    this.hammer.headY = this.hammer.pivotY + this.hammer.length;
+    this.hammer.prevHeadX = this.hammer.headX;
+    this.hammer.prevHeadY = this.hammer.headY;
   }
 
   /** Pre-build anvil gradients so we don't recreate them every frame */
@@ -264,7 +312,7 @@ export class HammerSystem {
     const cx = x1 + dx * t;
     const cy = y1 + dy * t;
     const dist = Math.hypot(px - cx, py - cy);
-    const grabDist = this.width <= 768 ? 70 : 140;
+    const grabDist = this.width <= MOBILE_BREAKPOINT ? 70 : 140;
     return dist < grabDist;
   }
 
@@ -319,7 +367,10 @@ onPointerDown(e) {
   hammer.isHeld = true;
   hammer.pivotX = this.input.mouseX;
   hammer.pivotY = this.input.mouseY;
+  setScreenLocked(true);
+  setBackgroundDragLocked(true);
 }
+
 
 
   /**
@@ -360,6 +411,8 @@ onPointerDown(e) {
         cleanupToolDragSidebar();
         this.input.isDown = false;
         this.hammer.isHeld = false;
+        setScreenLocked(false);
+        setBackgroundDragLocked(false);
         this.onPutAway();
         return;
       }
@@ -367,6 +420,8 @@ onPointerDown(e) {
     }
     this.input.isDown = false;
     this.hammer.isHeld = false;
+    setScreenLocked(false);
+    setBackgroundDragLocked(false);
   }
 
   /**
@@ -1197,7 +1252,7 @@ drawHammer(ctx, hammer) {
    * Draw anvil
    */
   drawAnvil(ctx, anvil) {
-    if (!this._isMobile) {
+    if (this.useBackgroundAnvil) {
       return;
     }
     ctx.save();
@@ -1291,7 +1346,7 @@ drawHammer(ctx, hammer) {
    */
   drawFlyingLetters(ctx, letters) {
     ctx.save();
-    const isMobile = this.width <= 768;
+    const isMobile = this.width <= MOBILE_BREAKPOINT;
     const size = 28;
 
     // On mobile, skip per-letter gradients and use flat fill for perf
