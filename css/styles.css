@@ -3742,3 +3742,56 @@ body.book-overlay-active .magic-book {
     transform: scale(1);
   }
 }
+
+/* ===============================================
+   SIDEBAR VERTICAL DRAG
+   =============================================== */
+
+/* Drag-handle hint: three dots visible on tab handles */
+.mold-sidebar-tab::before,
+.tools-sidebar-tab::before {
+  content: '⋮';
+  display: block;
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.5;
+  margin-bottom: 2px;
+}
+
+/* After repositioning, override top-centering with translateY(-50%).
+   For the tools sidebar this must compose with the existing translateX. */
+.sidebar-repositioned {
+  transform: translateY(-50%) !important;
+}
+
+/* Tools sidebar: preserve hide/show translateX when repositioned */
+.tools-sidebar.sidebar-repositioned {
+  transform: translateY(-50%) translateX(calc(100% - 18px)) !important;
+}
+
+.tools-sidebar.sidebar-repositioned:hover,
+.tools-sidebar.sidebar-repositioned.pinned,
+.tools-sidebar.sidebar-repositioned.open {
+  transform: translateY(-50%) translateX(0) !important;
+}
+
+/* While dragging, disable transitions and pointer events on children */
+.sidebar-dragging {
+  transition: none !important;
+}
+
+.sidebar-dragging * {
+  transition: none !important;
+}
+
+/* Grab cursor on sidebar tabs */
+.mold-sidebar-tab,
+.tools-sidebar-tab {
+  cursor: grab;
+  touch-action: none;
+}
+
+.sidebar-dragging .mold-sidebar-tab,
+.sidebar-dragging .tools-sidebar-tab {
+  cursor: grabbing;
+}

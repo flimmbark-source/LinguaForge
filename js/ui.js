@@ -19,6 +19,10 @@ let lastRenderedVerseWords = [];
 // Track last rendered scribe state to avoid unnecessary recreations
 let lastRenderedScribes = [];
 
+// Track last rendered mold state to avoid unnecessary recreations
+let lastRenderedMoldIndex = -1;
+let lastRenderedMoldSlots = '';
+
 /**
  * Initialize DOM element references
  */
@@ -143,8 +147,14 @@ export function updateScribePurchaseButton() {
  */
 export function renderMolds() {
   if (!elements.moldListDiv) return;
-  elements.moldListDiv.innerHTML = '';
-  if (!gameState.currentLine.molds.length) return;
+  if (!gameState.currentLine.molds.length) {
+    if (lastRenderedMoldIndex !== -1) {
+      elements.moldListDiv.innerHTML = '';
+      lastRenderedMoldIndex = -1;
+      lastRenderedMoldSlots = '';
+    }
+    return;
+  }
 
   // Ensure index is valid
   if (gameState.currentMoldIndex < 0) gameState.currentMoldIndex = 0;
@@ -153,6 +163,16 @@ export function renderMolds() {
   }
 
   const mold = gameState.currentLine.molds[gameState.currentMoldIndex];
+
+  // Skip full DOM rebuild if mold state hasn't changed
+  const slotsKey = mold.id + ':' + mold.slots.map(s => s ? '1' : '0').join('');
+  if (gameState.currentMoldIndex === lastRenderedMoldIndex && slotsKey === lastRenderedMoldSlots) {
+    return;
+  }
+  lastRenderedMoldIndex = gameState.currentMoldIndex;
+  lastRenderedMoldSlots = slotsKey;
+
+  elements.moldListDiv.innerHTML = '';
 
   // Create mold card
   const card = document.createElement('div');

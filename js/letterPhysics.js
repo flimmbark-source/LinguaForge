@@ -321,6 +321,12 @@ export class LetterPhysicsSystem {
    * Assumes the context is in viewport-coordinate space.
    */
   render(ctx) {
+    const s = LETTER_SIZE;
+    // Set shared text properties once outside the loop
+    ctx.font = 'bold 18px "Noto Sans Hebrew", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
     for (const l of this.letters) {
       if (l.consumed) continue;
 
@@ -329,7 +335,6 @@ export class LetterPhysicsSystem {
       ctx.rotate(l.angle);
 
       // Tile background
-      const s = LETTER_SIZE;
       roundRect(ctx, -s / 2, -s / 2, s, s, 6);
       ctx.fillStyle = l.isHeld ? '#1e293b' : '#111827';
       ctx.fill();
@@ -339,9 +344,6 @@ export class LetterPhysicsSystem {
 
       // Letter character
       ctx.fillStyle = '#f9fafb';
-      ctx.font = 'bold 18px "Noto Sans Hebrew", Arial, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
       ctx.fillText(l.char, 0, 2); // slight offset for visual centering
 
       ctx.restore();

@@ -502,8 +502,10 @@ export class PestleSystem {
    * Spawn ink drop visual effect
    */
   spawnInkDrop(x, y) {
-    const MAX_INK_DROPS = 30;
-    const burstCount = Math.min(5 + Math.floor(Math.random() * 3), MAX_INK_DROPS - this.inkDrops.length);
+    const isMobile = this.width <= 768;
+    const MAX_INK_DROPS = isMobile ? 15 : 30;
+    const base = isMobile ? 3 + Math.floor(Math.random() * 2) : 5 + Math.floor(Math.random() * 3);
+    const burstCount = Math.min(base, MAX_INK_DROPS - this.inkDrops.length);
     for (let i = 0; i < burstCount; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 120 + Math.random() * 80;

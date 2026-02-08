@@ -231,18 +231,14 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
     e.stopPropagation();
   });
 
-  // Mobile: tap the tab to toggle sidebar open/closed
+  // Tab: tap to toggle sidebar, drag to reposition vertically
   const tab = sidebar.querySelector('.tools-sidebar-tab');
   if (tab) {
-    tab.addEventListener('click', (e) => {
-      e.stopPropagation();
-      sidebar.classList.toggle('open');
-    });
-    // Also handle touch to prevent the click-through delay
-    tab.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      sidebar.classList.toggle('open');
+    makeVerticallyDraggable(sidebar, tab, {
+      onTap() {
+        sidebar.classList.toggle('open');
+      },
+      side: 'right'
     });
   }
 
@@ -432,8 +428,80 @@ function activateTool(tool, e, onToolSelected) {
   }
 }
 
+// ===============================================
+// VERTICAL DRAG REPOSITIONING for sidebar panels
+// ===============================================
+
+/**
+ * Make a fixed-position element draggable vertically by its tab handle.
+ * The element's CSS `top` is updated; `transform: translateY(-50%)` is
+ * removed while dragging so the position tracks the pointer accurately.
+ *
+ * @param {HTMLElement} container - The fixed-position wrapper element
+ * @param {HTMLElement} handle   - The tab the user grabs to drag
+ * @param {Object} opts
+ *   opts.onTap   - called when the handle is tapped (no drag)
+ *   opts.side    - 'left' or 'right' (used for cursor style)
+ */
+function makeVerticallyDraggable(container, handle, opts = {}) {
+  let dragging = false;
+  let startY = 0;
+  let startTop = 0;
+  let moved = false;
+  const DRAG_THRESHOLD = 6; // px before we treat as drag
+
+  function pointerDown(e) {
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    dragging = true;
+    moved = false;
+    startY = clientY;
+    // Resolve current top from computed style (handles translateY centering)
+    const rect = container.getBoundingClientRect();
+    startTop = rect.top + rect.height / 2; // track center
+    container.classList.add('sidebar-dragging');
+    if (e.cancelable) e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function pointerMove(e) {
+    if (!dragging) return;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const dy = clientY - startY;
+    if (!moved && Math.abs(dy) < DRAG_THRESHOLD) return;
+    moved = true;
+    // Clamp so container stays on screen
+    const h = container.getBoundingClientRect().height;
+    const minTop = h / 2 + 8;
+    const maxTop = window.innerHeight - h / 2 - 8;
+    const newCenter = Math.max(minTop, Math.min(maxTop, startTop + dy));
+    container.style.top = newCenter + 'px';
+    // Use a class so CSS rules can compose translateY with their own translateX
+    container.classList.add('sidebar-repositioned');
+  }
+
+  function pointerUp(e) {
+    if (!dragging) return;
+    dragging = false;
+    container.classList.remove('sidebar-dragging');
+    if (!moved && opts.onTap) {
+      opts.onTap(e);
+    }
+  }
+
+  // Mouse
+  handle.addEventListener('mousedown', pointerDown);
+  document.addEventListener('mousemove', pointerMove);
+  document.addEventListener('mouseup', pointerUp);
+
+  // Touch
+  handle.addEventListener('touchstart', pointerDown, { passive: false });
+  document.addEventListener('touchmove', pointerMove, { passive: false });
+  document.addEventListener('touchend', pointerUp);
+}
+
 /**
  * Initialize the mold viewport tab for mobile: tap to toggle open/closed
+ * and drag to reposition vertically.
  */
 export function initMoldSidebarTab() {
   const wrapper = document.querySelector('.mold-viewport-wrapper');
@@ -442,14 +510,12 @@ export function initMoldSidebarTab() {
   const tab = wrapper.querySelector('.mold-sidebar-tab');
   if (!tab) return;
 
-  const toggle = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    wrapper.classList.toggle('open');
-  };
-
-  tab.addEventListener('click', toggle);
-  tab.addEventListener('touchend', toggle);
+  makeVerticallyDraggable(wrapper, tab, {
+    onTap() {
+      wrapper.classList.toggle('open');
+    },
+    side: 'left'
+  });
 
   // Stop mousedown from reaching canvas
   wrapper.addEventListener('mousedown', (e) => {
