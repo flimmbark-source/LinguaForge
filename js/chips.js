@@ -32,6 +32,11 @@ export class ChipSystem {
     this.dragStartY = 0;
     this.dragStartTime = 0;
     this.hasMoved = false;
+    this.setScreenLocked = (locked) => {
+      if (window.innerWidth > 900) return;
+      if (!document.body) return;
+      document.body.classList.toggle('screen-locked', locked);
+    };
 
     // Callbacks
     this.onChipHeated = null; // Called when chip is heated
@@ -365,6 +370,7 @@ export class ChipSystem {
         chip.vx = 0;
         chip.vy = 0;
         chip.angularVel = 0;
+        this.setScreenLocked(true);
 
         e.preventDefault();
         return;
@@ -425,6 +431,7 @@ export class ChipSystem {
       console.log(`Chip "${chip.word.text}" aligned to horizontal`);
       this.isDragging = false;
       this.draggedChip = null;
+      this.setScreenLocked(false);
       e.preventDefault();
       return;
     }
@@ -434,6 +441,7 @@ export class ChipSystem {
       // Chip was dropped in hearth for heating
       this.isDragging = false;
       this.draggedChip = null;
+      this.setScreenLocked(false);
       e.preventDefault();
       return;
     }
@@ -456,6 +464,7 @@ export class ChipSystem {
             this.removeChip(chip.id);
             this.isDragging = false;
             this.draggedChip = null;
+            this.setScreenLocked(false);
             e.preventDefault();
             return;
           }
@@ -467,6 +476,7 @@ export class ChipSystem {
           chip.angularVel = (Math.random() - 0.5) * 6;
           this.isDragging = false;
           this.draggedChip = null;
+          this.setScreenLocked(false);
           e.preventDefault();
           return;
         }
@@ -480,6 +490,7 @@ export class ChipSystem {
 
     this.isDragging = false;
     this.draggedChip = null;
+    this.setScreenLocked(false);
 
     // Remove ghost preview
     this.removeGhostPreview();

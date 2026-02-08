@@ -38,14 +38,14 @@ const BACKGROUND_IMAGE = {
 };
 
 const HEARTH_ANCHOR = {
-  x: 1140,
-  y: 470,
-  size: 240
+  x: 1160,
+  y: 520,
+  size: 260
 };
 
 const ANVIL_ANCHOR = {
-  x: 520,
-  y: 560,
+  x: 460,
+  y: 600,
   width: 260,
   height: 70
 };
@@ -157,6 +157,7 @@ function initBackgroundDrag() {
 
   function shouldHandleBackgroundDrag(target) {
     if (!isPortraitBackground()) return false;
+    if (body.classList.contains('screen-locked')) return false;
     return !target.closest(
       '.tools-sidebar, .mold-viewport-wrapper, .letter-basket, .magic-book, .upgrade-modal, .workers-panel, .stats-wrap, .upgrades-btn, .crafting-forge, .letter-block-layer'
     );

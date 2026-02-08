@@ -579,6 +579,10 @@ export function initMoldSidebarTab() {
   const tab = wrapper.querySelector('.mold-sidebar-tab');
   if (!tab) return;
 
+  if (window.innerWidth > 900 && !wrapper.classList.contains('open')) {
+    wrapper.classList.add('open');
+  }
+
   makeVerticallyDraggable(wrapper, tab, {
     onTap() {
       wrapper.classList.toggle('open');

@@ -9,6 +9,11 @@ import { playHammerClank } from './audio.js?v=9';
 import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 
 const MOBILE_BREAKPOINT = 900;
+function setScreenLocked(locked) {
+  if (window.innerWidth > MOBILE_BREAKPOINT) return;
+  if (!document.body) return;
+  document.body.classList.toggle('screen-locked', locked);
+}
 
 export class HammerSystem {
   constructor(canvas) {
@@ -351,6 +356,7 @@ onPointerDown(e) {
   hammer.isHeld = true;
   hammer.pivotX = this.input.mouseX;
   hammer.pivotY = this.input.mouseY;
+  setScreenLocked(true);
 }
 
 
@@ -393,6 +399,7 @@ onPointerDown(e) {
         cleanupToolDragSidebar();
         this.input.isDown = false;
         this.hammer.isHeld = false;
+        setScreenLocked(false);
         this.onPutAway();
         return;
       }
@@ -400,6 +407,7 @@ onPointerDown(e) {
     }
     this.input.isDown = false;
     this.hammer.isHeld = false;
+    setScreenLocked(false);
   }
 
   /**

@@ -8,6 +8,13 @@
 import { playPestleGrind, playPestleSquelch } from './audio.js?v=9';
 import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 
+const MOBILE_BREAKPOINT = 900;
+function setScreenLocked(locked) {
+  if (window.innerWidth > MOBILE_BREAKPOINT) return;
+  if (!document.body) return;
+  document.body.classList.toggle('screen-locked', locked);
+}
+
 export class PestleSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -208,6 +215,7 @@ export class PestleSystem {
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
     this.input.isDown = true;
+    setScreenLocked(true);
   }
 
   onPointerMove(e) {
@@ -234,12 +242,14 @@ export class PestleSystem {
     const client = e.changedTouches ? e.changedTouches[0] : e;
     if (shouldPutToolAway(client.clientX, client.clientY) && this.onPutAway) {
       cleanupToolDragSidebar();
+      setScreenLocked(false);
       this.onPutAway();
       return;
     }
     cleanupToolDragSidebar();
 
     this.input.isDown = false;
+    setScreenLocked(false);
   }
 
   // ─── Physics ──────────────────────────────────────────
