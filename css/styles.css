@@ -9,6 +9,12 @@
 
 :root {
   --letter-basket-height: 150px;
+  --bg-offset-x: 0px;
+  --bg-offset-y: 0px;
+  --bg-pos-y: 50%;
+  --hearth-x: 50%;
+  --hearth-y: 50%;
+  --hearth-size: 220px;
 }
 
 /* Base Layout */
@@ -29,7 +35,7 @@ body {
   background-image: url('/Public/ForgeBackground.png');
   background-repeat: no-repeat;
   background-size: cover;
-  background-position: center center;
+  background-position: calc(50% + var(--bg-offset-x)) calc(var(--bg-pos-y) + var(--bg-offset-y));
   background-attachment: fixed;
   background-color: #111827;
 }
@@ -39,7 +45,7 @@ body {
   body {
     /* Avoid `fixed` on many mobile browsers due to UX/performance issues */
     background-attachment: scroll;
-    background-position: center top;
+    --bg-pos-y: 50%;
     background-size: cover;
   }
 }
@@ -47,7 +53,7 @@ body {
 @media (orientation: portrait) and (max-width: 900px) {
   body {
     /* Keep image anchored toward the top in portrait phones/tablets */
-    background-position: center top;
+    --bg-pos-y: 0%;
     background-size: cover;
   }
 }
@@ -55,15 +61,23 @@ body {
 @media (orientation: landscape) and (max-width: 900px) {
   body {
     /* In landscape on narrow viewports, fit the image width to avoid awkward vertical crop */
-    background-position: center center;
+    --bg-pos-y: 50%;
     background-size: 100% auto;
   }
+}
+
+body.background-draggable {
+  cursor: grab;
+}
+
+body.background-dragging {
+  cursor: grabbing;
 }
 
 @media (min-width: 1600px) {
   body {
     /* Very large/desktop screens keep the cover behavior */
-    background-position: center center;
+    background-position: calc(50% + var(--bg-offset-x)) calc(var(--bg-pos-y) + var(--bg-offset-y));
     background-size: cover;
   }
 }
@@ -213,7 +227,8 @@ button.secondary {
 
 .letter-basket {
   position: fixed;
-  left: 25px;
+  left: auto;
+  right: 25px;
   bottom: 55px;
   width: calc((100% - 32px) / 3);
   min-width: 280px;
@@ -306,7 +321,8 @@ button.secondary {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: grab;
 }
 
 .basket-title {
@@ -356,12 +372,43 @@ button.secondary {
 /* Hearth Wrapper - Fixed at bottom center */
 .hearth-wrapper {
   position: fixed;
-  left: 50%;
-  bottom: 16px;
+  left: calc(50% + 300px);
+  bottom: calc(16px + 210px);
   transform: translateX(-50%);
   z-index: 100;
   max-width: 400px;
   width: calc(100% - 32px);
+}
+
+@media (min-width: 769px) {
+  .hearth-wrapper {
+    width: 220px;
+    max-width: none;
+  }
+
+  .hearth-structure {
+    width: 220px;
+    height: 220px;
+  }
+
+  .hearth-mantle,
+  .hearth-body,
+  .hearth-arch,
+  .hearth-arch-left,
+  .hearth-arch-right,
+  .hearth-arch-top,
+  .hearth-opening,
+  .hearth-back-wall,
+  .hearth-floor,
+  .hearth-base {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .hearth-opening {
+    min-height: 0;
+  }
 }
 
 /* ===============================================
@@ -391,7 +438,8 @@ button.secondary {
 
 .mold-viewport-wrapper {
   position: fixed;
-  left: 13px; /* match letter-basket or column edge */
+  left: auto;
+  right: 25px;
   top: 290px;
   width: calc((100% - 32px) / 3); /* same as a column / basket width */
   z-index: 505;
@@ -403,7 +451,20 @@ button.secondary {
 
 /* Mold tab: hidden on desktop, shown on mobile */
 .mold-sidebar-tab {
-  display: none;
+  display: flex;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  align-items: center;
+  justify-content: center;
+  background: rgba(58, 54, 50, 0.85);
+  color: #c9b58a;
+  padding: 10px 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 8px 0 0 8px;
+  border: 1px solid rgba(41, 37, 36, 0.6);
+  border-right: none;
 }
 
 .mold-viewport {
@@ -2679,25 +2740,40 @@ button.secondary {
 
   /* ─ Hearth: tight against letter basket, no gap ─ */
   .hearth-wrapper {
-    left: 50%;
+    left: var(--hearth-x);
+    top: var(--hearth-y);
     right: auto;
-    transform: translateX(-50%);
-    /* Anvil bottom is ~160px from bottom; place hearth just below it */
-    bottom: calc(var(--basket-height) + 10px);
-    top: auto;
-    width: calc(100% - 32px);
-    max-width: 320px;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    width: var(--hearth-size);
+    max-width: none;
   }
 
   .hearth-structure {
     width: 100%;
-    max-width: 320px;
+    height: var(--hearth-size);
+    max-width: none;
+  }
+
+  .hearth-mantle,
+  .hearth-body,
+  .hearth-arch,
+  .hearth-arch-left,
+  .hearth-arch-right,
+  .hearth-arch-top,
+  .hearth-opening,
+  .hearth-back-wall,
+  .hearth-floor,
+  .hearth-base {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
   .hearth-opening {
     /* Fixed height so hearth doesn't change size when fire appears/disappears */
-    height: 50px;
-    min-height: unset;
+    height: auto;
+    min-height: 0;
   }
 
   .hearth-fire {
@@ -3512,7 +3588,7 @@ body.book-overlay-active .magic-book {
 .tools-sidebar {
   position: fixed;
   right: 0;
-  top: 50%;
+  top: calc(50% - 175px);
   transform: translateY(-50%) translateX(calc(100% - 18px));
   z-index: 90;
   display: flex;
@@ -3833,6 +3909,11 @@ body.book-overlay-active .magic-book {
 
 .sidebar-dragging .mold-sidebar-tab,
 .sidebar-dragging .tools-sidebar-tab {
+  cursor: grabbing;
+}
+
+.floating-dragging .mold-sidebar-tab,
+.floating-dragging .letter-basket-header {
   cursor: grabbing;
 }
 

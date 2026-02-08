@@ -20,7 +20,7 @@ import { initAudio, startBackgroundMusic, getMusicVolume, getSfxVolume, setMusic
 import { addInk, addVerseWord /*, whatever else you need */ } from './state.js?v=9';
 import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from './upgrades.js?v=9';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
-import { initMagicBook, initToolsSidebar, initMoldSidebarTab, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
+import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 import { LetterPhysicsSystem } from './letterPhysics.js?v=9';
 
 // Global crafting system references
@@ -31,6 +31,30 @@ let letterPhysics = null;
 let craftingCanvasRef = null;
 let letterBlocksCanvasRef = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
+
+const BACKGROUND_IMAGE = {
+  width: 1536,
+  height: 1024
+};
+
+const HEARTH_ANCHOR = {
+  x: 1140,
+  y: 470,
+  size: 240
+};
+
+const ANVIL_ANCHOR = {
+  x: 520,
+  y: 560,
+  width: 260,
+  height: 70
+};
+
+let bgOffsetX = 0;
+let bgOffsetY = 0;
+let bgDragging = false;
+let bgDragStartX = 0;
+let bgDragStartOffsetX = 0;
 
 /**
  * Handle mold slot being filled by a letter drop.
@@ -46,6 +70,138 @@ function handleMoldSlotFilled(slotEl) {
   }
 
   updateUI();
+}
+
+function isMobileBackground() {
+  return window.innerWidth <= 900;
+}
+
+function isPortraitBackground() {
+  return isMobileBackground() && window.innerHeight > window.innerWidth;
+}
+
+function getBackgroundMetrics() {
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const imgWidth = BACKGROUND_IMAGE.width;
+  const imgHeight = BACKGROUND_IMAGE.height;
+
+  let scale;
+  if (isMobileBackground() && window.innerWidth > window.innerHeight) {
+    scale = viewportWidth / imgWidth;
+  } else {
+    scale = Math.max(viewportWidth / imgWidth, viewportHeight / imgHeight);
+  }
+
+  const displayWidth = imgWidth * scale;
+  const displayHeight = imgHeight * scale;
+  const originX = (viewportWidth - displayWidth) / 2 + bgOffsetX;
+  const originY = isPortraitBackground()
+    ? bgOffsetY
+    : (viewportHeight - displayHeight) / 2 + bgOffsetY;
+
+  return {
+    scale,
+    displayWidth,
+    displayHeight,
+    originX,
+    originY,
+    viewportWidth,
+    viewportHeight
+  };
+}
+
+function clampBackgroundOffset(metrics, offsetX) {
+  const maxOffsetX = Math.max(0, (metrics.displayWidth - metrics.viewportWidth) / 2);
+  return Math.max(-maxOffsetX, Math.min(maxOffsetX, offsetX));
+}
+
+function applyBackgroundOffsets() {
+  const root = document.documentElement;
+  root.style.setProperty('--bg-offset-x', `${bgOffsetX}px`);
+  root.style.setProperty('--bg-offset-y', `${bgOffsetY}px`);
+}
+
+function updateAnchoredUI() {
+  const root = document.documentElement;
+  const metrics = getBackgroundMetrics();
+
+  bgOffsetX = clampBackgroundOffset(metrics, bgOffsetX);
+  applyBackgroundOffsets();
+
+  if (!isMobileBackground()) return;
+
+  const hearthX = metrics.originX + HEARTH_ANCHOR.x * metrics.scale;
+  const hearthY = metrics.originY + HEARTH_ANCHOR.y * metrics.scale;
+  const hearthSize = HEARTH_ANCHOR.size * metrics.scale;
+  root.style.setProperty('--hearth-x', `${hearthX}px`);
+  root.style.setProperty('--hearth-y', `${hearthY}px`);
+  root.style.setProperty('--hearth-size', `${hearthSize}px`);
+
+  if (hammerSystem && typeof hammerSystem.setAnvilAnchor === 'function') {
+    const anvilX = metrics.originX + ANVIL_ANCHOR.x * metrics.scale;
+    const anvilY = metrics.originY + ANVIL_ANCHOR.y * metrics.scale;
+    hammerSystem.setAnvilAnchor({
+      x: anvilX,
+      y: anvilY,
+      width: ANVIL_ANCHOR.width * metrics.scale,
+      height: ANVIL_ANCHOR.height * metrics.scale
+    });
+    hammerSystem.setUseBackgroundAnvil(true);
+  }
+}
+
+function initBackgroundDrag() {
+  const body = document.body;
+  if (!body) return;
+
+  function shouldHandleBackgroundDrag(target) {
+    if (!isPortraitBackground()) return false;
+    return !target.closest(
+      '.tools-sidebar, .mold-viewport-wrapper, .letter-basket, .magic-book, .upgrade-modal, .workers-panel, .stats-wrap, .upgrades-btn, .crafting-forge, .letter-block-layer'
+    );
+  }
+
+  function pointerDown(e) {
+    if (!shouldHandleBackgroundDrag(e.target)) return;
+    bgDragging = true;
+    bgDragStartX = e.clientX;
+    bgDragStartOffsetX = bgOffsetX;
+    body.classList.add('background-dragging');
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function pointerMove(e) {
+    if (!bgDragging) return;
+    const metrics = getBackgroundMetrics();
+    const nextOffset = bgDragStartOffsetX + (e.clientX - bgDragStartX);
+    bgOffsetX = clampBackgroundOffset(metrics, nextOffset);
+    applyBackgroundOffsets();
+    updateAnchoredUI();
+  }
+
+  function pointerUp() {
+    if (!bgDragging) return;
+    bgDragging = false;
+    body.classList.remove('background-dragging');
+  }
+
+  body.addEventListener('pointerdown', pointerDown);
+  window.addEventListener('pointermove', pointerMove);
+  window.addEventListener('pointerup', pointerUp);
+
+  function refreshBackgroundState() {
+    body.classList.toggle('background-draggable', isPortraitBackground());
+    if (!isPortraitBackground()) {
+      bgOffsetX = 0;
+      applyBackgroundOffsets();
+    }
+    updateAnchoredUI();
+  }
+
+  window.addEventListener('resize', refreshBackgroundState);
+  window.addEventListener('orientationchange', refreshBackgroundState);
+  refreshBackgroundState();
 }
 
 function resizeLetterBlocksCanvas() {
@@ -244,6 +400,7 @@ function initializeGame() {
   // Initialize magic book, tools sidebar, and mold tab
   initMagicBook();
   initMoldSidebarTab();
+  initFloatingPanels();
   initToolsSidebar(
     // onToolSelected: pull a tool out to use it
     (toolName, dropX, dropY) => {
@@ -309,6 +466,8 @@ function initializeGame() {
     }
   );
 
+  initBackgroundDrag();
+
   // Spawn starting letters
   for (let i = 0; i < STARTING_LETTERS; i++) {
     spawnLetter(handleMoldSlotFilled);
@@ -342,6 +501,9 @@ function initializeCraftingSystems() {
 
   // Create hammer system with callbacks
   hammerSystem = new HammerSystem(craftingCanvas);
+  if (hammerSystem.setUseBackgroundAnvil) {
+    hammerSystem.setUseBackgroundAnvil(true);
+  }
 
   // Callback when hammer strikes anvil - spawn flying physics letters
   hammerSystem.onLetterForged = (impactX, impactY, power, strikeVx, multiplier = 1) => {
