@@ -769,6 +769,37 @@ button.secondary {
   filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6));
 }
 
+/* Hearth spark burst */
+#hearth-spark-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.hearth-spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fef3c7 0%, #f59e0b 45%, rgba(249, 115, 22, 0) 70%);
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
+  transform: translate(-50%, -50%) scale(var(--spark-scale, 1));
+  animation: hearthSparkBurst 0.6s ease-out forwards;
+  mix-blend-mode: screen;
+}
+
+@keyframes hearthSparkBurst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(var(--spark-scale, 1));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--spark-x, 0px), var(--spark-y, -20px)) scale(0.2);
+  }
+}
+
 /* Hearth Base/Foundation */
 .hearth-base {
   height: 16px;
