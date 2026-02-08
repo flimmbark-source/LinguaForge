@@ -17,6 +17,12 @@ const LETTER_SIZE    = 28;     // px  (visual tile size)
 const HALF           = LETTER_SIZE / 2;
 const FLOOR_MARGIN   = 10;     // px above screen bottom
 
+// ─── Mobile performance tuning ──────────────────────────────
+const IS_MOBILE = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 768;
+const MAX_PHYSICS_LETTERS = IS_MOBILE ? 20 : 60;
+// On mobile, settle letters faster to reduce per-frame work
+const MOBILE_STOP_VEL = IS_MOBILE ? 40 : STOP_VEL;
+
 export class LetterPhysicsSystem {
   constructor() {
     /** @type {PhysicsLetter[]} */
@@ -39,6 +45,14 @@ export class LetterPhysicsSystem {
    * @returns {object} the new letter object
    */
   spawn(char, x, y, vx = 0, vy = 0) {
+    // Cap max physics letters to prevent performance degradation
+    if (this.letters.length >= MAX_PHYSICS_LETTERS) {
+      // Mark the oldest non-held letter as consumed to make room
+      const oldest = this.letters.find(l => !l.consumed && !l.isHeld && l.settled);
+      if (oldest) oldest.consumed = true;
+      else return null; // hard cap
+    }
+
     const letter = {
       id: ++this._idCounter,
       char,
@@ -92,10 +106,10 @@ export class LetterPhysicsSystem {
           l.vy = -l.vy * RESTITUTION;
           l.vx *= FLOOR_FRICTION;
           l.angularVel *= 0.7;
-          if (Math.abs(l.vy) < STOP_VEL) {
+          if (Math.abs(l.vy) < MOBILE_STOP_VEL) {
             l.vy = 0;
             l.vx *= 0.5;
-            if (Math.abs(l.vx) < STOP_VEL) {
+            if (Math.abs(l.vx) < MOBILE_STOP_VEL) {
               l.vx = 0;
               l.angularVel = 0;
               l.settled = true;
@@ -142,7 +156,10 @@ export class LetterPhysicsSystem {
    * If the letter's character matches an open slot it overlaps, fill it.
    */
   checkMoldSlots() {
-    const moldListDiv = document.getElementById('moldList');
+    if (!this._moldListRef || !this._moldListRef.isConnected) {
+      this._moldListRef = document.getElementById('moldList');
+    }
+    const moldListDiv = this._moldListRef;
     if (!moldListDiv) return;
 
     const slots = moldListDiv.querySelectorAll('.slot');
@@ -334,13 +351,15 @@ export class LetterPhysicsSystem {
       ctx.translate(l.x, l.y);
       ctx.rotate(l.angle);
 
-      // Tile background
+      // Tile background — on mobile, skip stroke for settled letters
       roundRect(ctx, -s / 2, -s / 2, s, s, 6);
       ctx.fillStyle = l.isHeld ? '#1e293b' : '#111827';
       ctx.fill();
-      ctx.strokeStyle = l.isHeld ? '#6366f1' : '#4b5563';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      if (!IS_MOBILE || !l.settled) {
+        ctx.strokeStyle = l.isHeld ? '#6366f1' : '#4b5563';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
 
       // Letter character
       ctx.fillStyle = '#f9fafb';
