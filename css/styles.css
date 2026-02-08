@@ -377,7 +377,7 @@ button.secondary {
 .hearth-wrapper {
   position: fixed;
   left: calc(50% + 300px);
-  bottom: calc(16px + 210px);
+  bottom: calc(16px + 160px);
   transform: translateX(-50%);
   z-index: 100;
   max-width: 400px;
