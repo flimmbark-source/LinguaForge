@@ -119,8 +119,8 @@ function spawnMagicalText(word, moldBounds, delay) {
 
     wrapper.appendChild(el);
 
-    // Spawn sparkle particles around the text
-    const sparkleCount = 8 + Math.floor(Math.random() * 5);
+    // Spawn sparkle particles around the text (fewer on mobile)
+    const sparkleCount = isMobileDevice ? 3 + Math.floor(Math.random() * 2) : 8 + Math.floor(Math.random() * 5);
     for (let i = 0; i < sparkleCount; i++) {
       const sparkle = document.createElement('div');
       sparkle.className = 'magical-sparkle';
@@ -149,8 +149,9 @@ function spawnMagicalText(word, moldBounds, delay) {
       wrapper.style.left = target.x + 'px';
       wrapper.style.top = target.y + 'px';
 
-      // Spawn a second burst of sparkles for the zoom trail
-      for (let i = 0; i < 6; i++) {
+      // Spawn a second burst of sparkles for the zoom trail (fewer on mobile)
+      const zoomSparkleCount = isMobileDevice ? 2 : 6;
+      for (let i = 0; i < zoomSparkleCount; i++) {
         const sparkle = document.createElement('div');
         sparkle.className = 'magical-sparkle';
         const angle = Math.random() * Math.PI * 2;
@@ -345,15 +346,18 @@ function initializeCraftingSystems() {
   // Callback when hammer strikes anvil - spawn flying physics letters
   hammerSystem.onLetterForged = (impactX, impactY, power, strikeVx, multiplier = 1) => {
     // Spawn letters based on lettersPerClick and multiplier
-    const totalLetters = gameState.lettersPerClick * multiplier;
+    // On mobile, cap total spawned per strike to keep framerate smooth
+    const rawTotal = gameState.lettersPerClick * multiplier;
+    const totalLetters = isMobileDevice ? Math.min(rawTotal, 6) : rawTotal;
     for (let i = 0; i < totalLetters; i++) {
       // Get random Hebrew letter
       const letterChar = randomAllowedLetter();
 
-      // Slight delay between multiple letters for visual effect
+      // Slight delay between multiple letters for visual effect (shorter on mobile)
+      const delay = isMobileDevice ? i * 30 : i * 50;
       setTimeout(() => {
         hammerSystem.spawnFlyingLetter(impactX, impactY, power, strikeVx, letterChar);
-      }, i * 50);
+      }, delay);
     }
 
     // Hide hint after first strike
@@ -811,9 +815,31 @@ let cachedCanvasRect = null;
 let canvasRectAge = 0;
 const RECT_CACHE_MS = 200;   // refresh canvas rect every 200ms
 
+// ── Mobile performance helpers ──────────────────────────────
+const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+// On mobile, skip expensive collision checks every other frame
+let physicsFrameCount = 0;
+
+// Throttle mold-slot and hearth collision checks on mobile (every 3rd frame)
+const COLLISION_SKIP = isMobileDevice ? 3 : 1;
+
+// Cache letterPool element reference to avoid repeated getElementById
+let _letterPoolRef = null;
+function getLetterPool() {
+  if (!_letterPoolRef || !_letterPoolRef.isConnected) {
+    _letterPoolRef = document.getElementById('letterPool');
+  }
+  return _letterPoolRef;
+}
+
 function gameLoop(timestamp) {
-  const dt = (timestamp - lastTime) / 1000;
+  const rawDt = (timestamp - lastTime) / 1000;
+  // Clamp dt to avoid spiral-of-death on slow devices
+  const dt = Math.min(rawDt, 0.05);
   lastTime = timestamp;
+
+  physicsFrameCount++;
 
   // Update hearth
   updateHearth(dt);
@@ -827,12 +853,17 @@ function gameLoop(timestamp) {
   if (letterPhysics) {
     try {
       letterPhysics.update(dt, window.innerWidth, window.innerHeight);
-      letterPhysics.checkMoldSlots();
-      letterPhysics.checkHearth();
+
+      // On mobile, run expensive collision checks less frequently
+      if (physicsFrameCount % COLLISION_SKIP === 0) {
+        letterPhysics.checkMoldSlots();
+        letterPhysics.checkHearth();
+      }
+
       letterPhysics.checkBasket((char) => {
         // Return the letter to the basket DOM as a tile
         addLetters(1);
-        const letterPoolDiv = document.getElementById('letterPool');
+        const letterPoolDiv = getLetterPool();
         if (!letterPoolDiv) return;
         const existing = Array.from(letterPoolDiv.children).find(
           el => el.classList && el.classList.contains('letter-tile') && el.dataset.letterChar === char
@@ -854,8 +885,10 @@ function gameLoop(timestamp) {
       });
 
       // Cache canvas rect (avoid per-frame getBoundingClientRect)
+      // On mobile, refresh less frequently (400ms)
+      const rectCacheInterval = isMobileDevice ? 400 : RECT_CACHE_MS;
       canvasRectAge += dt * 1000;
-      if (!cachedCanvasRect || canvasRectAge > RECT_CACHE_MS) {
+      if (!cachedCanvasRect || canvasRectAge > rectCacheInterval) {
         if (craftingCanvasRef) cachedCanvasRect = craftingCanvasRef.getBoundingClientRect();
         canvasRectAge = 0;
       }
@@ -886,9 +919,10 @@ function gameLoop(timestamp) {
   // Update resource gain feedback
   updateResourceFeedback(dt);
 
-  // Throttle UI updates (expensive DOM reads) to ~4×/sec
+  // Throttle UI updates (expensive DOM reads) - slower on mobile (~3×/sec)
+  const uiInterval = isMobileDevice ? 0.33 : UI_INTERVAL;
   uiThrottleAcc += dt;
-  if (uiThrottleAcc >= UI_INTERVAL) {
+  if (uiThrottleAcc >= uiInterval) {
     uiThrottleAcc = 0;
     updateUI();
     updateUpgradeHeaderStats();

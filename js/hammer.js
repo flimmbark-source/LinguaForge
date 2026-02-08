@@ -90,6 +90,9 @@ export class HammerSystem {
     // Cached gradients (rebuilt on resize)
     this._cachedGradients = {};
 
+    // Mobile detection for performance tuning
+    this._isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
     // Initialize
     this.resize();
     this.setupEventListeners();
@@ -165,6 +168,10 @@ export class HammerSystem {
     this.hammer.angle = Math.PI / 2;
     this.hammer.headVx = 0;
     this.hammer.headVy = 0;
+
+    // Invalidate cached canvas rect on resize
+    this._cachedCanvasRect = null;
+    this._canvasRectAge = 0;
 
     // Rebuild cached gradients for the anvil (dimensions are stable per resize)
     this._rebuildAnvilGradients();
@@ -262,7 +269,10 @@ export class HammerSystem {
    */
 onPointerDown(e) {
   if (!this.isRunning) return;
-  const rect = this.canvas.getBoundingClientRect();
+  // Refresh cached rect on pointer down
+  this._cachedCanvasRect = this.canvas.getBoundingClientRect();
+  this._canvasRectAge = 0;
+  const rect = this._cachedCanvasRect;
   const client = e.touches ? e.touches[0] : e;
   this.input.mouseX = client.clientX - rect.left;
   this.input.mouseY = client.clientY - rect.top;
@@ -312,7 +322,12 @@ onPointerDown(e) {
    * Handle pointer move event
    */
   onPointerMove(e) {
-     const rect = this.canvas.getBoundingClientRect();
+     // Cache canvas rect to avoid layout thrashing on every pointermove
+     if (!this._cachedCanvasRect || this._canvasRectAge++ > 10) {
+       this._cachedCanvasRect = this.canvas.getBoundingClientRect();
+       this._canvasRectAge = 0;
+     }
+     const rect = this._cachedCanvasRect;
      const client = e.touches ? e.touches[0] : e;
       this.input.mouseX = client.clientX - rect.left;
       this.input.mouseY = client.clientY - rect.top;
@@ -400,7 +415,7 @@ onPointerDown(e) {
     const angularVel = (strikeVx >= 0 ? 1 : -1) * (spinBase + spinFromStrike);
 
     // Cap flying letters to prevent accumulation on mobile
-    const MAX_FLYING = this.width <= 768 ? 12 : 30;
+    const MAX_FLYING = this._isMobile ? 8 : 30;
     if (this.flyingLetters.length >= MAX_FLYING) return;
 
     this.flyingLetters.push({
@@ -428,9 +443,9 @@ onPointerDown(e) {
 spawnSparks(x, y, power, options = {}) {
   const isRip = !!options.isRip;
   // Cap sparks: limit total active to avoid buildup on mobile
-  const isMobile = this.width <= 768;
-  const MAX_SPARKS = isMobile ? 20 : 40;
-  const base = isMobile ? 4 + Math.floor(power * 2) : 8 + Math.floor(power * 4);
+  const isMobile = this._isMobile;
+  const MAX_SPARKS = isMobile ? 12 : 40;
+  const base = isMobile ? 3 + Math.floor(power * 1.5) : 8 + Math.floor(power * 4);
   const count = Math.min(base, MAX_SPARKS - this.sparks.length);
 
   for (let i = 0; i < count; i++) {

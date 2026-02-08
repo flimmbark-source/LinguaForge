@@ -3795,3 +3795,119 @@ body.book-overlay-active .magic-book {
 .sidebar-dragging .tools-sidebar-tab {
   cursor: grabbing;
 }
+
+/* ===============================================
+   MOBILE PERFORMANCE OPTIMIZATIONS
+   Reduce GPU-expensive effects on mobile devices
+   =============================================== */
+@media (max-width: 768px) {
+  /* Remove expensive backdrop-filter blur on mobile */
+  .magic-book,
+  .upgrade-modal,
+  .audio-controls-panel,
+  .upgrade-modal-content,
+  .book-interior,
+  .core-stats-float,
+  .tools-sidebar-content,
+  .mold-sidebar-content {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Simplify hearth fire filter (drop-shadow is expensive) */
+  .hearth-fire-svg {
+    filter: none;
+  }
+
+  /* Reduce hearth spark complexity */
+  .hearth-spark {
+    background: #f59e0b;
+    box-shadow: none;
+    mix-blend-mode: normal;
+  }
+
+  /* Simplify heated hearth animations — use simpler keyframes */
+  .hearth-structure.heated .hearth-fire {
+    animation: fireFlickerSimple 2s ease-in-out infinite alternate;
+  }
+
+  /* Simpler panic/fading animation on mobile */
+  .hearth-structure.fading .hearth-fire {
+    animation: fireFlickerSimple 0.5s ease-in-out infinite;
+  }
+
+  .hearth-structure.fading .hearth-fire-svg {
+    animation: none;
+    filter: none;
+  }
+
+  .hearth-structure.fading .hearth-opening {
+    animation: none;
+  }
+
+  .hearth-structure.fading .hearth-arch-top,
+  .hearth-structure.fading .hearth-mantle,
+  .hearth-structure.fading .hearth-base {
+    animation: none;
+  }
+
+  /* Reduce hearth level filter effects on mobile */
+  .hearth-structure[data-hearth-level="1"] .hearth-fire-svg,
+  .hearth-structure[data-hearth-level="2"] .hearth-fire-svg,
+  .hearth-structure[data-hearth-level="3"] .hearth-fire-svg {
+    filter: none !important;
+  }
+
+  /* Simplify magical text animations */
+  .magical-text.phase-emerge {
+    animation-duration: 0.5s;
+  }
+
+  .magical-text.phase-zoom {
+    animation-duration: 0.4s;
+  }
+
+  /* Reduce sparkle count via hiding excess with nth-child */
+  .magical-sparkle:nth-child(n+5) {
+    display: none;
+  }
+
+  /* Simplify letter basket background (reduce gradient layers) */
+  .letter-basket::before {
+    background:
+      repeating-linear-gradient(
+        45deg,
+        #b77a3a 0px,
+        #b77a3a 6px,
+        #8f5a2b 6px,
+        #8f5a2b 12px
+      );
+    background-blend-mode: normal;
+  }
+
+  /* Use will-change on animated canvases for GPU compositing */
+  #craftingCanvas,
+  #letterBlocksCanvas {
+    will-change: contents;
+  }
+
+  /* Reduce box-shadow complexity on mobile */
+  .letter-basket {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .mold-viewport {
+    box-shadow: 0 0 0 1px rgba(41, 37, 36, 0.9);
+  }
+
+  .mold-viewport .mold-list {
+    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Simple fire flicker for mobile — no filter changes, just opacity */
+@keyframes fireFlickerSimple {
+  0%   { opacity: 0.7; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.8; }
+}
