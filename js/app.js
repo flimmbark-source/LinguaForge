@@ -661,6 +661,9 @@ function setupEventHandlers() {
     };
     const stopAudioPanelPointer = (event) => {
       event.stopPropagation();
+    };
+    const stopAudioTogglePointer = (event) => {
+      event.stopPropagation();
       event.preventDefault();
     };
     const updateVolumeDisplay = (slider, valueEl) => {
@@ -677,8 +680,8 @@ function setupEventHandlers() {
 
     syncVolumeSliders();
 
-    audioToggleBtn.addEventListener('pointerdown', stopAudioPanelPointer);
-    audioToggleBtn.addEventListener('mousedown', stopAudioPanelPointer);
+    audioToggleBtn.addEventListener('pointerdown', stopAudioTogglePointer);
+    audioToggleBtn.addEventListener('mousedown', stopAudioTogglePointer);
     audioToggleBtn.addEventListener('click', (event) => {
       event.stopPropagation();
       audioControls.classList.toggle('hidden');
