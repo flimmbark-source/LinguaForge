@@ -442,15 +442,16 @@ button.secondary {
 
 .mold-viewport-wrapper {
   position: fixed;
-  left: auto;
-  right: 25px;
-  top: 290px;
-  width: calc((100% - 32px) / 3); /* same as a column / basket width */
+  left: 0;
+  right: auto;
+  top: 32%;
+  width: auto;
+  transform: translateY(-50%);
   z-index: 505;
   pointer-events: auto;
 
   display: flex;
-  flex-direction: row-reverse;
+  flex-direction: row;
   justify-content: flex-start;
   align-items: center;
 }
@@ -468,9 +469,9 @@ button.secondary {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  border-radius: 8px 0 0 8px;
+  border-radius: 0 8px 8px 0;
   border: 1px solid rgba(41, 37, 36, 0.6);
-  border-right: none;
+  border-left: none;
   cursor: pointer;
 }
 
@@ -515,8 +516,8 @@ button.secondary {
   padding: 0;
   opacity: 0;
   transition: max-width 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
-  border-radius: 8px 0 0 8px;
-  border-right: none;
+  border-radius: 0 8px 8px 0;
+  border-left: none;
   min-width: 0;
   margin: 0;
   display: flex;
@@ -528,7 +529,7 @@ button.secondary {
   padding: 6px;
   opacity: 1;
   border: 1px solid rgba(41, 37, 36, 0.8);
-  border-right: none;
+  border-left: none;
 }
 
 .mold-panel .mold-list {

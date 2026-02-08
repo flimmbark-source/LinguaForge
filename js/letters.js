@@ -26,12 +26,8 @@ function setMoldViewportHold(shouldHold) {
     _moldHoldState = {
       wasOpen: wrapper.classList.contains('open'),
     };
-    wrapper.classList.add('open');
     wrapper.dataset.dragHold = 'true';
   } else if (_moldHoldState) {
-    if (!_moldHoldState.wasOpen) {
-      wrapper.classList.remove('open');
-    }
     delete wrapper.dataset.dragHold;
     _moldHoldState = null;
   }
