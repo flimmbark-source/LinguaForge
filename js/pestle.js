@@ -200,7 +200,10 @@ export class PestleSystem {
 
   onPointerDown(e) {
     if (!this.isRunning) return;
-    const rect = this.canvas.getBoundingClientRect();
+    // Refresh cached rect on pointer down
+    this._cachedCanvasRect = this.canvas.getBoundingClientRect();
+    this._canvasRectAge = 0;
+    const rect = this._cachedCanvasRect;
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
@@ -209,7 +212,12 @@ export class PestleSystem {
 
   onPointerMove(e) {
     if (!this.isRunning) return;
-    const rect = this.canvas.getBoundingClientRect();
+    // Cache canvas rect to avoid layout thrashing on every pointermove
+    if (!this._cachedCanvasRect || this._canvasRectAge++ > 10) {
+      this._cachedCanvasRect = this.canvas.getBoundingClientRect();
+      this._canvasRectAge = 0;
+    }
+    const rect = this._cachedCanvasRect;
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
@@ -503,8 +511,8 @@ export class PestleSystem {
    */
   spawnInkDrop(x, y) {
     const isMobile = this.width <= 768;
-    const MAX_INK_DROPS = isMobile ? 15 : 30;
-    const base = isMobile ? 3 + Math.floor(Math.random() * 2) : 5 + Math.floor(Math.random() * 3);
+    const MAX_INK_DROPS = isMobile ? 8 : 30;
+    const base = isMobile ? 2 + Math.floor(Math.random() * 2) : 5 + Math.floor(Math.random() * 3);
     const burstCount = Math.min(base, MAX_INK_DROPS - this.inkDrops.length);
     for (let i = 0; i < burstCount; i++) {
       const angle = Math.random() * Math.PI * 2;
@@ -700,14 +708,20 @@ export class PestleSystem {
    */
   drawInkDrops(ctx, inkDrops) {
     ctx.save();
+    const isMobile = this.width <= 768;
     for (const d of inkDrops) {
       const t = d.age / d.life;
       const alpha = Math.max(0, 1 - t);
       const size = 2 + (1 - t) * 1.5;
       ctx.fillStyle = `rgba(139, 92, 246, ${alpha})`;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, size, 0, Math.PI * 2);
-      ctx.fill();
+      if (isMobile) {
+        // Use cheaper fillRect on mobile instead of arc
+        ctx.fillRect(d.x - size, d.y - size, size * 2, size * 2);
+      } else {
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     ctx.restore();
   }

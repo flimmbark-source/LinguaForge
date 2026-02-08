@@ -41,6 +41,9 @@ function getDefaultSparkPosition() {
   };
 }
 
+// Mobile detection for reduced spark counts
+const _isMobileHearth = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
 export function spawnHearthSpark(x, y, burstCount = 4) {
   if (!gameState.hearthUnlocked) return;
 
@@ -54,7 +57,12 @@ export function spawnHearthSpark(x, y, burstCount = 4) {
   }
 
   const container = getHearthSparkContainer();
-  const count = Math.max(1, burstCount);
+  // On mobile, reduce spark count to reduce DOM churn
+  const count = _isMobileHearth ? Math.max(1, Math.floor(burstCount * 0.5)) : Math.max(1, burstCount);
+
+  // Cap total active sparks in container to avoid DOM bloat
+  const maxSparks = _isMobileHearth ? 12 : 40;
+  if (container.childElementCount >= maxSparks) return;
 
   for (let i = 0; i < count; i += 1) {
     const spark = document.createElement('div');
@@ -75,7 +83,7 @@ export function spawnHearthSpark(x, y, burstCount = 4) {
 
     spark.addEventListener('animationend', () => {
       spark.remove();
-    });
+    }, { once: true });
 
     container.appendChild(spark);
   }

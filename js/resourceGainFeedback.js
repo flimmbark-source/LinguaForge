@@ -5,10 +5,17 @@
  * Creates floating "+X 🌟" or "+X 💧" ghosts that float up and fade out.
  */
 
+// Use CSS animations on mobile for resource ghosts to offload to compositor
+const _isMobileRF = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+// Cap concurrent ghosts on mobile to avoid DOM bloat
+const MAX_GHOSTS = _isMobileRF ? 8 : 30;
+
 export class ResourceGainFeedbackSystem {
   constructor() {
     this.ghosts = [];
     this.containerDiv = null;
+    this._useCSSAnimation = _isMobileRF;
     this.init();
   }
 
@@ -26,6 +33,23 @@ export class ResourceGainFeedbackSystem {
       z-index: 9999;
     `;
     document.body.appendChild(this.containerDiv);
+
+    // Inject CSS animation for mobile (GPU-composited, no JS per-frame updates)
+    if (this._useCSSAnimation) {
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes resourceGhostFloat {
+          0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          50% { opacity: 1; transform: translate(-50%, calc(-50% - 40px)) scale(1.15); }
+          100% { opacity: 0; transform: translate(-50%, calc(-50% - 70px)) scale(0.9); }
+        }
+        .resource-gain-ghost-css {
+          animation: resourceGhostFloat 1.2s ease-out forwards;
+          will-change: transform, opacity;
+        }
+      `;
+      document.head.appendChild(style);
+    }
   }
 
   /**
@@ -36,23 +60,29 @@ export class ResourceGainFeedbackSystem {
    * @param {'renown'|'ink'} type - Type of resource
    */
   spawnGain(x, y, amount, type) {
+    // Cap ghosts to prevent DOM bloat
+    if (this.ghosts.length >= MAX_GHOSTS) return;
+
     const icon = type === 'renown' ? '⭐' : '💧';
     const color = type === 'renown' ? '#fbbf24' : '#3b82f6'; // Yellow for renown, blue for ink
 
     const ghostEl = document.createElement('div');
-    ghostEl.className = 'resource-gain-ghost';
+    ghostEl.className = this._useCSSAnimation ? 'resource-gain-ghost resource-gain-ghost-css' : 'resource-gain-ghost';
     ghostEl.textContent = `+${amount} ${icon}`;
+
+    // Simplified text-shadow on mobile for better perf
+    const shadow = this._useCSSAnimation
+      ? `0 1px 3px rgba(0,0,0,0.9)`
+      : `0 0 10px rgba(0, 0, 0, 0.8), 0 0 20px ${color}40, 2px 2px 4px rgba(0, 0, 0, 0.9)`;
+
     ghostEl.style.cssText = `
       position: absolute;
       left: ${x}px;
       top: ${y}px;
       color: ${color};
-      font-size: 24px;
+      font-size: ${this._useCSSAnimation ? '18px' : '24px'};
       font-weight: bold;
-      text-shadow:
-        0 0 10px rgba(0, 0, 0, 0.8),
-        0 0 20px ${color}40,
-        2px 2px 4px rgba(0, 0, 0, 0.9);
+      text-shadow: ${shadow};
       pointer-events: none;
       white-space: nowrap;
       transform: translate(-50%, -50%);
@@ -61,15 +91,23 @@ export class ResourceGainFeedbackSystem {
 
     this.containerDiv.appendChild(ghostEl);
 
-    const ghost = {
-      el: ghostEl,
-      startY: y,
-      age: 0,
-      lifetime: 1.5, // 1.5 seconds total
-      floatDistance: 80, // Float up 80px
-    };
-
-    this.ghosts.push(ghost);
+    if (this._useCSSAnimation) {
+      // Let CSS handle animation; auto-remove on animationend
+      ghostEl.addEventListener('animationend', () => {
+        ghostEl.remove();
+      }, { once: true });
+      // Track for cleanup
+      this.ghosts.push({ el: ghostEl, age: 0, lifetime: 1.2, startY: y, floatDistance: 70 });
+    } else {
+      const ghost = {
+        el: ghostEl,
+        startY: y,
+        age: 0,
+        lifetime: 1.5, // 1.5 seconds total
+        floatDistance: 80, // Float up 80px
+      };
+      this.ghosts.push(ghost);
+    }
   }
 
   /**
@@ -77,7 +115,21 @@ export class ResourceGainFeedbackSystem {
    * @param {number} dt - Delta time in seconds
    */
   update(dt) {
-    // Update each ghost
+    if (this._useCSSAnimation) {
+      // CSS handles animation; just track age for cleanup
+      this.ghosts = this.ghosts.filter(ghost => {
+        ghost.age += dt;
+        if (ghost.age >= ghost.lifetime + 0.5) {
+          // Safety cleanup if animationend didn't fire
+          if (ghost.el.parentNode) ghost.el.remove();
+          return false;
+        }
+        return true;
+      });
+      return;
+    }
+
+    // Desktop: JS-driven animation
     this.ghosts.forEach(ghost => {
       ghost.age += dt;
 
