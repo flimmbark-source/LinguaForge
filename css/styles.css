@@ -12,6 +12,10 @@
   --bg-offset-x: 0px;
   --bg-offset-y: 0px;
   --bg-pos-y: 50%;
+  --bg-origin-x: 0px;
+  --bg-origin-y: 0px;
+  --bg-display-width: 0px;
+  --bg-display-height: 0px;
   --hearth-x: 50%;
   --hearth-y: 50%;
   --hearth-size: 220px;
@@ -54,7 +58,8 @@ body {
   body {
     /* Keep image anchored toward the top in portrait phones/tablets */
     --bg-pos-y: 0%;
-    background-size: cover;
+    background-position: var(--bg-origin-x) var(--bg-origin-y);
+    background-size: var(--bg-display-width) var(--bg-display-height);
   }
 }
 
@@ -2309,6 +2314,11 @@ button.secondary {
     width: 50px;
     height: 50px;
     margin-bottom: 0;
+  }
+
+  .hearth-fire::before {
+    left: calc(50% - 25px);
+    transform: translate(-50%, 25px);
   }
 
   .hearth-instructions {

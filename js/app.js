@@ -163,23 +163,32 @@ function updateAnchoredUI() {
   bgOffsetX = clampBackgroundOffset(metrics, bgOffsetX);
   applyBackgroundOffsets();
 
+  const updatedMetrics = getBackgroundMetrics();
+
+  if (isPortraitBackground()) {
+    root.style.setProperty('--bg-origin-x', `${updatedMetrics.originX}px`);
+    root.style.setProperty('--bg-origin-y', `${updatedMetrics.originY}px`);
+    root.style.setProperty('--bg-display-width', `${updatedMetrics.displayWidth}px`);
+    root.style.setProperty('--bg-display-height', `${updatedMetrics.displayHeight}px`);
+  }
+
   if (!isMobileBackground()) return;
 
-  const hearthX = metrics.originX + HEARTH_ANCHOR.x * metrics.scale;
-  const hearthY = metrics.originY + HEARTH_ANCHOR.y * metrics.scale;
-  const hearthSize = HEARTH_ANCHOR.size * metrics.scale;
+  const hearthX = updatedMetrics.originX + HEARTH_ANCHOR.x * updatedMetrics.scale;
+  const hearthY = updatedMetrics.originY + HEARTH_ANCHOR.y * updatedMetrics.scale;
+  const hearthSize = HEARTH_ANCHOR.size * updatedMetrics.scale;
   root.style.setProperty('--hearth-x', `${hearthX}px`);
   root.style.setProperty('--hearth-y', `${hearthY}px`);
   root.style.setProperty('--hearth-size', `${hearthSize}px`);
 
   if (hammerSystem && typeof hammerSystem.setAnvilAnchor === 'function') {
-    const anvilX = metrics.originX + ANVIL_ANCHOR.x * metrics.scale;
-    const anvilY = metrics.originY + ANVIL_ANCHOR.y * metrics.scale;
+    const anvilX = updatedMetrics.originX + ANVIL_ANCHOR.x * updatedMetrics.scale;
+    const anvilY = updatedMetrics.originY + ANVIL_ANCHOR.y * updatedMetrics.scale;
     hammerSystem.setAnvilAnchor({
       x: anvilX,
       y: anvilY,
-      width: ANVIL_ANCHOR.width * metrics.scale,
-      height: ANVIL_ANCHOR.height * metrics.scale
+      width: ANVIL_ANCHOR.width * updatedMetrics.scale,
+      height: ANVIL_ANCHOR.height * updatedMetrics.scale
     });
     hammerSystem.setUseBackgroundAnvil(true);
   }
@@ -249,9 +258,22 @@ function initCanvasScreenLock() {
   if (!craftingCanvasRef || !letterBlocksCanvasRef) return;
   const lockOn = () => setScreenLocked(true);
   const lockOff = () => setScreenLocked(false);
+  const lockBackgroundOn = () => {
+    if (window.setBackgroundDragLocked) {
+      window.setBackgroundDragLocked(true);
+    }
+  };
+  const lockBackgroundOff = () => {
+    if (window.setBackgroundDragLocked) {
+      window.setBackgroundDragLocked(false);
+    }
+  };
   letterBlocksCanvasRef.addEventListener('pointerdown', lockOn);
   letterBlocksCanvasRef.addEventListener('pointerup', lockOff);
   letterBlocksCanvasRef.addEventListener('pointercancel', lockOff);
+  letterBlocksCanvasRef.addEventListener('pointerdown', lockBackgroundOn);
+  letterBlocksCanvasRef.addEventListener('pointerup', lockBackgroundOff);
+  letterBlocksCanvasRef.addEventListener('pointercancel', lockBackgroundOff);
   craftingCanvasRef.addEventListener('pointerdown', lockOn);
   craftingCanvasRef.addEventListener('pointerup', lockOff);
   craftingCanvasRef.addEventListener('pointercancel', lockOff);
