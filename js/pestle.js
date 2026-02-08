@@ -10,9 +10,9 @@ import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } 
 
 const MOBILE_BREAKPOINT = 900;
 function setScreenLocked(locked) {
-  if (window.innerWidth > MOBILE_BREAKPOINT) return;
-  if (!document.body) return;
-  document.body.classList.toggle('screen-locked', locked);
+  if (window.setScreenLocked) {
+    window.setScreenLocked(locked);
+  }
 }
 
 export class PestleSystem {

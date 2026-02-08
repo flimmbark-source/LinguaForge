@@ -31,6 +31,7 @@ let letterPhysics = null;
 let craftingCanvasRef = null;
 let letterBlocksCanvasRef = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
+let screenLockCount = 0;
 
 const BACKGROUND_IMAGE = {
   width: 1536,
@@ -71,6 +72,21 @@ function handleMoldSlotFilled(slotEl) {
 
   updateUI();
 }
+
+function setScreenLocked(locked) {
+  if (window.innerWidth > 900) return;
+  if (window.innerHeight <= window.innerWidth) return;
+  const body = document.body;
+  if (!body) return;
+  if (locked) {
+    screenLockCount += 1;
+  } else {
+    screenLockCount = Math.max(0, screenLockCount - 1);
+  }
+  body.classList.toggle('screen-locked', screenLockCount > 0);
+}
+
+window.setScreenLocked = setScreenLocked;
 
 function isMobileBackground() {
   return window.innerWidth <= 900;
@@ -203,6 +219,18 @@ function initBackgroundDrag() {
   window.addEventListener('resize', refreshBackgroundState);
   window.addEventListener('orientationchange', refreshBackgroundState);
   refreshBackgroundState();
+}
+
+function initCanvasScreenLock() {
+  if (!craftingCanvasRef || !letterBlocksCanvasRef) return;
+  const lockOn = () => setScreenLocked(true);
+  const lockOff = () => setScreenLocked(false);
+  letterBlocksCanvasRef.addEventListener('pointerdown', lockOn);
+  letterBlocksCanvasRef.addEventListener('pointerup', lockOff);
+  letterBlocksCanvasRef.addEventListener('pointercancel', lockOff);
+  craftingCanvasRef.addEventListener('pointerdown', lockOn);
+  craftingCanvasRef.addEventListener('pointerup', lockOff);
+  craftingCanvasRef.addEventListener('pointercancel', lockOff);
 }
 
 function resizeLetterBlocksCanvas() {
@@ -376,6 +404,7 @@ function initializeGame() {
 
   // Initialize crafting systems
   initializeCraftingSystems();
+  initCanvasScreenLock();
 
   // Initialize hearth system
   initializeHearth();

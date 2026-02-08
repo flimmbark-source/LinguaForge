@@ -33,9 +33,9 @@ export class ChipSystem {
     this.dragStartTime = 0;
     this.hasMoved = false;
     this.setScreenLocked = (locked) => {
-      if (window.innerWidth > 900) return;
-      if (!document.body) return;
-      document.body.classList.toggle('screen-locked', locked);
+      if (window.setScreenLocked) {
+        window.setScreenLocked(locked);
+      }
     };
 
     // Callbacks

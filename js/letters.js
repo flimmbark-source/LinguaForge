@@ -13,9 +13,9 @@ let _mouseHist = [];
 let _moldHoldState = null;
 
 function setScreenLocked(locked) {
-  if (window.innerWidth > 900) return;
-  if (!document.body) return;
-  document.body.classList.toggle('screen-locked', locked);
+  if (window.setScreenLocked) {
+    window.setScreenLocked(locked);
+  }
 }
 
 function setMoldViewportHold(shouldHold) {
