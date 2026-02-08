@@ -213,20 +213,44 @@ export class HammerSystem {
   applyAnvilAnchor() {
     if (!this.anvilAnchor || !this._isMobile) return;
     const canvasRect = this.canvas.getBoundingClientRect();
+
+    // Remember old anvil center so we can compute the delta
+    const oldCenterX = this.anvil.x + this.anvil.width / 2;
+    const oldCenterY = this.anvil.y + this.anvil.height / 2;
+
     this.anvil.width = this.anvilAnchor.width;
     this.anvil.height = this.anvilAnchor.height;
     this.anvil.x = this.anvilAnchor.x - canvasRect.left - this.anvil.width / 2;
     this.anvil.y = this.anvilAnchor.y - canvasRect.top - this.anvil.height / 2;
 
+    const newCenterX = this.anvil.x + this.anvil.width / 2;
+    const newCenterY = this.anvil.y + this.anvil.height / 2;
+
     const isMobileLandscape = window.innerWidth <= MOBILE_BREAKPOINT && window.innerWidth > window.innerHeight;
     const hammerScale = isMobileLandscape ? 0.75 : 1;
     const pivotClearance = (this._isMobile ? 100 : 140) * hammerScale;
-    this.hammer.pivotX = this.anvil.x + this.anvil.width / 2;
-    this.hammer.pivotY = this.anvil.y - pivotClearance;
-    this.hammer.headX = this.hammer.pivotX;
-    this.hammer.headY = this.hammer.pivotY + this.hammer.length;
-    this.hammer.prevHeadX = this.hammer.headX;
-    this.hammer.prevHeadY = this.hammer.headY;
+
+    if (this._anvilAnchorInitialized) {
+      // Subsequent updates: translate hammer by the anvil's movement delta
+      // so the hammer stays in place relative to the scrolling background
+      const dx = newCenterX - oldCenterX;
+      const dy = newCenterY - oldCenterY;
+      this.hammer.pivotX += dx;
+      this.hammer.pivotY += dy;
+      this.hammer.headX += dx;
+      this.hammer.headY += dy;
+      this.hammer.prevHeadX += dx;
+      this.hammer.prevHeadY += dy;
+    } else {
+      // First call: place hammer in default rest position above the anvil
+      this._anvilAnchorInitialized = true;
+      this.hammer.pivotX = this.anvil.x + this.anvil.width / 2;
+      this.hammer.pivotY = this.anvil.y - pivotClearance;
+      this.hammer.headX = this.hammer.pivotX;
+      this.hammer.headY = this.hammer.pivotY + this.hammer.length;
+      this.hammer.prevHeadX = this.hammer.headX;
+      this.hammer.prevHeadY = this.hammer.headY;
+    }
   }
 
   /** Pre-build anvil gradients so we don't recreate them every frame */

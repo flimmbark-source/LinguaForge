@@ -3163,26 +3163,13 @@ button.secondary {
     height: 130px;
   }
 
-  /* Hearth: compact */
-  .hearth-wrapper {
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
-    width: calc(100% - 32px);
-    max-width: 280px;
-    top: auto;
-    bottom: calc(var(--basket-height) + 8px);
-  }
-
-  .hearth-structure {
-    width: 100%;
-    max-width: 280px;
-  }
+  /* Hearth: keep background-anchored positioning from 768px portrait query,
+     only adjust fire/opening sizes for small screens */
 
   .hearth-opening {
     /* Fixed height so hearth doesn't change size when fire appears/disappears */
-    height: 45px;
-    min-height: unset;
+    height: auto;
+    min-height: 0;
   }
 
   .hearth-fire {
@@ -3394,10 +3381,6 @@ button.secondary {
   .scribe-block {
     width: 22px;
     height: 22px;
-  }
-
-  .hearth-wrapper {
-    width: 200px;
   }
 
   .mold-viewport-wrapper .mold-viewport {
