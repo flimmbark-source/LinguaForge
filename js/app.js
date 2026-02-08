@@ -32,6 +32,7 @@ let craftingCanvasRef = null;
 let letterBlocksCanvasRef = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
 let screenLockCount = 0;
+let backgroundDragLockCount = 0;
 
 const BACKGROUND_IMAGE = {
   width: 1536,
@@ -87,6 +88,23 @@ function setScreenLocked(locked) {
 }
 
 window.setScreenLocked = setScreenLocked;
+
+function setBackgroundDragLocked(locked) {
+  if (!isPortraitBackground()) return;
+  const body = document.body;
+  if (!body) return;
+  if (locked) {
+    backgroundDragLockCount += 1;
+  } else {
+    backgroundDragLockCount = Math.max(0, backgroundDragLockCount - 1);
+  }
+  if (backgroundDragLockCount > 0 && bgDragging) {
+    bgDragging = false;
+    body.classList.remove('background-dragging');
+  }
+}
+
+window.setBackgroundDragLocked = setBackgroundDragLocked;
 
 function isMobileBackground() {
   return window.innerWidth <= 900;
@@ -174,6 +192,7 @@ function initBackgroundDrag() {
   function shouldHandleBackgroundDrag(target) {
     if (!isPortraitBackground()) return false;
     if (body.classList.contains('screen-locked')) return false;
+    if (backgroundDragLockCount > 0) return false;
     return !target.closest(
       '.tools-sidebar, .mold-viewport-wrapper, .letter-basket, .magic-book, .upgrade-modal, .workers-panel, .stats-wrap, .upgrades-btn, .crafting-forge, .letter-block-layer'
     );
@@ -190,6 +209,11 @@ function initBackgroundDrag() {
 
   function pointerMove(e) {
     if (!bgDragging) return;
+    if (backgroundDragLockCount > 0) {
+      bgDragging = false;
+      body.classList.remove('background-dragging');
+      return;
+    }
     const metrics = getBackgroundMetrics();
     const nextOffset = bgDragStartOffsetX + (e.clientX - bgDragStartX);
     bgOffsetX = clampBackgroundOffset(metrics, nextOffset);

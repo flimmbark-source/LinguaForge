@@ -2270,23 +2270,39 @@ button.secondary {
 
   /* ─ Hearth: tight against basket ─ */
   .hearth-wrapper {
-    left: 50%;
+    left: var(--hearth-x);
+    top: var(--hearth-y);
     right: auto;
-    transform: translateX(-50%);
-    bottom: calc(var(--basket-height) + 6px);
-    top: auto;
-    width: calc(100% - 32px);
-    max-width: 320px;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    width: var(--hearth-size);
+    max-width: none;
   }
 
   .hearth-structure {
     width: 100%;
-    max-width: 320px;
+    height: var(--hearth-size);
+    max-width: none;
+  }
+
+  .hearth-mantle,
+  .hearth-body,
+  .hearth-arch,
+  .hearth-arch-left,
+  .hearth-arch-right,
+  .hearth-arch-top,
+  .hearth-opening,
+  .hearth-back-wall,
+  .hearth-floor,
+  .hearth-base {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
   .hearth-opening {
-    height: 50px;
-    min-height: unset;
+    height: auto;
+    min-height: 0;
   }
 
   .hearth-fire {
@@ -2299,16 +2315,11 @@ button.secondary {
     display: none;
   }
 
-  .hearth-mantle {
-    height: 12px;
-  }
-
-  .hearth-base {
-    height: 16px;
-  }
-
+  .hearth-mantle,
+  .hearth-base,
   .hearth-body {
-    padding: 8px;
+    height: auto;
+    padding: 0;
   }
 
   /* ─ Letter basket: full width at bottom ─ */

@@ -15,6 +15,12 @@ function setScreenLocked(locked) {
   }
 }
 
+function setBackgroundDragLocked(locked) {
+  if (window.setBackgroundDragLocked) {
+    window.setBackgroundDragLocked(locked);
+  }
+}
+
 export class HammerSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -357,6 +363,7 @@ onPointerDown(e) {
   hammer.pivotX = this.input.mouseX;
   hammer.pivotY = this.input.mouseY;
   setScreenLocked(true);
+  setBackgroundDragLocked(true);
 }
 
 
@@ -400,6 +407,7 @@ onPointerDown(e) {
         this.input.isDown = false;
         this.hammer.isHeld = false;
         setScreenLocked(false);
+        setBackgroundDragLocked(false);
         this.onPutAway();
         return;
       }
@@ -408,6 +416,7 @@ onPointerDown(e) {
     this.input.isDown = false;
     this.hammer.isHeld = false;
     setScreenLocked(false);
+    setBackgroundDragLocked(false);
   }
 
   /**

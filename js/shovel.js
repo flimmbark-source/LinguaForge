@@ -17,6 +17,12 @@ function setScreenLocked(locked) {
   }
 }
 
+function setBackgroundDragLocked(locked) {
+  if (window.setBackgroundDragLocked) {
+    window.setBackgroundDragLocked(locked);
+  }
+}
+
 function getLetterFromTile(tile) {
   if (!tile) return '';
 
@@ -184,6 +190,7 @@ resize() {
       this.shovel.isHeld = true;
       if (e.cancelable) e.preventDefault();
       setScreenLocked(true);
+      setBackgroundDragLocked(true);
     }
     // Else: ignore clicks not on shovel
   }
@@ -219,11 +226,13 @@ resize() {
       this.shovel.isHeld = false;
       cleanupToolDragSidebar();
       setScreenLocked(false);
+      setBackgroundDragLocked(false);
       this.onPutAway();
       return;
     }
     cleanupToolDragSidebar();
     setScreenLocked(false);
+    setBackgroundDragLocked(false);
 
     // on release, drop collected letters into hearth if over hearth, else return to basket
     const { bounds: headBounds } = this.computeHeadGeometry();
