@@ -5,7 +5,7 @@
 
 import { getAllowedLetters, INK_PER_LETTER } from './config.js?v=9';
 import { gameState, addLetters, addInk, getNextLetterId } from './state.js?v=9';
-import { canPlaceInHearth, heatHearth } from './RuneHearth.js?v=9';
+import { canPlaceInHearth, heatHearth, spawnHearthSpark } from './RuneHearth.js?v=9';
 
 // ─── Physics-based letter throw ──────────────────────────────
 let _heldLetter = null;
@@ -191,8 +191,10 @@ export function feedLetterToHearth(tile) {
     console.log('You cannot place letters in the hearth while it is off.');
     return false;
   }
+  const tileRect = tile.getBoundingClientRect();
   consumeLetterTile(tile);
   heatHearth(1); // Heat hearth for 5 seconds per letter
+  spawnHearthSpark(tileRect.left + tileRect.width / 2, tileRect.top + tileRect.height / 2, 5);
   return true;
 }
 

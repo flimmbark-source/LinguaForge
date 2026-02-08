@@ -5,7 +5,7 @@
  */
 
 import { gameState } from './state.js?v=9';
-import { canPlaceInHearth, heatHearth } from './RuneHearth.js?v=9';
+import { canPlaceInHearth, heatHearth, spawnHearthSpark } from './RuneHearth.js?v=9';
 
 // ─── Physics constants ───────────────────────────────────────
 const GRAVITY        = 2000;   // px/s²
@@ -203,6 +203,7 @@ export class LetterPhysicsSystem {
       if (l.x >= hr.left && l.x <= hr.right && l.y >= hr.top && l.y <= hr.bottom) {
         l.consumed = true;
         heatHearth(1);
+        spawnHearthSpark(l.x, l.y, 4);
       }
     }
   }

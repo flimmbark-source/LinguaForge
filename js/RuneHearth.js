@@ -18,6 +18,68 @@ export const hearthState = {
 };
 
 let lastForgeEnabledState = null;
+let hearthSparkContainer = null;
+
+function getHearthSparkContainer() {
+  if (hearthSparkContainer && hearthSparkContainer.isConnected) {
+    return hearthSparkContainer;
+  }
+
+  hearthSparkContainer = document.createElement('div');
+  hearthSparkContainer.id = 'hearth-spark-container';
+  document.body.appendChild(hearthSparkContainer);
+  return hearthSparkContainer;
+}
+
+function getDefaultSparkPosition() {
+  const hearthDiv = document.getElementById('hearth');
+  if (!hearthDiv) return null;
+  const rect = hearthDiv.getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
+}
+
+export function spawnHearthSpark(x, y, burstCount = 4) {
+  if (!gameState.hearthUnlocked) return;
+
+  let sparkX = x;
+  let sparkY = y;
+  if (sparkX == null || sparkY == null) {
+    const fallback = getDefaultSparkPosition();
+    if (!fallback) return;
+    sparkX = fallback.x;
+    sparkY = fallback.y;
+  }
+
+  const container = getHearthSparkContainer();
+  const count = Math.max(1, burstCount);
+
+  for (let i = 0; i < count; i += 1) {
+    const spark = document.createElement('div');
+    spark.className = 'hearth-spark';
+
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 12 + Math.random() * 20;
+    const dx = Math.cos(angle) * distance;
+    const dy = Math.sin(angle) * distance - 12;
+    const scale = 0.7 + Math.random() * 0.6;
+
+    spark.style.left = `${sparkX}px`;
+    spark.style.top = `${sparkY}px`;
+    spark.style.setProperty('--spark-x', `${dx}px`);
+    spark.style.setProperty('--spark-y', `${dy}px`);
+    spark.style.setProperty('--spark-scale', scale.toFixed(2));
+    spark.style.animationDelay = `${Math.random() * 0.08}s`;
+
+    spark.addEventListener('animationend', () => {
+      spark.remove();
+    });
+
+    container.appendChild(spark);
+  }
+}
 
 /**
  * Heat up the hearth when letters are placed
