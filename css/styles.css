@@ -2275,8 +2275,8 @@ button.secondary {
 
   /* ─ Hearth: tight against basket ─ */
   .hearth-wrapper {
-    left: var(--hearth-x);
-    top: var(--hearth-y);
+    left: calc(var(--hearth-x) - 30px);
+    top: calc(var(--hearth-y) + 27px);
     right: auto;
     bottom: auto;
     transform: translate(-50%, -50%);
@@ -2317,8 +2317,8 @@ button.secondary {
   }
 
   .hearth-fire::before {
-    left: calc(50% - 25px);
-    transform: translate(-50%, 25px);
+    left: 50%;
+    transform: -50%;
   }
 
   .hearth-instructions {
