@@ -161,7 +161,8 @@ export class PestleSystem {
     const cx = x1 + dx * t;
     const cy = y1 + dy * t;
     const dist = Math.hypot(px - cx, py - cy);
-    return dist < 40;
+    const grabDist = this.width <= 768 ? 25 : 40;
+    return dist < grabDist;
   }
 
   /**

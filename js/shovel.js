@@ -155,8 +155,8 @@ resize() {
     const headW = 48;
     const headH = 148;
 
-    // Generous padding so players can grab near the edges
-    const PAD = 26;
+    // Padding for grab area — tighter on mobile
+    const PAD = this.width <= 768 ? 14 : 26;
 
     const withinHandle =
       localX > -handleW / 2 - PAD &&

@@ -253,7 +253,8 @@ export class HammerSystem {
     const cx = x1 + dx * t;
     const cy = y1 + dy * t;
     const dist = Math.hypot(px - cx, py - cy);
-    return dist < 140;
+    const grabDist = this.width <= 768 ? 70 : 140;
+    return dist < grabDist;
   }
 
   /**
