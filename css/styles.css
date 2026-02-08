@@ -1913,8 +1913,9 @@ button.secondary {
   }
 }
 
-/* ── Mobile landscape layout (≤768px) ── */
-@media (max-width: 768px) and (orientation: landscape) {
+/* ── Mobile landscape layout (≤768px or short-height) ── */
+@media (max-width: 768px) and (orientation: landscape),
+  (max-height: 540px) and (orientation: landscape) {
   :root {
     --basket-height: 50px;
   }
@@ -1949,14 +1950,18 @@ button.secondary {
 
   .audio-toggle-btn {
     top: 6px;
-    right: 74px;
+    right: 120px;
     padding: 4px 6px;
   }
 
   .audio-controls-panel {
     top: 44px;
-    right: 6px;
+    right: 120px;
     width: min(200px, 60vw);
+  }
+
+  .fullscreen-toggle-btn {
+    display: inline-flex;
   }
 
   .upgrades-btn-icon {
