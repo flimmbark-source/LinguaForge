@@ -1286,8 +1286,11 @@ button.secondary {
 .fullscreen-toggle-btn {
   display: none;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 0;
+  padding: 6px;
+  width: 32px;
+  height: 32px;
+  justify-content: center;
   border-radius: 10px;
   border: 1px solid rgba(250, 250, 250, 0.5);
   background: rgba(15, 23, 42, 0.7);
@@ -1944,6 +1947,18 @@ button.secondary {
     gap: 4px;
   }
 
+  .audio-toggle-btn {
+    top: 6px;
+    right: 74px;
+    padding: 4px 6px;
+  }
+
+  .audio-controls-panel {
+    top: 44px;
+    right: 6px;
+    width: min(200px, 60vw);
+  }
+
   .upgrades-btn-icon {
     font-size: 12px;
   }
@@ -2094,7 +2109,7 @@ button.secondary {
     left: 50%;
     right: auto;
     transform: translateX(-50%);
-    bottom: var(--basket-height);
+    bottom: calc(var(--basket-height) + 6px);
     top: auto;
     width: calc(100% - 32px);
     max-width: 320px;
@@ -2234,7 +2249,7 @@ button.secondary {
     position: fixed;
     left: 6px;
     top: auto;
-    bottom: calc(var(--basket-height) + 8px);
+    bottom: calc(var(--basket-height) + 12px);
     right: auto;
     width: 130px;
     min-width: 110px;
@@ -2464,6 +2479,12 @@ button.secondary {
     padding: 4px 8px;
   }
 
+  .audio-controls-panel {
+    top: 48px;
+    right: 110px;
+    width: min(220px, 78vw);
+  }
+
   .audio-toggle-icon {
     font-size: 14px;
   }
@@ -2617,8 +2638,8 @@ button.secondary {
     right: auto;
     transform: translateX(-50%);
     /* Anvil bottom is ~160px from bottom; place hearth just below it */
-    bottom: auto;
-    top: calc(100vh - 164px);
+    bottom: calc(var(--basket-height) + 10px);
+    top: auto;
     width: calc(100% - 32px);
     max-width: 320px;
   }
@@ -2727,7 +2748,7 @@ button.secondary {
   }
 
   .mold-viewport-wrapper.open .mold-panel {
-    max-width: 220px;
+    max-width: calc(100vw - 56px);
     padding: 8px;
     opacity: 1;
     border: 1px solid rgba(107, 96, 80, 0.3);
@@ -2735,7 +2756,7 @@ button.secondary {
   }
 
   .mold-viewport-wrapper .mold-viewport {
-    width: 200px;
+    width: min(100vw - 64px, 340px);
   }
 
   /* ─ Workers panel: below upgrades btn with proper spacing ─ */
@@ -2949,7 +2970,8 @@ button.secondary {
     transform: translateX(-50%);
     width: calc(100% - 32px);
     max-width: 280px;
-    top: calc(100vh - 164px);
+    top: auto;
+    bottom: calc(var(--basket-height) + 8px);
   }
 
   .hearth-structure {
@@ -2993,11 +3015,11 @@ button.secondary {
 
   /* Mold: smaller */
   .mold-viewport-wrapper .mold-viewport {
-    width: 170px;
+    width: min(100vw - 64px, 300px);
   }
 
   .mold-viewport-wrapper.open .mold-panel {
-    max-width: 190px;
+    max-width: calc(100vw - 56px);
   }
 
   /* Workers: compact */
@@ -3179,7 +3201,7 @@ button.secondary {
   }
 
   .mold-viewport-wrapper .mold-viewport {
-    width: 170px;
+    width: min(100vw - 64px, 260px);
   }
 }
 

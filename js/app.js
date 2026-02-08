@@ -721,16 +721,12 @@ function setupEventHandlers() {
   // Fullscreen toggle (mobile)
   const fullscreenToggleBtn = document.getElementById('fullscreenToggleBtn');
   if (fullscreenToggleBtn) {
-    const labelEl = fullscreenToggleBtn.querySelector('.fullscreen-toggle-label');
     const iconEl = fullscreenToggleBtn.querySelector('.fullscreen-toggle-icon');
     const supportsFullscreen = !!document.documentElement.requestFullscreen && !!document.exitFullscreen;
 
     const updateFullscreenLabel = () => {
       const isFullscreen = !!document.fullscreenElement;
       fullscreenToggleBtn.classList.toggle('is-active', isFullscreen);
-      if (labelEl) {
-        labelEl.textContent = isFullscreen ? 'Exit' : 'Fullscreen';
-      }
       if (iconEl) {
         iconEl.textContent = isFullscreen ? '⤢' : '⛶';
       }
@@ -739,9 +735,6 @@ function setupEventHandlers() {
     if (!supportsFullscreen) {
       fullscreenToggleBtn.disabled = true;
       fullscreenToggleBtn.classList.add('disabled');
-      if (labelEl) {
-        labelEl.textContent = 'Fullscreen';
-      }
     } else {
       fullscreenToggleBtn.addEventListener('click', async () => {
         try {
