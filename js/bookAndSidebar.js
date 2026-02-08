@@ -500,6 +500,75 @@ function makeVerticallyDraggable(container, handle, opts = {}) {
 }
 
 /**
+ * Make a fixed-position element draggable in both axes by its handle.
+ * Updates left/top and clears right/bottom so it can move freely.
+ */
+function makeFreeDraggable(container, handle) {
+  if (!container || !handle) return;
+  let dragging = false;
+  let startX = 0;
+  let startY = 0;
+  let startLeft = 0;
+  let startTop = 0;
+  let moved = false;
+  let width = 0;
+  let height = 0;
+  const DRAG_THRESHOLD = 6;
+
+  function pointerDown(e) {
+    if (isMobileScreen()) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const rect = container.getBoundingClientRect();
+    dragging = true;
+    moved = false;
+    startX = clientX;
+    startY = clientY;
+    startLeft = rect.left;
+    startTop = rect.top;
+    width = rect.width;
+    height = rect.height;
+    container.classList.add('floating-dragging');
+    container.style.left = `${rect.left}px`;
+    container.style.top = `${rect.top}px`;
+    container.style.right = 'auto';
+    container.style.bottom = 'auto';
+    container.style.transform = 'none';
+    if (e.cancelable) e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function pointerMove(e) {
+    if (!dragging) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+    if (!moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    moved = true;
+    const maxLeft = window.innerWidth - width - 8;
+    const maxTop = window.innerHeight - height - 8;
+    const nextLeft = Math.max(8, Math.min(maxLeft, startLeft + dx));
+    const nextTop = Math.max(8, Math.min(maxTop, startTop + dy));
+    container.style.left = `${nextLeft}px`;
+    container.style.top = `${nextTop}px`;
+  }
+
+  function pointerUp() {
+    if (!dragging) return;
+    dragging = false;
+    container.classList.remove('floating-dragging');
+  }
+
+  handle.addEventListener('mousedown', pointerDown);
+  document.addEventListener('mousemove', pointerMove);
+  document.addEventListener('mouseup', pointerUp);
+  handle.addEventListener('touchstart', pointerDown, { passive: false });
+  document.addEventListener('touchmove', pointerMove, { passive: false });
+  document.addEventListener('touchend', pointerUp);
+}
+
+/**
  * Initialize the mold viewport tab for mobile: tap to toggle open/closed
  * and drag to reposition vertically.
  */
@@ -521,6 +590,20 @@ export function initMoldSidebarTab() {
   wrapper.addEventListener('mousedown', (e) => {
     e.stopPropagation();
   });
+}
+
+/**
+ * Initialize draggable behavior for desktop-floating panels.
+ */
+export function initFloatingPanels() {
+  if (isMobileScreen()) return;
+  const moldWrapper = document.querySelector('.mold-viewport-wrapper');
+  const moldTab = moldWrapper ? moldWrapper.querySelector('.mold-sidebar-tab') : null;
+  makeFreeDraggable(moldWrapper, moldTab);
+
+  const letterBasket = document.querySelector('.letter-basket');
+  const basketHandle = letterBasket ? letterBasket.querySelector('.letter-basket-header') : null;
+  makeFreeDraggable(letterBasket, basketHandle);
 }
 
 /**

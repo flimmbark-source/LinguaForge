@@ -213,7 +213,8 @@ button.secondary {
 
 .letter-basket {
   position: fixed;
-  left: 25px;
+  left: auto;
+  right: 25px;
   bottom: 55px;
   width: calc((100% - 32px) / 3);
   min-width: 280px;
@@ -306,7 +307,8 @@ button.secondary {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: grab;
 }
 
 .basket-title {
@@ -356,12 +358,43 @@ button.secondary {
 /* Hearth Wrapper - Fixed at bottom center */
 .hearth-wrapper {
   position: fixed;
-  left: 50%;
-  bottom: 16px;
+  left: calc(50% + 300px);
+  bottom: calc(16px + 210px);
   transform: translateX(-50%);
   z-index: 100;
   max-width: 400px;
   width: calc(100% - 32px);
+}
+
+@media (min-width: 769px) {
+  .hearth-wrapper {
+    width: 220px;
+    max-width: none;
+  }
+
+  .hearth-structure {
+    width: 220px;
+    height: 220px;
+  }
+
+  .hearth-mantle,
+  .hearth-body,
+  .hearth-arch,
+  .hearth-arch-left,
+  .hearth-arch-right,
+  .hearth-arch-top,
+  .hearth-opening,
+  .hearth-back-wall,
+  .hearth-floor,
+  .hearth-base {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .hearth-opening {
+    min-height: 0;
+  }
 }
 
 /* ===============================================
@@ -391,7 +424,8 @@ button.secondary {
 
 .mold-viewport-wrapper {
   position: fixed;
-  left: 13px; /* match letter-basket or column edge */
+  left: auto;
+  right: 25px;
   top: 290px;
   width: calc((100% - 32px) / 3); /* same as a column / basket width */
   z-index: 505;
@@ -403,7 +437,20 @@ button.secondary {
 
 /* Mold tab: hidden on desktop, shown on mobile */
 .mold-sidebar-tab {
-  display: none;
+  display: flex;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  align-items: center;
+  justify-content: center;
+  background: rgba(58, 54, 50, 0.85);
+  color: #c9b58a;
+  padding: 10px 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 8px 0 0 8px;
+  border: 1px solid rgba(41, 37, 36, 0.6);
+  border-right: none;
 }
 
 .mold-viewport {
@@ -3512,7 +3559,7 @@ body.book-overlay-active .magic-book {
 .tools-sidebar {
   position: fixed;
   right: 0;
-  top: 50%;
+  top: calc(50% - 175px);
   transform: translateY(-50%) translateX(calc(100% - 18px));
   z-index: 90;
   display: flex;
@@ -3833,6 +3880,11 @@ body.book-overlay-active .magic-book {
 
 .sidebar-dragging .mold-sidebar-tab,
 .sidebar-dragging .tools-sidebar-tab {
+  cursor: grabbing;
+}
+
+.floating-dragging .mold-sidebar-tab,
+.floating-dragging .letter-basket-header {
   cursor: grabbing;
 }
 
