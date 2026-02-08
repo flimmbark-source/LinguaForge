@@ -14,7 +14,7 @@
 /* Base Layout */
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #111827;
+  background-color: #111827;
   color: #f9fafb;
   margin: 0;
   padding: 16px;
@@ -25,8 +25,48 @@ body {
   box-sizing: border-box;
   overflow: hidden;
   touch-action: none;
+  /* Background image (default desktop behavior) */
+  background-image: url('/Public/ForgeBackground.png');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
+  background-color: #111827;
 }
 
+/* Responsive background adjustments for portrait, landscape, and mobile/desktop sizes */
+@media (max-width: 900px) {
+  body {
+    /* Avoid `fixed` on many mobile browsers due to UX/performance issues */
+    background-attachment: scroll;
+    background-position: center top;
+    background-size: cover;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  body {
+    /* Keep image anchored toward the top in portrait phones/tablets */
+    background-position: center top;
+    background-size: cover;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 900px) {
+  body {
+    /* In landscape on narrow viewports, fit the image width to avoid awkward vertical crop */
+    background-position: center center;
+    background-size: 100% auto;
+  }
+}
+
+@media (min-width: 1600px) {
+  body {
+    /* Very large/desktop screens keep the cover behavior */
+    background-position: center center;
+    background-size: cover;
+  }
+}
 /* Utility helpers */
 .locked-hidden {
   display: none;
