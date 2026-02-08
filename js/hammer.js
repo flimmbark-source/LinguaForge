@@ -253,7 +253,8 @@ export class HammerSystem {
     const cx = x1 + dx * t;
     const cy = y1 + dy * t;
     const dist = Math.hypot(px - cx, py - cy);
-    return dist < 140;
+    const grabDist = this.width <= 768 ? 70 : 140;
+    return dist < grabDist;
   }
 
   /**
@@ -398,6 +399,10 @@ onPointerDown(e) {
     const spinFromStrike = Math.abs(strikeVx || 0) * 0.01 * power;
     const angularVel = (strikeVx >= 0 ? 1 : -1) * (spinBase + spinFromStrike);
 
+    // Cap flying letters to prevent accumulation on mobile
+    const MAX_FLYING = this.width <= 768 ? 12 : 30;
+    if (this.flyingLetters.length >= MAX_FLYING) return;
+
     this.flyingLetters.push({
       x: impactX,
       y: impactY - 24,
@@ -423,8 +428,10 @@ onPointerDown(e) {
 spawnSparks(x, y, power, options = {}) {
   const isRip = !!options.isRip;
   // Cap sparks: limit total active to avoid buildup on mobile
-  const MAX_SPARKS = 40;
-  const count = Math.min(8 + Math.floor(power * 4), MAX_SPARKS - this.sparks.length);
+  const isMobile = this.width <= 768;
+  const MAX_SPARKS = isMobile ? 20 : 40;
+  const base = isMobile ? 4 + Math.floor(power * 2) : 8 + Math.floor(power * 4);
+  const count = Math.min(base, MAX_SPARKS - this.sparks.length);
 
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI - Math.PI;
@@ -1262,32 +1269,50 @@ drawHammer(ctx, hammer) {
    */
   drawFlyingLetters(ctx, letters) {
     ctx.save();
+    const isMobile = this.width <= 768;
+    const size = 28;
+
+    // On mobile, skip per-letter gradients and use flat fill for perf
+    if (isMobile) {
+      ctx.font = 'bold 20px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+    }
+
     for (const letter of letters) {
       ctx.save();
       ctx.translate(letter.x, letter.y);
       ctx.rotate(letter.angle);
 
-      const size = 28;
+      if (isMobile) {
+        // Flat fill — no gradient, no stroke
+        ctx.fillStyle = '#1aa34a';
+        ctx.beginPath();
+        ctx.roundRect(-size / 2, -size / 2, size, size, 6);
+        ctx.fill();
+      } else {
+        // Letter tile background
+        const grad = ctx.createLinearGradient(-size / 2, -size / 2, size / 2, size / 2);
+        grad.addColorStop(0, '#22c55e');
+        grad.addColorStop(1, '#15803d');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(-size / 2, -size / 2, size, size, 6);
+        ctx.fill();
 
-      // Letter tile background
-      const grad = ctx.createLinearGradient(-size / 2, -size / 2, size / 2, size / 2);
-      grad.addColorStop(0, '#22c55e');
-      grad.addColorStop(1, '#15803d');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.roundRect(-size / 2, -size / 2, size, size, 6);
-      ctx.fill();
-
-      // Border
-      ctx.strokeStyle = 'rgba(15, 23, 42, 0.75)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+        // Border
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.75)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
 
       // Hebrew letter
       ctx.fillStyle = '#ecfdf5';
-      ctx.font = 'bold 20px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      if (!isMobile) {
+        ctx.font = 'bold 20px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+      }
       ctx.fillText(letter.letter, 0, 0);
 
       ctx.restore();
