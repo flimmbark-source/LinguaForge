@@ -128,9 +128,14 @@ export class HammerSystem {
 
     // Position anvil just above the hearth so they visually stack
     const isMobile = this.width <= MOBILE_BREAKPOINT;
-    const baseHammerLength = isMobile ? 140 : 180;
+    const isMobileLandscape = window.innerWidth <= MOBILE_BREAKPOINT && window.innerWidth > window.innerHeight;
+    const hammerScale = isMobileLandscape ? 0.75 : 1;
+    const baseHammerLength = (isMobile ? 140 : 180) * hammerScale;
     this.hammer.length = baseHammerLength;
     this.hammer.baseLength = baseHammerLength;
+    this.hammer.maxLength = baseHammerLength;
+    this.hammer.width = 90 * hammerScale;
+    this.hammer.handleThickness = 20 * hammerScale;
     this.refreshHandleCaps(true);
 
     // Read the hearth's actual top position so the anvil sits right on it
@@ -159,7 +164,6 @@ export class HammerSystem {
 
     // On mobile portrait (<=768px), sit the anvil directly on top of the hearth
     const isMobilePortrait = window.innerWidth <= MOBILE_BREAKPOINT && window.innerHeight > window.innerWidth;
-    const isMobileLandscape = window.innerWidth <= MOBILE_BREAKPOINT && window.innerWidth > window.innerHeight;
     if (isMobilePortrait) {
       // Hearth top is at 100vh - 164px; overlap anvil base onto hearth mantle
       this.anvil.y = this.height - 164 - this.anvil.height + 4;
@@ -174,12 +178,11 @@ export class HammerSystem {
 
     // Position hammer pivot above anvil with enough clearance to swing
     const pivotX = this.anvil.x + this.anvil.width / 2;
-    const hammerLength = isMobile ? 140 : 180;
-    const pivotClearance = isMobile ? 100 : 140;
+    const pivotClearance = (isMobile ? 100 : 140) * hammerScale;
     const pivotY = this.anvil.y - pivotClearance;
     this.hammer.pivotX = pivotX;
     this.hammer.pivotY = pivotY;
-    this.hammer.length = hammerLength;
+    this.hammer.length = baseHammerLength;
 
     // Start with hammer hanging down
     this.hammer.headX = pivotX;
@@ -215,7 +218,9 @@ export class HammerSystem {
     this.anvil.x = this.anvilAnchor.x - canvasRect.left - this.anvil.width / 2;
     this.anvil.y = this.anvilAnchor.y - canvasRect.top - this.anvil.height / 2;
 
-    const pivotClearance = this._isMobile ? 100 : 140;
+    const isMobileLandscape = window.innerWidth <= MOBILE_BREAKPOINT && window.innerWidth > window.innerHeight;
+    const hammerScale = isMobileLandscape ? 0.75 : 1;
+    const pivotClearance = (this._isMobile ? 100 : 140) * hammerScale;
     this.hammer.pivotX = this.anvil.x + this.anvil.width / 2;
     this.hammer.pivotY = this.anvil.y - pivotClearance;
     this.hammer.headX = this.hammer.pivotX;
