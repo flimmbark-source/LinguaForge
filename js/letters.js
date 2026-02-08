@@ -18,6 +18,12 @@ function setScreenLocked(locked) {
   }
 }
 
+function setBackgroundDragLocked(locked) {
+  if (window.setBackgroundDragLocked) {
+    window.setBackgroundDragLocked(locked);
+  }
+}
+
 function setMoldViewportHold(shouldHold) {
   const wrapper = document.querySelector('.mold-viewport-wrapper');
   if (!wrapper) return;
@@ -64,6 +70,7 @@ document.addEventListener('pointerdown', e => {
     gameState.activeLetterDrag = { isPhysics: true };
     setMoldViewportHold(true);
     setScreenLocked(true);
+    setBackgroundDragLocked(true);
   }
 });
 
@@ -102,6 +109,7 @@ document.addEventListener('pointerup', e => {
   gameState.activeLetterDrag = null;
   setMoldViewportHold(false);
   setScreenLocked(false);
+  setBackgroundDragLocked(false);
 });
 
 document.addEventListener('pointercancel', () => {
@@ -112,6 +120,7 @@ document.addEventListener('pointercancel', () => {
   gameState.activeLetterDrag = null;
   setMoldViewportHold(false);
   setScreenLocked(false);
+  setBackgroundDragLocked(false);
 });
 
 function getLetterDragOverlay() {
