@@ -393,6 +393,7 @@ export class PestleSystem {
     const opening = this.getMortarOpening();
     const safeDt = Math.max(dt, 0.0001);
     const headRadius = pestle.width / 2;
+    const rimBuffer = 6;
 
     // ── Pivot (handle end) snaps directly to mouse ──
     pestle.pivotX = this.input.mouseX;
