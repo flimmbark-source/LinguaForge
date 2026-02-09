@@ -349,14 +349,15 @@ button.secondary {
   min-width: 24px;
   height: 28px;
   border-radius: 6px;
-  border: 1px solid #4b5563;
+  border: 2px solid #d1a640;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 18px;
-  background: #111827;
+  background: linear-gradient(135deg, #0f0f10 0%, #1b1b1d 100%);
+  color: #f3d27a;
   cursor: grab;
   user-select: none;
   position: relative;
@@ -370,7 +371,8 @@ button.secondary {
 
 .letter-count {
   font-size: 10px;
-  opacity: 0.85;
+  opacity: 0.9;
+  color: #f3d27a;
   pointer-events: none;
   margin-top: 1px;
 }
