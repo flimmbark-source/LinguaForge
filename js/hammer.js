@@ -1157,20 +1157,33 @@ drawHammer(ctx, hammer) {
   const headHeight = 42;
   const headWidth = hammer.width;
 
+  // Draw subtle ambient glow behind hammer head (always on for visibility)
+  const headCenterY = -(handleLength + headHeight / 2);
+  const baseGlowRadius = 36;
+  const baseGlow = ctx.createRadialGradient(0, headCenterY, 4, 0, headCenterY, baseGlowRadius);
+  baseGlow.addColorStop(0, 'rgba(255, 245, 230, 0.22)');
+  baseGlow.addColorStop(1, 'rgba(255, 220, 180, 0)');
+  ctx.fillStyle = baseGlow;
+  ctx.beginPath();
+  ctx.arc(0, headCenterY, baseGlowRadius, 0, Math.PI * 2);
+  ctx.fill();
+
   // Draw heat glow behind hammer head
   if (hammer.heatLevel > 0) {
-    const glowRadius = 50 + hammer.heatLevel * 20;
-    const headCenterY = -(handleLength + headHeight / 2);
-    const gradient = ctx.createRadialGradient(0, headCenterY, 5, 0, headCenterY, glowRadius);
+    const glowRadius = 60 + hammer.heatLevel * 30;
+    const gradient = ctx.createRadialGradient(0, headCenterY, 4, 0, headCenterY, glowRadius);
     if (hammer.heatLevel >= 3) {
-      gradient.addColorStop(0, 'rgba(255, 255, 200, 0.5)');
-      gradient.addColorStop(1, 'rgba(255, 200, 50, 0)');
+      gradient.addColorStop(0, 'rgba(255, 240, 210, 0.75)');
+      gradient.addColorStop(0.35, 'rgba(255, 120, 60, 0.45)');
+      gradient.addColorStop(1, 'rgba(255, 60, 0, 0)');
     } else if (hammer.heatLevel >= 2) {
-      gradient.addColorStop(0, 'rgba(255, 200, 50, 0.4)');
-      gradient.addColorStop(1, 'rgba(255, 150, 0, 0)');
+      gradient.addColorStop(0, 'rgba(255, 190, 120, 0.6)');
+      gradient.addColorStop(0.4, 'rgba(255, 90, 40, 0.35)');
+      gradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
     } else {
-      gradient.addColorStop(0, 'rgba(255, 150, 0, 0.3)');
-      gradient.addColorStop(1, 'rgba(255, 80, 0, 0)');
+      gradient.addColorStop(0, 'rgba(255, 150, 90, 0.45)');
+      gradient.addColorStop(0.45, 'rgba(255, 70, 30, 0.25)');
+      gradient.addColorStop(1, 'rgba(255, 40, 0, 0)');
     }
     ctx.fillStyle = gradient;
     ctx.beginPath();
