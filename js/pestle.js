@@ -282,9 +282,9 @@ export class PestleSystem {
    * Constrain pestle tip to mortar interior walls.
    * Returns the corrected position and contact info.
    */
-  constrainToMortarInterior(tipX, tipY) {
+  constrainToMortarInterior(tipX, tipY, radius) {
     const m = this.mortar;
-    const mBottom = m.y + m.height;
+    const mBottom = m.y + m.height - radius;
     let x = tipX;
     let y = tipY;
     let atBottom = false;
@@ -297,13 +297,15 @@ export class PestleSystem {
     }
 
     // Get wall bounds at this y
-    const bounds = this.getMortarBoundsAtY(y);
+    const bounds = this.getMortarBoundsAtY(Math.min(Math.max(y, m.y), m.y + m.height));
     if (bounds) {
-      if (x < bounds.left) {
-        x = bounds.left;
+      const left = bounds.left + radius;
+      const right = bounds.right - radius;
+      if (x < left) {
+        x = left;
         touchingWall = true;
-      } else if (x > bounds.right) {
-        x = bounds.right;
+      } else if (x > right) {
+        x = right;
         touchingWall = true;
       }
     }
@@ -319,6 +321,7 @@ export class PestleSystem {
     const m = this.mortar;
     const opening = this.getMortarOpening();
     const safeDt = Math.max(dt, 0.0001);
+    const headRadius = pestle.width / 2;
 
     // ── Pivot (handle end) snaps directly to mouse ──
     pestle.pivotX = this.input.mouseX;
@@ -367,20 +370,22 @@ export class PestleSystem {
     let collided = false;
 
     if (this.insideMortar) {
-      if (newY < m.y) {
+      if (newY < m.y - headRadius) {
         // Head is being pulled above the mortar top
         // Always constrain X to opening bounds while exiting to prevent
         // the pestle center bottom from moving outside the mortar walls
-        if (newX < opening.left || newX > opening.right) {
+        const openingLeft = opening.left + headRadius;
+        const openingRight = opening.right - headRadius;
+        if (newX < openingLeft || newX > openingRight) {
           collided = true;
-          newX = Math.max(opening.left, Math.min(opening.right, newX));
+          newX = Math.max(openingLeft, Math.min(openingRight, newX));
         } else {
           // Exiting cleanly through opening
           this.insideMortar = false;
         }
       } else {
         // Inside mortar, constrain to walls and bottom
-        const result = this.constrainToMortarInterior(newX, newY);
+        const result = this.constrainToMortarInterior(newX, newY, headRadius);
         if (result.x !== newX || result.y !== newY) {
           collided = true;
           newX = result.x;
@@ -388,12 +393,14 @@ export class PestleSystem {
         }
       }
     } else {
-      const nearMortarX = newX >= m.x && newX <= m.x + m.width;
-      if (newY >= m.y && nearMortarX) {
-        if (newX >= opening.left && newX <= opening.right) {
+      const nearMortarX = newX + headRadius >= m.x && newX - headRadius <= m.x + m.width;
+      if (newY + headRadius >= m.y && nearMortarX) {
+        const openingLeft = opening.left + headRadius;
+        const openingRight = opening.right - headRadius;
+        if (newX >= openingLeft && newX <= openingRight) {
           // Entering through the top opening — allowed
           this.insideMortar = true;
-          const result = this.constrainToMortarInterior(newX, newY);
+          const result = this.constrainToMortarInterior(newX, newY, headRadius);
           if (result.x !== newX || result.y !== newY) {
             collided = true;
             newX = result.x;
@@ -402,7 +409,7 @@ export class PestleSystem {
         } else {
           // Hitting mortar rim/wall from outside — block
           collided = true;
-          newY = m.y - 1;
+          newY = m.y - headRadius;
         }
       }
     }
@@ -485,12 +492,13 @@ export class PestleSystem {
     const pestle = this.pestle;
     const m = this.mortar;
     const gt = this.grindTracker;
+    const headRadius = pestle.width / 2;
 
     gt.cooldown = Math.max(0, gt.cooldown - dt);
 
     // Only grind when held, inside mortar, and near the bottom
     const mBottom = m.y + m.height;
-    const nearBottom = pestle.headY >= mBottom - 6;
+    const nearBottom = pestle.headY >= mBottom - headRadius - 6;
 
     if (!this.insideMortar || !nearBottom) {
       gt.lastX = pestle.headX;
