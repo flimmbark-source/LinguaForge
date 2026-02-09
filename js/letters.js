@@ -337,6 +337,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
       _mouseHist = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
       gameState.activeLetterDrag = { isPhysics: true };
       setMoldViewportHold(true);
+      setScreenLocked(true);
       setBackgroundDragLocked(true);
       return;
     }
