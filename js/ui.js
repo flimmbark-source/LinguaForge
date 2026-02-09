@@ -139,40 +139,27 @@ function renderScribeHireBlocksInline() {
   container.querySelectorAll('.scribe-hire-block').forEach(block => block.remove());
 
   const owned = gameState.scribeList.length;
-  const costs = [getScribeCost(owned)];
-  if (owned > 0) {
-    costs.push(getScribeCost(owned + 1));
+  const cost = getScribeCost(owned);
+  const block = document.createElement('button');
+  block.type = 'button';
+  block.className = 'scribe-block scribe-hire-block';
+  block.dataset.tooltip = `Cost: ${cost} ⭐`;
+  block.dataset.cost = String(cost);
+  const icon = document.createElement('span');
+  icon.className = 'scribe-icon';
+  icon.textContent = '✒️';
+  block.appendChild(icon);
+
+  const canAfford = gameState.scribesUnlocked && gameState.letters >= cost;
+  block.classList.add('is-active');
+  block.dataset.disabled = canAfford ? 'false' : 'true';
+  block.setAttribute('aria-disabled', canAfford ? 'false' : 'true');
+  block.setAttribute('aria-label', `Hire scribe for ${cost} renown`);
+  if (!canAfford) {
+    block.classList.add('is-disabled');
   }
 
-  costs.forEach((cost, index) => {
-    const block = document.createElement('button');
-    block.type = 'button';
-    block.className = 'scribe-block scribe-hire-block';
-    block.dataset.tooltip = `Cost: ${cost} ⭐`;
-    block.dataset.cost = String(cost);
-    const icon = document.createElement('span');
-    icon.className = 'scribe-icon';
-    icon.textContent = '✒️';
-    block.appendChild(icon);
-
-    if (index === 0) {
-      const canAfford = gameState.scribesUnlocked && gameState.letters >= cost;
-      block.classList.add('is-active');
-      block.dataset.disabled = canAfford ? 'false' : 'true';
-      block.setAttribute('aria-disabled', canAfford ? 'false' : 'true');
-      block.setAttribute('aria-label', `Hire scribe for ${cost} renown`);
-      if (!canAfford) {
-        block.classList.add('is-disabled');
-      }
-    } else {
-      block.classList.add('is-preview');
-      block.dataset.disabled = 'true';
-      block.setAttribute('aria-disabled', 'true');
-      block.setAttribute('aria-label', `Next scribe cost ${cost} renown`);
-    }
-
-    container.appendChild(block);
-  });
+  container.appendChild(block);
 }
 
 /**
