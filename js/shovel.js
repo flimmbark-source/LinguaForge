@@ -4,7 +4,7 @@
  */
 
 import { canPlaceInHearth, getHearthBounds, heatHearth, spawnHearthSpark } from './RuneHearth.js?v=9';
-import { createLetterTile, consumeLetterTile } from './letters.js?v=9';
+import { consumeLetterTile, returnLetterToPool } from './letters.js?v=9';
 import { spawnResourceGain } from './resourceGainFeedback.js?v=9';
 import { gameState } from './state.js?v=9';
 import { playShovelScoop, playShovelDump } from './audio.js?v=9';
@@ -219,12 +219,8 @@ resize() {
     const client = e.changedTouches ? e.changedTouches[0] : e;
     if (shouldPutToolAway(client.clientX, client.clientY) && this.onPutAway) {
       // Return any collected letters before putting away
-      const pool = document.getElementById('letterPool');
-      if (pool) {
-        for (const ch of this.collected) {
-          const tile = createLetterTile(ch, null);
-          pool.appendChild(tile);
-        }
+      for (const ch of this.collected) {
+        returnLetterToPool(ch, null);
       }
       this.collected = [];
       this.shovel.isHeld = false;
@@ -272,12 +268,8 @@ resize() {
       this.collected = [];
     } else {
       // return letters to basket DOM
-      const pool = document.getElementById('letterPool');
-      if (pool) {
-        for (const ch of this.collected) {
-          const tile = createLetterTile(ch, null);
-          pool.appendChild(tile);
-        }
+      for (const ch of this.collected) {
+        returnLetterToPool(ch, null);
       }
       this.collected = [];
     }
