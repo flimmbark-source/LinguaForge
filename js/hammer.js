@@ -1326,28 +1326,31 @@ drawHammer(ctx, hammer) {
 
       if (isMobile) {
         // Flat fill — no gradient, no stroke
-        ctx.fillStyle = '#1aa34a';
+        ctx.fillStyle = '#0b0b0c';
         ctx.beginPath();
         ctx.roundRect(-size / 2, -size / 2, size, size, 6);
         ctx.fill();
+        ctx.strokeStyle = '#d1a640';
+        ctx.lineWidth = 2;
+        ctx.stroke();
       } else {
         // Letter tile background
         const grad = ctx.createLinearGradient(-size / 2, -size / 2, size / 2, size / 2);
-        grad.addColorStop(0, '#22c55e');
-        grad.addColorStop(1, '#15803d');
+        grad.addColorStop(0, '#0f0f10');
+        grad.addColorStop(1, '#1b1b1d');
         ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.roundRect(-size / 2, -size / 2, size, size, 6);
         ctx.fill();
 
         // Border
-        ctx.strokeStyle = 'rgba(15, 23, 42, 0.75)';
+        ctx.strokeStyle = '#d1a640';
         ctx.lineWidth = 2;
         ctx.stroke();
       }
 
       // Hebrew letter
-      ctx.fillStyle = '#ecfdf5';
+      ctx.fillStyle = '#f3d27a';
       if (!isMobile) {
         ctx.font = 'bold 20px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         ctx.textAlign = 'center';
