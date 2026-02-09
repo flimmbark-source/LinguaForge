@@ -38,7 +38,7 @@ const UPGRADE_META = {
 
 // Tool blocks shown in the Workshop column (clickable to filter Forgecraft)
 const WORKSHOP_TOOLS = [
-  { id: 'fist',    label: 'Fist',    icon: '💪', upgradeId: null,             alwaysVisible: true },
+  { id: 'fist',    label: 'Hammer',    icon: '🔨', upgradeId: null,             alwaysVisible: true },
   { id: 'forge',   label: 'Hearth',   icon: '🔥', upgradeId: 'activateHearth', alwaysVisible: true },
   { id: 'pestle',  label: 'Pestle',  icon: '🥄', upgradeId: 'unlockPestle',  visibleWhen: 'activateHearth' },
   { id: 'scribes', label: 'Scribes', icon: '✍️', upgradeId: 'hireScribes',   visibleWhen: 'unlockPestle' },

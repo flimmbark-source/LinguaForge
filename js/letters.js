@@ -76,11 +76,17 @@ document.addEventListener('pointerdown', e => {
 
 document.addEventListener('pointermove', e => {
   if (!_heldLetter) return;
+  if (e.cancelable) e.preventDefault();
   _heldLetter.x = e.clientX;
   _heldLetter.y = e.clientY;
   _mouseHist.push({ x: e.clientX, y: e.clientY, t: performance.now() });
   if (_mouseHist.length > 6) _mouseHist.shift();
 });
+
+document.addEventListener('touchmove', e => {
+  if (!_heldLetter) return;
+  if (e.cancelable) e.preventDefault();
+}, { passive: false });
 
 document.addEventListener('pointerup', e => {
   if (!_heldLetter) return;
@@ -331,6 +337,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
       _mouseHist = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
       gameState.activeLetterDrag = { isPhysics: true };
       setMoldViewportHold(true);
+      setBackgroundDragLocked(true);
       return;
     }
 
@@ -352,6 +359,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
     tile.setPointerCapture(e.pointerId);
     setMoldViewportHold(true);
     setScreenLocked(true);
+    setBackgroundDragLocked(true);
   });
 
   tile.addEventListener('pointermove', e => {
@@ -373,6 +381,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
     handleLetterDrop(e.clientX, e.clientY, tile, dragState, onDrop);
     setMoldViewportHold(false);
     setScreenLocked(false);
+    setBackgroundDragLocked(false);
   });
 
   tile.addEventListener('pointercancel', () => {
@@ -386,6 +395,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
     resetLetterTilePosition(tile);
     setMoldViewportHold(false);
     setScreenLocked(false);
+    setBackgroundDragLocked(false);
   });
 }
 
