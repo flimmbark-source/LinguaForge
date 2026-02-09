@@ -486,7 +486,7 @@ onPointerDown(e) {
     const targetY = this.height - 10; // Bottom of canvas minus small margin
 
     // Launch the letter from the anvil impact point with an upward arc
-    const launchSpeed = 900 + power * 500; // px/s upward
+    const launchSpeed = 200 + power * 500; // px/s upward
     const baseVx = (strikeVx || 0) * 0.25;
     const biasVx = (targetX - impactX) * 0.8 / Math.max(1, this.width);
     const vx = baseVx + biasVx * launchSpeed * 0.2;
