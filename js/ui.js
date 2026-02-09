@@ -413,7 +413,14 @@ function renderScribeGhosts(block, scribe) {
     const offset = -6 - 10 * ratio - index * 10;
     ghostEl.style.opacity = opacity.toFixed(2);
     ghostEl.style.transform = 'translate(-50%, ' + offset + 'px)';
-    ghostEl.textContent = ghost.label;
+    if (ghost.type === 'letter') {
+      const tile = document.createElement('div');
+      tile.className = 'letter-tile scribe-ghost-tile';
+      tile.innerHTML = `<span>${ghost.label}</span>`;
+      ghostEl.appendChild(tile);
+    } else {
+      ghostEl.textContent = ghost.label;
+    }
     block.appendChild(ghostEl);
   });
 }
