@@ -746,10 +746,10 @@ export class PestleSystem {
       const tileWidth = 18;
       const tileHeight = 20;
       const tileRadius = 4;
-      const tileSpacing = 4;
+      const tileOverlap = 8; // Tiles overlap by 8px
 
       for (let i = 0; i < displayCount; i++) {
-        const offsetY = headHeight / 2 + i * (tileHeight + tileSpacing);
+        const offsetY = headHeight / 2 + tileHeight + i * (tileHeight - tileOverlap);
         const char = pestle.attachedLetters[pestle.attachedLetters.length - 1 - i];
 
         // Draw tile background (dark gradient approximation)
@@ -777,7 +777,7 @@ export class PestleSystem {
       }
 
       if (letterCount > 3) {
-        const indicatorY = headHeight / 2 + displayCount * (tileHeight + tileSpacing);
+        const indicatorY = headHeight / 2 + tileHeight + displayCount * (tileHeight - tileOverlap);
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 10px system-ui';
         ctx.textAlign = 'center';
