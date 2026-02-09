@@ -67,6 +67,11 @@ export function processScribeTick(scribe, onLetterSpawned) {
     }
     // Start new batch
     spendInk(SCRIBE_INK_PER_BATCH);
+    addScribeGhost(scribe.id, {
+      type: 'ink',
+      amount: SCRIBE_INK_PER_BATCH,
+      label: `-${SCRIBE_INK_PER_BATCH} Ink`,
+    });
     scribe.lettersLeftInBatch = SCRIBE_LETTERS_PER_BATCH;
   }
 
@@ -74,7 +79,11 @@ export function processScribeTick(scribe, onLetterSpawned) {
   scribe.progress -= 1;
   spawnLetter(onLetterSpawned);
   scribe.lettersLeftInBatch -= 1;
-  addScribeGhost(scribe.id);
+  addScribeGhost(scribe.id, {
+    type: 'letter',
+    amount: 1,
+    label: '+1 Letter',
+  });
   return true;
 }
 

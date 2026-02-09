@@ -391,19 +391,19 @@ export function renderScribeBlocks(force = false) {
     icon.textContent = '✒️';
     block.appendChild(icon);
 
-    // Ghost (floating "+1 Letter" animation)
-    const ghost = gameState.scribeGhosts.find(g => g.scribeId === scribe.id);
-    if (ghost) {
+    // Ghosts (floating resource animations)
+    const ghosts = gameState.scribeGhosts.filter(g => g.scribeId === scribe.id);
+    ghosts.forEach((ghost, index) => {
       const ghostEl = document.createElement('div');
-      ghostEl.className = 'scribe-ghost';
+      ghostEl.className = `scribe-ghost scribe-ghost--${ghost.type}`;
       const ratio = Math.max(0, Math.min(1, ghost.t / SCRIBE_GHOST_LIFETIME));
       const opacity = 1 - ratio;
-      const offset = -6 - 10 * ratio;
+      const offset = -6 - 10 * ratio - index * 10;
       ghostEl.style.opacity = opacity.toFixed(2);
       ghostEl.style.transform = 'translate(-50%, ' + offset + 'px)';
-      ghostEl.textContent = '+1 Letter';
+      ghostEl.textContent = ghost.label;
       block.appendChild(ghostEl);
-    }
+    });
 
     // Click to toggle pause
     block.addEventListener('click', (e) => {
