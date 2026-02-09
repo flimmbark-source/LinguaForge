@@ -862,9 +862,9 @@ function setupEventHandlers() {
   // Hammer system replaces the strike button (initialized separately)
 
   // Buy scribe blocks
-  const scribeHireBlocks = document.getElementById('scribeHireBlocks');
-  if (scribeHireBlocks) {
-    scribeHireBlocks.addEventListener('click', (event) => {
+  const scribeBlocks = document.getElementById('scribeBlocks');
+  if (scribeBlocks) {
+    scribeBlocks.addEventListener('click', (event) => {
       const block = event.target.closest('.scribe-hire-block');
       if (!block || block.dataset.disabled === 'true') return;
       if (hireScribe()) {

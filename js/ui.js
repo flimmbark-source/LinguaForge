@@ -30,7 +30,6 @@ export function initializeElements() {
   elements.lettersDisplay = document.getElementById('lettersDisplay');
   elements.inkDisplay = document.getElementById('inkDisplay');
   elements.clickGainSpan = document.getElementById('clickGain');
-  elements.scribeHireBlocksContainer = document.getElementById('scribeHireBlocks');
   elements.scribeBlocksContainer = document.getElementById('scribeBlocks');
   elements.moldListDiv = document.getElementById('moldList');
   elements.moldIndexLabel = document.getElementById('moldIndexLabel');
@@ -131,12 +130,13 @@ function updateShovelVisibility() {
  * Update scribe purchase button
  */
 export function updateScribePurchaseButton() {
-  renderScribeHireBlocks();
+  renderScribeHireBlocksInline();
 }
 
-function renderScribeHireBlocks() {
-  if (!elements.scribeHireBlocksContainer) return;
-  elements.scribeHireBlocksContainer.innerHTML = '';
+function renderScribeHireBlocksInline() {
+  if (!elements.scribeBlocksContainer) return;
+  const container = elements.scribeBlocksContainer;
+  container.querySelectorAll('.scribe-hire-block').forEach(block => block.remove());
 
   const owned = gameState.scribeList.length;
   const costs = [getScribeCost(owned)];
@@ -150,6 +150,10 @@ function renderScribeHireBlocks() {
     block.className = 'scribe-block scribe-hire-block';
     block.dataset.tooltip = `Cost: ${cost} ⭐`;
     block.dataset.cost = String(cost);
+    const icon = document.createElement('span');
+    icon.className = 'scribe-icon';
+    icon.textContent = '✒️';
+    block.appendChild(icon);
 
     if (index === 0) {
       const canAfford = gameState.scribesUnlocked && gameState.letters >= cost;
@@ -167,7 +171,7 @@ function renderScribeHireBlocks() {
       block.setAttribute('aria-label', `Next scribe cost ${cost} renown`);
     }
 
-    elements.scribeHireBlocksContainer.appendChild(block);
+    container.appendChild(block);
   });
 }
 
@@ -361,6 +365,7 @@ export function renderScribeBlocks(force = false) {
         }
       }
     });
+    renderScribeHireBlocksInline();
     return;
   }
 
@@ -410,6 +415,7 @@ export function renderScribeBlocks(force = false) {
 
     elements.scribeBlocksContainer.appendChild(block);
   });
+  renderScribeHireBlocksInline();
 
   // Update our tracking state
   lastRenderedScribes = gameState.scribeList.map(s => ({ id: s.id, paused: s.paused }));

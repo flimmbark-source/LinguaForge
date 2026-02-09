@@ -117,7 +117,7 @@ body.screen-locked {
 .workers-panel {
   position: fixed;
   left: 16px;
-  top: 140px;
+  top: 120px;
   width: calc((110%) / 3);
   min-width: 280px;
   max-width: 445px;
@@ -718,11 +718,16 @@ button.secondary {
 }
 
 .scribe-hire-block {
-  background: rgba(15, 23, 42, 0.25);
+  background: rgba(15, 23, 42, 0.45);
   border: 1px dashed rgba(148, 163, 184, 0.7);
   box-shadow: none;
   padding: 0;
-  color: transparent;
+  color: #cbd5f5;
+  opacity: 0.6;
+}
+
+.scribe-hire-block .scribe-icon {
+  opacity: 0.85;
 }
 
 .scribe-hire-block::after {
@@ -749,7 +754,7 @@ button.secondary {
 
 .scribe-hire-block.is-preview {
   border-style: dotted;
-  opacity: 0.45;
+  opacity: 0.35;
   cursor: default;
 }
 
