@@ -369,17 +369,14 @@ export class PestleSystem {
     if (this.insideMortar) {
       if (newY < m.y) {
         // Head is being pulled above the mortar top
-        if (newX >= opening.left && newX <= opening.right) {
-          // Exiting through the top opening — allow it
-          this.insideMortar = false;
-        } else {
-          // Being pulled through the wall by length constraint — block it
+        // Always constrain X to opening bounds while exiting to prevent
+        // the pestle center bottom from moving outside the mortar walls
+        if (newX < opening.left || newX > opening.right) {
           collided = true;
-          newY = m.y + 1;
-          const bounds = this.getMortarBoundsAtY(newY);
-          if (bounds) {
-            newX = Math.max(bounds.left, Math.min(bounds.right, newX));
-          }
+          newX = Math.max(opening.left, Math.min(opening.right, newX));
+        } else {
+          // Exiting cleanly through opening
+          this.insideMortar = false;
         }
       } else {
         // Inside mortar, constrain to walls and bottom
@@ -430,6 +427,48 @@ export class PestleSystem {
       // Kill head velocity on collision to prevent bouncing
       pestle.prevHeadX = newX;
       pestle.prevHeadY = newY;
+    }
+
+    // When inside mortar, constrain pivot to prevent pestle from extending
+    // too far outside the mortar bounds visually
+    if (this.insideMortar) {
+      const mortarLeft = m.x - 50;
+      const mortarRight = m.x + m.width + 50;
+      const mortarTop = m.y - 100;
+      
+      if (pestle.pivotX < mortarLeft) {
+        pestle.pivotX = mortarLeft;
+        dx = pestle.headX - pestle.pivotX;
+        dy = pestle.headY - pestle.pivotY;
+        dist = Math.hypot(dx, dy);
+        if (dist > 0) {
+          const scale = pestle.constantLength / dist;
+          pestle.headX = pestle.pivotX + dx * scale;
+          pestle.headY = pestle.pivotY + dy * scale;
+        }
+      } else if (pestle.pivotX > mortarRight) {
+        pestle.pivotX = mortarRight;
+        dx = pestle.headX - pestle.pivotX;
+        dy = pestle.headY - pestle.pivotY;
+        dist = Math.hypot(dx, dy);
+        if (dist > 0) {
+          const scale = pestle.constantLength / dist;
+          pestle.headX = pestle.pivotX + dx * scale;
+          pestle.headY = pestle.pivotY + dy * scale;
+        }
+      }
+      
+      if (pestle.pivotY < mortarTop) {
+        pestle.pivotY = mortarTop;
+        dx = pestle.headX - pestle.pivotX;
+        dy = pestle.headY - pestle.pivotY;
+        dist = Math.hypot(dx, dy);
+        if (dist > 0) {
+          const scale = pestle.constantLength / dist;
+          pestle.headX = pestle.pivotX + dx * scale;
+          pestle.headY = pestle.pivotY + dy * scale;
+        }
+      }
     }
 
     // Update angle
