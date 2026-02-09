@@ -797,6 +797,10 @@ button.secondary {
   text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
 }
 
+.scribe-ghost--ink {
+  color: #bae6fd;
+}
+
 /* ===============================================
    GRAMMAR / VERSE SYSTEM
    =============================================== */

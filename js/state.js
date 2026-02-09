@@ -152,11 +152,14 @@ export function addScribe(scribe) {
  * Add a scribe ghost (visual effect)
  * @param {number} scribeId - ID of the scribe
  */
-export function addScribeGhost(scribeId) {
+export function addScribeGhost(scribeId, { type, amount, label }) {
   gameState.scribeGhosts.push({
     id: Date.now() + Math.random(),
     scribeId,
     t: 0,
+    type,
+    amount,
+    label,
   });
 }
 
