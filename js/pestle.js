@@ -645,17 +645,6 @@ export class PestleSystem {
   drawMortarBack(ctx, mortar) {
     ctx.save();
 
-    // Glow effect underneath the mortar
-    const centerX = mortar.x + mortar.width / 2;
-    const bottomY = mortar.y + mortar.height;
-    const glowGradient = ctx.createRadialGradient(centerX, bottomY, 10, centerX, bottomY, 100);
-    glowGradient.addColorStop(0, 'rgba(139, 92, 246, 0.25)');
-    glowGradient.addColorStop(1, 'rgba(15,23,42,0)');
-    ctx.fillStyle = glowGradient;
-    ctx.beginPath();
-    ctx.ellipse(centerX, bottomY + 4, mortar.width * 0.6, 20, 0, 0, Math.PI * 2);
-    ctx.fill();
-
     // Draw mortar PNG image
     if (this._mortarImg && this._mortarImg.complete && this._mortarImg.naturalWidth > 0) {
       const imgAspect = this._mortarImg.naturalWidth / this._mortarImg.naturalHeight;
