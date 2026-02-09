@@ -39,6 +39,7 @@ export class PestleSystem {
 
     // World physics constants
     this.gravity = 3400;
+    this.mortarGravity = 12000; // Dramatically increased gravity inside mortar
     this.airFriction = 0.9;
 
     // Pestle state
@@ -419,7 +420,7 @@ export class PestleSystem {
     pestle.pivotY = this.input.mouseY;
 
     // ── Head (grinding end) swings below pivot with gravity (Verlet) ──
-    const g = this.gravity;
+    const g = this.insideMortar ? this.mortarGravity : this.gravity;
     const friction = this.airFriction;
 
     const x = pestle.headX;
