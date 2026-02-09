@@ -252,26 +252,34 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
   const slots = sidebar.querySelectorAll('.tool-slot');
   slots.forEach(slot => {
     slot.addEventListener('mousedown', (e) => onToolSlotMouseDown(e, slot, onToolSelected));
-    // Mobile: tap a tool slot to activate it
-    slot.addEventListener('touchend', (e) => {
+    // Touch: drag-out support (mirrors mouse drag behavior)
+    slot.addEventListener('touchstart', (e) => {
       if (slot.classList.contains('locked-hidden')) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const tool = slot.dataset.tool;
-      const isActive = slot.classList.contains('active') ||
-        (tool === 'book' && document.getElementById('magicBook')?.style.display !== 'none');
-      if (isActive) {
-        putToolAway(tool, slot, onToolPutAway);
-      } else {
-        activateTool(tool, e, onToolSelected);
-      }
-      // Close the sidebar after selecting a tool on mobile
-      sidebar.classList.remove('open');
-    });
+      const touch = e.touches[0];
+      onToolSlotMouseDown({
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        preventDefault: () => { if (e.cancelable) e.preventDefault(); },
+        stopPropagation: () => e.stopPropagation()
+      }, slot, onToolSelected);
+    }, { passive: false });
   });
 
   document.addEventListener('mousemove', onToolSlotMouseMove);
   document.addEventListener('mouseup', (e) => onToolSlotMouseUp(e, onToolSelected, onToolPutAway));
+  // Touch move/end for tool slot drag
+  document.addEventListener('touchmove', (e) => {
+    if (!toolDragging || !toolDragSource) return;
+    const touch = e.touches[0];
+    onToolSlotMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+  }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (!toolDragging) return;
+    const touch = e.changedTouches[0];
+    onToolSlotMouseUp({ clientX: touch.clientX, clientY: touch.clientY }, onToolSelected, onToolPutAway);
+    // Close the sidebar after a touch interaction
+    sidebar.classList.remove('open');
+  });
 }
 
 function onToolSlotMouseDown(e, slot, onToolSelected) {
