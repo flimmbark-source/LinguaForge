@@ -1178,12 +1178,14 @@ drawHammer(ctx, hammer) {
     ctx.fill();
   }
 
-  // Draw hammer PNG image
+  // Draw hammer PNG image (fixed size regardless of grab point)
   if (this._hammerImg && this._hammerImg.complete && this._hammerImg.naturalWidth > 0) {
     const imgAspect = this._hammerImg.naturalWidth / this._hammerImg.naturalHeight;
-    const imgHeight = handleLength + headHeight;
+    const baseLength = hammer.baseLength || 180;
+    const imgHeight = baseLength + headHeight;
     const imgWidth = imgHeight * imgAspect;
-    // Head (top of image) at -(handleLength + headHeight), grip (bottom) at y=0 (pivot)
+    // Head (top of image) anchored to physics head position;
+    // handle extends past the grip point when grabbing mid-haft
     ctx.drawImage(this._hammerImg, -imgWidth / 2, -(handleLength + headHeight), imgWidth, imgHeight);
   }
 
