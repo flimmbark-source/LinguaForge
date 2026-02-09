@@ -314,21 +314,22 @@ export class PestleSystem {
   }
 
   /**
-   * Keep the entire pestle shaft inside the mortar walls and above the bottom.
+   * Keep the entire pestle shaft from penetrating the mortar.
+   * Inside: shaft stays within inner walls and above bottom.
+   * Outside: shaft is pushed out of the mortar solid.
    * Returns true if an adjustment was applied.
    */
-  constrainPestleShaft(useOuterBounds = false) {
+  constrainPestleShaft() {
     const pestle = this.pestle;
     const m = this.mortar;
     const headRadius = pestle.width / 2;
-    const rimBuffer = 6;
     const handleRadius = pestle.handleThickness / 2;
 
-    const minX = Math.min(pestle.pivotX, pestle.headX);
-    const maxX = Math.max(pestle.pivotX, pestle.headX);
-    const minY = Math.min(pestle.pivotY, pestle.headY);
-    const maxY = Math.max(pestle.pivotY, pestle.headY);
-
+    // Quick AABB rejection
+    const minX = Math.min(pestle.pivotX, pestle.headX) - headRadius;
+    const maxX = Math.max(pestle.pivotX, pestle.headX) + headRadius;
+    const minY = Math.min(pestle.pivotY, pestle.headY) - headRadius;
+    const maxY = Math.max(pestle.pivotY, pestle.headY) + headRadius;
     if (maxY < m.y || minY > m.y + m.height) return false;
     if (maxX < m.x || minX > m.x + m.width) return false;
 
@@ -344,25 +345,45 @@ export class PestleSystem {
       if (sampleY < m.y || sampleY > m.y + m.height) continue;
 
       const radius = handleRadius + (headRadius - handleRadius) * t;
-      const bounds = useOuterBounds
-        ? { left: m.x, right: m.x + m.width }
-        : this.getMortarBoundsAtY(sampleY);
-      if (!bounds) continue;
 
-      const left = bounds.left + radius;
-      const right = bounds.right - radius;
-      if (sampleX < left) {
-        shiftX = Math.max(shiftX, left - sampleX);
-        collided = true;
-      } else if (sampleX > right) {
-        shiftX = Math.min(shiftX, right - sampleX);
-        collided = true;
-      }
-
-      const bottom = m.y + m.height - radius;
-      if (sampleY > bottom) {
-        shiftY = Math.min(shiftY, bottom - sampleY);
-        collided = true;
+      if (this.insideMortar) {
+        // Inside: constrain to interior walls and bottom
+        const bounds = this.getMortarBoundsAtY(sampleY);
+        if (!bounds) continue;
+        const left = bounds.left + radius;
+        const right = bounds.right - radius;
+        if (sampleX < left) {
+          shiftX = Math.max(shiftX, left - sampleX);
+          collided = true;
+        } else if (sampleX > right) {
+          shiftX = Math.min(shiftX, right - sampleX);
+          collided = true;
+        }
+        const bottom = m.y + m.height - radius;
+        if (sampleY > bottom) {
+          shiftY = Math.min(shiftY, bottom - sampleY);
+          collided = true;
+        }
+      } else {
+        // Outside: push shaft out of mortar bounding box
+        if (sampleX + radius > m.x && sampleX - radius < m.x + m.width &&
+            sampleY + radius > m.y && sampleY - radius < m.y + m.height) {
+          collided = true;
+          const pushUp = (sampleY + radius) - m.y;
+          const pushDown = (m.y + m.height) - (sampleY - radius);
+          const pushLeft = (sampleX + radius) - m.x;
+          const pushRight = (m.x + m.width) - (sampleX - radius);
+          const minPush = Math.min(pushUp, pushDown, pushLeft, pushRight);
+          if (minPush === pushUp) {
+            shiftY = Math.min(shiftY, -pushUp);
+          } else if (minPush === pushDown) {
+            shiftY = Math.max(shiftY, pushDown);
+          } else if (minPush === pushLeft) {
+            shiftX = Math.min(shiftX, -pushLeft);
+          } else {
+            shiftX = Math.max(shiftX, pushRight);
+          }
+        }
       }
     }
 
@@ -373,12 +394,11 @@ export class PestleSystem {
     pestle.pivotX += shiftX;
     pestle.pivotY += shiftY;
 
-    if (!useOuterBounds) {
+    // Re-constrain head after shifting
+    if (this.insideMortar) {
       const corrected = this.constrainToMortarInterior(pestle.headX, pestle.headY, headRadius);
-      if (corrected.x !== pestle.headX || corrected.y !== pestle.headY) {
-        pestle.headX = corrected.x;
-        pestle.headY = corrected.y;
-      }
+      pestle.headX = corrected.x;
+      pestle.headY = corrected.y;
     }
 
     return true;
@@ -393,7 +413,6 @@ export class PestleSystem {
     const opening = this.getMortarOpening();
     const safeDt = Math.max(dt, 0.0001);
     const headRadius = pestle.width / 2;
-    const rimBuffer = 6;
 
     // ── Pivot (handle end) snaps directly to mouse ──
     pestle.pivotX = this.input.mouseX;
@@ -513,6 +532,11 @@ export class PestleSystem {
 
     pestle.headX = newX;
     pestle.headY = newY;
+
+    // Shaft collision — entire pestle length vs mortar edges
+    if (this.constrainPestleShaft()) {
+      collided = true;
+    }
 
     if (collided) {
       // Re-enforce constant length from constrained head
