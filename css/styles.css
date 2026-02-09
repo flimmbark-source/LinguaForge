@@ -2337,7 +2337,7 @@ button.secondary {
     right: auto;
     bottom: 0;
     top: auto;
-    width: 100%;
+    width: min(470px, 90vw);
     min-width: unset;
     max-width: none;
     height: calc(var(--basket-height) - 4px);
