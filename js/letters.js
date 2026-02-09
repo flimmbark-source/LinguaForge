@@ -417,6 +417,29 @@ export function createLetterTile(char, onDrop) {
 }
 
 /**
+ * Return a letter to the pool, stacking with existing tiles if present.
+ * @param {string} char - Hebrew character
+ * @param {Function} onDrop - Callback when tile is dropped
+ */
+export function returnLetterToPool(char, onDrop) {
+  const letterPoolDiv = document.getElementById('letterPool');
+  if (!letterPoolDiv || !char) return;
+
+  const existing = Array.from(letterPoolDiv.children).find(
+    el => el.classList && el.classList.contains('letter-tile') && el.dataset.letterChar === char
+  );
+  if (existing) {
+    const current = parseInt(existing.dataset.count || '1', 10);
+    existing.dataset.count = String(current + 1);
+    updateLetterTileLabel(existing);
+    return;
+  }
+
+  const tile = createLetterTile(char, onDrop);
+  letterPoolDiv.appendChild(tile);
+}
+
+/**
  * Spawn a new letter (add to pool)
  * @param {Function} onDrop - Callback when tile is dropped
  */
