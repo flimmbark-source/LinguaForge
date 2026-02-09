@@ -30,6 +30,7 @@ let shovelSystem = null;
 let letterPhysics = null;
 let craftingCanvasRef = null;
 let letterBlocksCanvasRef = null;
+let letterBlocksCtx = null;
 let activeTool = 'hammer'; // 'hammer' or 'pestle'
 let screenLockCount = 0;
 let backgroundDragLockCount = 0;
@@ -288,8 +289,12 @@ function resizeLetterBlocksCanvas() {
   const dpr = window.devicePixelRatio || 1;
   letterBlocksCanvasRef.width = rect.width * dpr;
   letterBlocksCanvasRef.height = rect.height * dpr;
-  const ctx = letterBlocksCanvasRef.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (!letterBlocksCtx) {
+    letterBlocksCtx = letterBlocksCanvasRef.getContext('2d');
+  }
+  if (letterBlocksCtx) {
+    letterBlocksCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
 }
 
 /**
@@ -566,6 +571,7 @@ function initializeCraftingSystems() {
   if (!letterBlocksCanvasRef) {
     console.warn('Letter blocks canvas not found');
   } else {
+    letterBlocksCtx = letterBlocksCanvasRef.getContext('2d');
     resizeLetterBlocksCanvas();
     window.addEventListener('resize', resizeLetterBlocksCanvas);
   }
@@ -702,14 +708,13 @@ function initializeCraftingSystems() {
 
   // Overlay renderer: draw physics letters on the letter blocks canvas
   const renderPhysicsLetters = () => {
-    if (!letterBlocksCanvasRef) return;
-    const ctx = letterBlocksCanvasRef.getContext('2d');
-    ctx.clearRect(0, 0, letterBlocksCanvasRef.width, letterBlocksCanvasRef.height);
+    if (!letterBlocksCanvasRef || !letterBlocksCtx) return;
+    letterBlocksCtx.clearRect(0, 0, letterBlocksCanvasRef.width, letterBlocksCanvasRef.height);
     if (!letterPhysics || letterPhysics.letters.length === 0) return;
     try {
-      ctx.save();
-      letterPhysics.render(ctx);
-      ctx.restore();
+      letterBlocksCtx.save();
+      letterPhysics.render(letterBlocksCtx);
+      letterBlocksCtx.restore();
     } catch (e) {
       console.warn('Physics letter render error:', e);
     }
@@ -1058,6 +1063,7 @@ let physicsFrameCount = 0;
 
 // Throttle mold-slot and hearth collision checks on mobile (every 3rd frame)
 const COLLISION_SKIP = isMobileDevice ? 3 : 1;
+const BASKET_SKIP = isMobileDevice ? 2 : 1;
 
 // Cache letterPool element reference to avoid repeated getElementById
 let _letterPoolRef = null;
@@ -1095,29 +1101,31 @@ function gameLoop(timestamp) {
         letterPhysics.checkHearth();
       }
 
-      letterPhysics.checkBasket((char) => {
-        // Return the letter to the basket DOM as a tile
-        addLetters(1);
-        const letterPoolDiv = getLetterPool();
-        if (!letterPoolDiv) return;
-        const existing = Array.from(letterPoolDiv.children).find(
-          el => el.classList && el.classList.contains('letter-tile') && el.dataset.letterChar === char
-        );
-        if (existing) {
-          const current = parseInt(existing.dataset.count || '1', 10);
-          existing.dataset.count = String(current + 1);
-          existing.innerHTML = '<span>' + (existing.dataset.letterChar || '') + '</span>';
-          if (current + 1 > 1) {
-            const badge = document.createElement('span');
-            badge.className = 'letter-count';
-            badge.textContent = 'x' + (current + 1);
-            existing.appendChild(badge);
+      if (physicsFrameCount % BASKET_SKIP === 0) {
+        letterPhysics.checkBasket((char) => {
+          // Return the letter to the basket DOM as a tile
+          addLetters(1);
+          const letterPoolDiv = getLetterPool();
+          if (!letterPoolDiv) return;
+          const existing = Array.from(letterPoolDiv.children).find(
+            el => el.classList && el.classList.contains('letter-tile') && el.dataset.letterChar === char
+          );
+          if (existing) {
+            const current = parseInt(existing.dataset.count || '1', 10);
+            existing.dataset.count = String(current + 1);
+            existing.innerHTML = '<span>' + (existing.dataset.letterChar || '') + '</span>';
+            if (current + 1 > 1) {
+              const badge = document.createElement('span');
+              badge.className = 'letter-count';
+              badge.textContent = 'x' + (current + 1);
+              existing.appendChild(badge);
+            }
+          } else {
+            const tile = createLetterTile(char, handleMoldSlotFilled);
+            letterPoolDiv.appendChild(tile);
           }
-        } else {
-          const tile = createLetterTile(char, handleMoldSlotFilled);
-          letterPoolDiv.appendChild(tile);
-        }
-      });
+        });
+      }
 
       // Cache canvas rect (avoid per-frame getBoundingClientRect)
       // On mobile, refresh less frequently (400ms)
@@ -1139,10 +1147,13 @@ function gameLoop(timestamp) {
       if (letterBlocksCanvasRef) {
         const anyToolRunning = hammerSystem?.isRunning || pestleSystem?.isRunning || shovelSystem?.isRunning;
         if (!anyToolRunning) {
-          const ctx = letterBlocksCanvasRef.getContext('2d');
-          ctx.clearRect(0, 0, letterBlocksCanvasRef.width, letterBlocksCanvasRef.height);
+          if (!letterBlocksCtx) {
+            letterBlocksCtx = letterBlocksCanvasRef.getContext('2d');
+          }
+          if (!letterBlocksCtx) return;
+          letterBlocksCtx.clearRect(0, 0, letterBlocksCanvasRef.width, letterBlocksCanvasRef.height);
           if (letterPhysics.letters.length > 0) {
-            letterPhysics.render(ctx);
+            letterPhysics.render(letterBlocksCtx);
           }
         }
       }
