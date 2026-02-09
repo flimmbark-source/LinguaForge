@@ -31,6 +31,22 @@ export class LetterPhysicsSystem {
 
     // callback set by app.js when a mold slot is filled
     this.onSlotFilled = null;
+
+    // Cached DOM refs/rects to avoid per-frame layout reads
+    this._slotCache = null;
+    this._slotCacheTime = 0;
+    this._slotCacheInterval = IS_MOBILE ? 260 : 160;
+    this._slotCacheLineRef = null;
+
+    this._hearthRectCache = null;
+    this._hearthCacheTime = 0;
+    this._hearthCacheInterval = IS_MOBILE ? 220 : 140;
+
+    this._basketRectCache = null;
+    this._basketCacheTime = 0;
+    this._basketCacheInterval = IS_MOBILE ? 220 : 140;
+    this._basketRef = null;
+    this._letterPoolRef = null;
   }
 
   // ─── Spawning ────────────────────────────────────────────
@@ -78,12 +94,16 @@ export class LetterPhysicsSystem {
    */
   update(dt, w, h) {
     const floorY = h - FLOOR_MARGIN;
+    let hasActive = false;
+    let hasMoving = false;
 
     for (const l of this.letters) {
       if (l.consumed || l.isHeld) continue;
+      hasActive = true;
 
       // If already settled just skip heavy math
       if (l.settled) continue;
+      hasMoving = true;
 
       // Gravity
       l.vy += GRAVITY * dt;
@@ -145,6 +165,9 @@ export class LetterPhysicsSystem {
       }
     }
 
+    this.hasActiveLetters = hasActive;
+    this.hasMovingLetters = hasMoving;
+
     // Purge consumed
     this.letters = this.letters.filter(l => !l.consumed);
   }
@@ -161,26 +184,45 @@ export class LetterPhysicsSystem {
     }
     const moldListDiv = this._moldListRef;
     if (!moldListDiv) return;
+    if (!gameState.currentLine || !gameState.currentLine.molds) return;
 
-    const slots = moldListDiv.querySelectorAll('.slot');
-    if (!slots.length) return;
+    const now = performance.now();
+    const shouldRefresh = !this._slotCache ||
+      now - this._slotCacheTime > this._slotCacheInterval ||
+      this._slotCacheLineRef !== gameState.currentLine;
 
-    // Batch-read all slot rects ONCE, then check letters against cached rects
-    const slotData = [];
-    for (const slotEl of slots) {
-      const moldId  = Number(slotEl.dataset.moldId);
-      const slotIdx = Number(slotEl.dataset.slotIndex);
-      if (!gameState.currentLine || !gameState.currentLine.molds) continue;
-      const mold = gameState.currentLine.molds.find(m => m.id === moldId);
-      if (!mold) continue;
-      if (mold.slots[slotIdx]) continue; // already filled
-      const neededChar = mold.pattern[slotIdx];
-      if (!neededChar) continue;
-      const sr = slotEl.getBoundingClientRect();
-      slotData.push({ slotEl, mold, slotIdx, neededChar, left: sr.left, top: sr.top, right: sr.right, bottom: sr.bottom });
+    if (shouldRefresh) {
+      const slots = moldListDiv.querySelectorAll('.slot');
+      if (!slots.length) {
+        this._slotCache = null;
+        return;
+      }
+
+      // Batch-read all slot rects ONCE, then check letters against cached rects
+      const slotData = [];
+      for (const slotEl of slots) {
+        const moldId  = Number(slotEl.dataset.moldId);
+        const slotIdx = Number(slotEl.dataset.slotIndex);
+        const mold = gameState.currentLine.molds.find(m => m.id === moldId);
+        if (!mold) continue;
+        if (mold.slots[slotIdx]) continue; // already filled
+        const neededChar = mold.pattern[slotIdx];
+        if (!neededChar) continue;
+        const sr = slotEl.getBoundingClientRect();
+        slotData.push({ slotEl, mold, slotIdx, neededChar, left: sr.left, top: sr.top, right: sr.right, bottom: sr.bottom });
+      }
+
+      this._slotCache = slotData;
+      this._slotCacheTime = now;
+      this._slotCacheLineRef = gameState.currentLine;
     }
 
-    if (!slotData.length) return;
+    let slotData = this._slotCache;
+    if (!slotData || !slotData.length) return;
+    if (slotData.some(sd => !sd.slotEl?.isConnected)) {
+      slotData = slotData.filter(sd => sd.slotEl?.isConnected);
+      this._slotCache = slotData;
+    }
 
     const tolerance = 6;
     for (const l of this.letters) {
@@ -189,6 +231,7 @@ export class LetterPhysicsSystem {
       if (speed < 30 && !l.settled) continue;
 
       for (const sd of slotData) {
+        if (!sd.mold || sd.mold.slots[sd.slotIdx]) continue;
         if (sd.neededChar !== l.char) continue;
         if (l.x >= sd.left - tolerance && l.x <= sd.right + tolerance &&
             l.y >= sd.top - tolerance  && l.y <= sd.bottom + tolerance) {
@@ -209,11 +252,16 @@ export class LetterPhysicsSystem {
    * Check if any moving letter has entered the hearth and feed it.
    */
   checkHearth() {
-    const hearthDiv = document.getElementById('hearth');
-    if (!hearthDiv) return;
     if (!canPlaceInHearth()) return;
-
-    const hr = hearthDiv.getBoundingClientRect();
+    const now = performance.now();
+    if (!this._hearthRectCache || now - this._hearthCacheTime > this._hearthCacheInterval) {
+      const hearthDiv = document.getElementById('hearth');
+      if (!hearthDiv) return;
+      this._hearthRectCache = hearthDiv.getBoundingClientRect();
+      this._hearthCacheTime = now;
+    }
+    const hr = this._hearthRectCache;
+    if (!hr) return;
     const floorBottom = window.innerHeight - FLOOR_MARGIN;
     const hearthBottom = Math.max(hr.bottom, floorBottom);
 
@@ -235,31 +283,44 @@ export class LetterPhysicsSystem {
    * @param {Function} onReturnToBasket - callback(char) when a letter returns to basket
    */
   checkBasket(onReturnToBasket) {
-    const basket = document.querySelector('.letter-basket');
-    const letterPool = document.getElementById('letterPool');
-    if (!letterPool) return;
-
-    // Use the pool element rect, clamped to the basket's inner padding.
-    const poolRect = letterPool.getBoundingClientRect();
-    const margin = 6;
-    let left = poolRect.left - margin;
-    let top = poolRect.top - margin;
-    let right = poolRect.right + margin;
-    let bottom = poolRect.bottom + margin;
-
-    if (basket) {
-      const basketRect = basket.getBoundingClientRect();
-      const basketStyles = getComputedStyle(basket);
-      const padLeft = parseFloat(basketStyles.paddingLeft) || 0;
-      const padRight = parseFloat(basketStyles.paddingRight) || 0;
-      const padTop = parseFloat(basketStyles.paddingTop) || 0;
-      const padBottom = parseFloat(basketStyles.paddingBottom) || 0;
-
-      left = Math.max(left, basketRect.left + padLeft - margin);
-      right = Math.min(right, basketRect.right - padRight + margin);
-      top = Math.max(top, basketRect.top + padTop - margin);
-      bottom = Math.min(bottom, basketRect.bottom - padBottom + margin);
+    if (!this._letterPoolRef || !this._letterPoolRef.isConnected) {
+      this._letterPoolRef = document.getElementById('letterPool');
     }
+    const letterPool = this._letterPoolRef;
+    if (!letterPool) return;
+    if (!this._basketRef || !this._basketRef.isConnected) {
+      this._basketRef = document.querySelector('.letter-basket');
+    }
+
+    const now = performance.now();
+    if (!this._basketRectCache || now - this._basketCacheTime > this._basketCacheInterval) {
+      // Use the pool element rect, clamped to the basket's inner padding.
+      const poolRect = letterPool.getBoundingClientRect();
+      const margin = 6;
+      let left = poolRect.left - margin;
+      let top = poolRect.top - margin;
+      let right = poolRect.right + margin;
+      let bottom = poolRect.bottom + margin;
+
+      if (this._basketRef) {
+        const basketRect = this._basketRef.getBoundingClientRect();
+        const basketStyles = getComputedStyle(this._basketRef);
+        const padLeft = parseFloat(basketStyles.paddingLeft) || 0;
+        const padRight = parseFloat(basketStyles.paddingRight) || 0;
+        const padTop = parseFloat(basketStyles.paddingTop) || 0;
+        const padBottom = parseFloat(basketStyles.paddingBottom) || 0;
+
+        left = Math.max(left, basketRect.left + padLeft - margin);
+        right = Math.min(right, basketRect.right - padRight + margin);
+        top = Math.max(top, basketRect.top + padTop - margin);
+        bottom = Math.min(bottom, basketRect.bottom - padBottom + margin);
+      }
+
+      this._basketRectCache = { left, top, right, bottom };
+      this._basketCacheTime = now;
+    }
+
+    const { left, top, right, bottom } = this._basketRectCache;
 
     for (const l of this.letters) {
       if (l.consumed || l.isHeld) continue;
