@@ -995,13 +995,16 @@ updateFreeHammer(dt) {
       hammer.reboundLock = 0.18;
 
       if (hammer.strikeCooldown <= 0) {
+        const wasRedHot = hammer.heatLevel > 0;
         hammer.strikeCooldown = 0.25;
         hammer.anvilExitReady = false;
         const impactX = headX;
         const impactY = anvil.y;
         this.spawnSparks(impactX, impactY, power);
         this.spawnClankWord(impactX, impactY, power); // Add clank word
-        playHammerClank();
+        if (!wasRedHot) {
+          playHammerClank();
+        }
 
         // Calculate multiplier based on heat level
         // Heat level 0 = 1x, level 1 = 2x, level 2 = 3x, level 3 = 4x, etc.
@@ -1012,6 +1015,7 @@ updateFreeHammer(dt) {
           // Cool down completely after striking
           hammer.heatLevel = 0;
           hammer.heatingTimer = 0;
+          playHammerClank();
         }
 
         // Produce letters with calculated multiplier
