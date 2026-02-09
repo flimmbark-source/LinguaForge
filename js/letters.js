@@ -337,6 +337,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
       _mouseHist = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
       gameState.activeLetterDrag = { isPhysics: true };
       setMoldViewportHold(true);
+      setBackgroundDragLocked(true);
       return;
     }
 
@@ -358,6 +359,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
     tile.setPointerCapture(e.pointerId);
     setMoldViewportHold(true);
     setScreenLocked(true);
+    setBackgroundDragLocked(true);
   });
 
   tile.addEventListener('pointermove', e => {
@@ -379,6 +381,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
     handleLetterDrop(e.clientX, e.clientY, tile, dragState, onDrop);
     setMoldViewportHold(false);
     setScreenLocked(false);
+    setBackgroundDragLocked(false);
   });
 
   tile.addEventListener('pointercancel', () => {
@@ -392,6 +395,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
     resetLetterTilePosition(tile);
     setMoldViewportHold(false);
     setScreenLocked(false);
+    setBackgroundDragLocked(false);
   });
 }
 
