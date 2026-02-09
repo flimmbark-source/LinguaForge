@@ -38,7 +38,7 @@ export class PestleSystem {
     this._mortarImg.src = 'Public/Mortar.png';
 
     // World physics constants
-    this.gravity = 2600;
+    this.gravity = 3400;
     this.airFriction = 0.9;
 
     // Pestle state
@@ -321,6 +321,7 @@ export class PestleSystem {
     const pestle = this.pestle;
     const m = this.mortar;
     const headRadius = pestle.width / 2;
+    const rimBuffer = 6;
     const handleRadius = pestle.handleThickness / 2;
 
     const minX = Math.min(pestle.pivotX, pestle.headX);
@@ -441,7 +442,8 @@ export class PestleSystem {
     let positionAdjusted = false;
 
     if (this.insideMortar) {
-      if (newY < m.y - headRadius) {
+      const exitY = m.y - headRadius - rimBuffer;
+      if (newY < exitY) {
         // Head is being pulled above the mortar top
         // Always constrain X to opening bounds while exiting to prevent
         // the pestle center bottom from moving outside the mortar walls
@@ -451,6 +453,7 @@ export class PestleSystem {
           collided = true;
           positionAdjusted = true;
           newX = Math.max(openingLeft, Math.min(openingRight, newX));
+          newY = Math.max(newY, exitY);
         } else {
           // Exiting cleanly through opening
           this.insideMortar = false;
@@ -481,10 +484,13 @@ export class PestleSystem {
             newY = result.y;
           }
         } else {
-          // Hitting mortar rim/wall from outside — block
+          // Hitting mortar rim/wall from outside — block and slide along rim
           collided = true;
           positionAdjusted = true;
-          newY = m.y - headRadius;
+          const rimLeft = m.x + headRadius;
+          const rimRight = m.x + m.width - headRadius;
+          newX = Math.max(rimLeft, Math.min(rimRight, newX));
+          newY = Math.min(newY, m.y - headRadius);
         }
       }
     }
