@@ -103,6 +103,10 @@ export class HammerSystem {
     // Cached gradients (rebuilt on resize)
     this._cachedGradients = {};
     this.useBackgroundAnvil = false;
+
+    // Load hammer PNG image
+    this._hammerImg = new Image();
+    this._hammerImg.src = 'Public/Hammer.png';
     this.anvilAnchor = null;
 
     // Mobile detection for performance tuning
@@ -1135,11 +1139,8 @@ updateFreeHammer(dt) {
 
 
   /**
-   * Draw hammer
+   * Draw hammer using PNG image
    */
-  /**
- * Draw hammer
- */
 drawHammer(ctx, hammer) {
   ctx.save();
   const pivotX = hammer.pivotX;
@@ -1152,123 +1153,58 @@ drawHammer(ctx, hammer) {
   ctx.translate(pivotX, pivotY);
   ctx.rotate(angle);
 
-  const handleWidth = hammer.handleThickness;
   const handleLength = Math.min(length, this.getMaxHandleLength());
-
-  // 1) Dynamic handle (physics-based) from PIVOT → HEAD
-  const handleGradient = ctx.createLinearGradient(0, -handleLength, 0, 0);
-  handleGradient.addColorStop(0, '#fbbf24');
-  handleGradient.addColorStop(1, '#92400e');
-  ctx.fillStyle = handleGradient;
-  ctx.fillRect(-handleWidth / 2, -handleLength, handleWidth, handleLength);
-
-  // 2) Move origin to the HEAD position
-  ctx.translate(0, -handleLength);
-
-  // 3) Static handle UNDER the head (anchored at the head, not the click)
-  //    If you stored an original length, use that; otherwise fall back to 160.
-  const staticHandleLength = hammer.baseLength || 160;
-  const staticGradient = ctx.createLinearGradient(0, 0, 0, staticHandleLength);
-  staticGradient.addColorStop(0, '#fbbf24');
-  staticGradient.addColorStop(1, '#92400e');
-  ctx.fillStyle = staticGradient;
-  // This now starts AT THE HEAD (y = 0) and goes *downward*
-  ctx.fillRect(-handleWidth / 2, 0, handleWidth, staticHandleLength);
-
-  // 4) Head (still drawn above the head origin, in negative Y)
-  const headWidth = hammer.width;
   const headHeight = 42;
+  const headWidth = hammer.width;
 
-  // Draw hammer head with heat level effects (no canvas shadow for perf)
+  // Draw heat glow behind hammer head
   if (hammer.heatLevel > 0) {
-    const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
-
-    // More intense colors for higher heat levels
+    const glowRadius = 50 + hammer.heatLevel * 20;
+    const headCenterY = -(handleLength + headHeight / 2);
+    const gradient = ctx.createRadialGradient(0, headCenterY, 5, 0, headCenterY, glowRadius);
     if (hammer.heatLevel >= 3) {
-      // Level 3: White-hot
-      headGradient.addColorStop(0, '#ffffff');
-      headGradient.addColorStop(0.3, '#fef3c7');
-      headGradient.addColorStop(1, '#f97316');
+      gradient.addColorStop(0, 'rgba(255, 255, 200, 0.5)');
+      gradient.addColorStop(1, 'rgba(255, 200, 50, 0)');
     } else if (hammer.heatLevel >= 2) {
-      // Level 2: Yellow-orange
-      headGradient.addColorStop(0, '#fef3c7');
-      headGradient.addColorStop(0.3, '#fbbf24');
-      headGradient.addColorStop(1, '#f97316');
+      gradient.addColorStop(0, 'rgba(255, 200, 50, 0.4)');
+      gradient.addColorStop(1, 'rgba(255, 150, 0, 0)');
     } else {
-      // Level 1: Orange-red
-      headGradient.addColorStop(0, '#fef3c7');
-      headGradient.addColorStop(0.3, '#f97316');
-      headGradient.addColorStop(1, '#dc2626');
+      gradient.addColorStop(0, 'rgba(255, 150, 0, 0.3)');
+      gradient.addColorStop(1, 'rgba(255, 80, 0, 0)');
     }
-    ctx.fillStyle = headGradient;
-  } else {
-    // Normal silver head
-    const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
-    headGradient.addColorStop(0, '#e5e7eb');
-    headGradient.addColorStop(1, '#475569');
-    ctx.fillStyle = headGradient;
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(0, headCenterY, glowRadius, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  ctx.beginPath();
-  ctx.roundRect(-headWidth / 2, -headHeight, headWidth, headHeight, 10);
-  ctx.fill();
+  // Draw hammer PNG image
+  if (this._hammerImg && this._hammerImg.complete && this._hammerImg.naturalWidth > 0) {
+    const imgAspect = this._hammerImg.naturalWidth / this._hammerImg.naturalHeight;
+    const imgHeight = handleLength + headHeight;
+    const imgWidth = imgHeight * imgAspect;
+    // Head (top of image) at -(handleLength + headHeight), grip (bottom) at y=0 (pivot)
+    ctx.drawImage(this._hammerImg, -imgWidth / 2, -(handleLength + headHeight), imgWidth, imgHeight);
+  }
 
-    // If hammer is heated, draw red-hot effect
-    if (hammer.isHeated) {
-      
-    if (!hammer.isHeated && hammer.heatingTimer > 0) {
-      const progress = Math.min(1, hammer.heatingTimer / hammer.heatingRequired);
-      ctx.fillStyle = `rgba(249, 115, 22, ${progress * 0.5})`;
-      ctx.fillRect(-headWidth / 2, -headHeight, headWidth * progress, headHeight);
-}
-      const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
-      headGradient.addColorStop(0, '#fef3c7'); // Hot yellow-white
-      headGradient.addColorStop(0.3, '#f97316'); // Orange
-      headGradient.addColorStop(1, '#dc2626'); // Red
-      ctx.fillStyle = headGradient;
-    } else {
-      // Normal silver head
-      const headGradient = ctx.createLinearGradient(-headWidth / 2, -headHeight, headWidth / 2, 0);
-      headGradient.addColorStop(0, '#e5e7eb');
-      headGradient.addColorStop(1, '#475569');
-      ctx.fillStyle = headGradient;
-    }
-
-    ctx.beginPath();
-    ctx.roundRect(-headWidth / 2, -headHeight, headWidth, headHeight, 10);
-    ctx.fill();
   // Show progress indicator for heating to next level
   if (hammer.heatingTimer > 0) {
     const currentLevelTime = hammer.heatLevel * hammer.heatingRequired;
     const progressToNextLevel = (hammer.heatingTimer - currentLevelTime) / hammer.heatingRequired;
 
     if (progressToNextLevel > 0 && progressToNextLevel < 1) {
-      // Show progress bar for next heat level
       const barHeight = 4;
-      const barY = -headHeight - 8;
+      const barY = -(handleLength + headHeight) - 8;
 
-      // Background
       ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
       ctx.fillRect(-headWidth / 2, barY, headWidth, barHeight);
 
-      // Progress (color based on next level)
       const nextLevel = hammer.heatLevel + 1;
       const progressColor = nextLevel >= 3 ? '#fef3c7' : nextLevel >= 2 ? '#fbbf24' : '#f97316';
       ctx.fillStyle = progressColor;
       ctx.fillRect(-headWidth / 2, barY, headWidth * progressToNextLevel, barHeight);
     }
   }
-
-  // Shine on head (brighter if heated)
-  if (hammer.heatLevel > 0) {
-    ctx.globalAlpha = 0.5 + (hammer.heatLevel * 0.1);
-    ctx.fillStyle = '#ffffff';
-  } else {
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = '#f9fafb';
-  }
-  ctx.fillRect(-headWidth / 2 + 4, -headHeight + 6, headWidth - 8, 10);
-  ctx.globalAlpha = 1;
 
   ctx.restore();
   }
