@@ -117,13 +117,11 @@ export class PestleSystem {
     const hearthEl = document.getElementById('hearth');
     const canvasRect = this.canvas.getBoundingClientRect();
     let mortarBottom;
-    if (isMobile) {
       const basketEl = document.querySelector('.letter-basket');
       if (basketEl) {
         const basketRect = basketEl.getBoundingClientRect();
         mortarBottom = basketRect.top - canvasRect.top - 2;
       }
-    }
 
     if (mortarBottom === undefined) {
       if (hearthEl) {
@@ -135,13 +133,14 @@ export class PestleSystem {
       }
     }
 
+    const mortarOffsetX = isMobile ? 0 : 400;
     this.mortar.width = Math.min(isMobile ? 160 : 200, this.width * 0.3);
     this.mortar.height = isMobile ? 60 : 80;
-    this.mortar.x = this.width * 0.5 - this.mortar.width / 2;
+    this.mortar.x = this.width * 0.5 - this.mortar.width / 2 + mortarOffsetX;
     this.mortar.y = mortarBottom - this.mortar.height;
 
     // Position pestle above mortar
-    const pivotX = this.width * 0.5;
+    const pivotX = this.width * 0.5 + mortarOffsetX;
     const pivotY = this.mortar.y - (isMobile ? 70 : 100);
     this.pestle.pivotX = pivotX;
     this.pestle.pivotY = pivotY;

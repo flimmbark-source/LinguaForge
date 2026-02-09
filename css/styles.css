@@ -8,7 +8,7 @@
    =============================================== */
 
 :root {
-  --letter-basket-height: 150px;
+  --letter-basket-height: 75px;
   --bg-offset-x: 0px;
   --bg-offset-y: 0px;
   --bg-pos-y: 50%;
@@ -236,9 +236,10 @@ button.secondary {
 
 .letter-basket {
   position: fixed;
-  left: auto;
-  right: 25px;
-  bottom: 55px;
+  left: 50%;
+  right: auto;
+  bottom: 15px;
+  transform: translateX(-50%);
   width: calc((100% - 32px) / 3);
   min-width: 280px;
   max-width: 420px;
@@ -309,20 +310,17 @@ button.secondary {
   /* NEW: make this a flex container so we can push the letter-board down */
   display: flex;
   flex: 1;
-}
-
-.letter-basket .letter-board {
-  margin-top: auto;          /* pushes the whole board to the bottom */
-  padding-bottom: 10px;      /* tweak this value to move the letters UP a bit */
+  align-items: flex-end;
 }
 
 .letter-basket .letter-board {
   flex: 1;
+  min-height: 0;
   display: flex;
-  flex-wrap: wrap-reverse;    /* rows stack from bottom upwards */
-  align-content: flex-start;  /* with wrap-reverse, this means "toward bottom" */
+  flex-wrap: wrap;
+  align-content: flex-end;
   justify-content: flex-start;
-  padding: 8px 8px 15px;      /* increase 20px to move the letters higher */
+  padding: 6px 8px;
   box-sizing: border-box;
 }
 
@@ -2335,15 +2333,16 @@ button.secondary {
 
   /* ─ Letter basket: full width at bottom ─ */
   .letter-basket {
-    left: 0;
-    right: 0;
+    left: 50%;
+    right: auto;
     bottom: 0;
     top: auto;
-    width: 100%;
+    width: min(420px, 90vw);
     min-width: unset;
     max-width: none;
     height: calc(var(--basket-height) - 4px);
     border-radius: 8px 8px 0 0;
+    transform: translateX(-50%);
     z-index: 100;
   }
 
@@ -2871,15 +2870,16 @@ button.secondary {
 
   /* ─ Letter basket: full width at bottom, properly sized ─ */
   .letter-basket {
-    left: 0;
-    right: 0;
+    left: 50%;
+    right: auto;
     bottom: 0;
     top: auto;
-    width: 100%;
+    width: min(420px, 90vw);
     min-width: unset;
     max-width: none;
     height: var(--basket-height);
     border-radius: 12px 12px 0 0;
+    transform: translateX(-50%);
     z-index: 100;
   }
 
