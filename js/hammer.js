@@ -1036,14 +1036,10 @@ updateFreeHammer(dt) {
         // Spawn sparks at impact point
         this.spawnSparks(impactX, impactY, 1.2);
 
-        // Trigger forge functionality
+        // Trigger forge functionality (no letter spawning on forge strikes)
         if (this.onForgeTriggered) {
           this.onForgeTriggered();
           console.log('Red-hot hammer struck mold viewport! Forging words...');
-        }
-
-        if (this.onLetterForged) {
-          this.onLetterForged(impactX, impactY, 1.1, hammer.headVx, multiplier);
         }
 
         // Bounce the hammer back

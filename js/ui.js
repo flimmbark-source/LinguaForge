@@ -3,8 +3,8 @@
  * Handles all UI updates and rendering logic
  */
 
-import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON } from './config.js?v=9';
-import { gameState, addVerseWord, findWord, removeWord } from './state.js?v=9';
+import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON, computeWordPower } from './config.js?v=9';
+import { gameState, addVerseWord, findWord, removeWord, addWord, getNextWordId } from './state.js?v=9';
 import { setupWordChipDrag, sellWord } from './molds.js?v=9';
 import { toggleScribePaused } from './scribes.js?v=9';
 import { evaluateVerse, setupVerseWordChipDrag, isVerseSolved } from './grammar.js?v=9';
@@ -651,9 +651,22 @@ export function initWordSelector() {
   if (eraseBtn) {
     eraseBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      // Clear the verse entry field
+      // Return all verse words back to inventory
+      const verseWords = [...gameState.verseWords];
       gameState.verseWords = [];
+      verseWords.forEach(vw => {
+        const wordObj = {
+          id: getNextWordId(),
+          text: vw.hebrew,
+          english: (GRAMMAR_LEXICON[vw.hebrew] && GRAMMAR_LEXICON[vw.hebrew].gloss) || vw.hebrew,
+          length: vw.hebrew.length,
+          power: computeWordPower(vw.hebrew.length),
+          heated: true,
+        };
+        addWord(wordObj);
+      });
       updateGrammarUI(true);
+      updateWordSelector();
     });
   }
 }
