@@ -2423,9 +2423,9 @@ button.secondary {
   }
 
   .letter-tile {
-    min-width: 28px;
-    height: 28px;
-    font-size: 20px;
+    min-width: 22px;
+    height: 26px;
+    font-size: 18px;
     border-radius: 6px;
   }
 
@@ -2960,9 +2960,9 @@ button.secondary {
   }
 
   .letter-tile {
-    min-width: 28px;
-    height: 28px;
-    font-size: 20px;
+    min-width: 22px;
+    height: 26px;
+    font-size: 18px;
   }
 
   /* ─ Mold viewport: left-edge tab, extends full height when open ─ */
@@ -3266,9 +3266,9 @@ button.secondary {
 
   /* Basket */
   .letter-tile {
-    min-width: 28px;
-    height: 28px;
-    font-size: 20px;
+    min-width: 22px;
+    height: 26px;
+    font-size: 18px;
     border-radius: 6px;
   }
 
