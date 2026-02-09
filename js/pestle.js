@@ -117,12 +117,22 @@ export class PestleSystem {
     const hearthEl = document.getElementById('hearth');
     const canvasRect = this.canvas.getBoundingClientRect();
     let mortarBottom;
-    if (hearthEl) {
-      const hearthRect = hearthEl.getBoundingClientRect();
-      mortarBottom = hearthRect.top - canvasRect.top - 4;
-    } else {
-      const letterPoolBarHeight = isMobile ? 110 : 160;
-      mortarBottom = this.height - letterPoolBarHeight;
+    if (isMobile) {
+      const basketEl = document.querySelector('.letter-basket');
+      if (basketEl) {
+        const basketRect = basketEl.getBoundingClientRect();
+        mortarBottom = basketRect.top - canvasRect.top - 2;
+      }
+    }
+
+    if (mortarBottom === undefined) {
+      if (hearthEl) {
+        const hearthRect = hearthEl.getBoundingClientRect();
+        mortarBottom = hearthRect.top - canvasRect.top - 4;
+      } else {
+        const letterPoolBarHeight = isMobile ? 110 : 160;
+        mortarBottom = this.height - letterPoolBarHeight;
+      }
     }
 
     this.mortar.width = Math.min(isMobile ? 160 : 200, this.width * 0.3);

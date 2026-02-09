@@ -216,6 +216,29 @@ let toolDragSource = null;
 let toolDragStartX = 0;
 let toolDragStartY = 0;
 const MIN_DRAG_DISTANCE = 15; // px before treating as a real drag
+let sidebarRecenterListenerAdded = false;
+
+function recenterSidebarTabs() {
+  const elements = [
+    document.getElementById('toolsSidebar'),
+    document.querySelector('.mold-viewport-wrapper')
+  ];
+  elements.forEach((el) => {
+    if (!el) return;
+    el.classList.remove('sidebar-repositioned');
+    el.style.top = '';
+  });
+}
+
+function ensureSidebarRecenterListener() {
+  if (sidebarRecenterListenerAdded) return;
+  sidebarRecenterListenerAdded = true;
+  const handler = () => {
+    recenterSidebarTabs();
+  };
+  window.addEventListener('resize', handler);
+  window.addEventListener('orientationchange', handler);
+}
 
 /**
  * Initialize the tools sidebar: tool slots with drag behavior
@@ -241,6 +264,7 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
       side: 'right'
     });
   }
+  ensureSidebarRecenterListener();
 
   // Close sidebar when tapping outside of it (mobile)
   document.addEventListener('touchstart', (e) => {
@@ -270,9 +294,10 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
   // Touch move/end for tool slot drag
   document.addEventListener('touchmove', (e) => {
     if (!toolDragging || !toolDragSource) return;
+    if (e.cancelable) e.preventDefault();
     const touch = e.touches[0];
     onToolSlotMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
-  }, { passive: true });
+  }, { passive: false });
   document.addEventListener('touchend', (e) => {
     if (!toolDragging) return;
     const touch = e.changedTouches[0];
@@ -312,10 +337,10 @@ function onToolSlotMouseMove(e) {
 
     toolDragGhost = document.createElement('div');
     toolDragGhost.className = 'tool-drag-ghost';
-    toolDragGhost.innerHTML = `
-      <div class="tool-slot-icon">${toolDragSource.querySelector('.tool-slot-icon').textContent}</div>
-      <div class="tool-slot-label">${toolDragSource.querySelector('.tool-slot-label').textContent}</div>
-    `;
+    const icon = toolDragSource.querySelector('.tool-slot-icon');
+    if (icon) {
+      toolDragGhost.appendChild(icon.cloneNode(true));
+    }
     document.body.appendChild(toolDragGhost);
   }
 
@@ -593,6 +618,7 @@ export function initMoldSidebarTab() {
     },
     side: 'left'
   });
+  ensureSidebarRecenterListener();
 
   // Stop mousedown from reaching canvas
   wrapper.addEventListener('mousedown', (e) => {
