@@ -83,6 +83,11 @@ document.addEventListener('pointermove', e => {
   if (_mouseHist.length > 6) _mouseHist.shift();
 });
 
+document.addEventListener('touchmove', e => {
+  if (!_heldLetter) return;
+  if (e.cancelable) e.preventDefault();
+}, { passive: false });
+
 document.addEventListener('pointerup', e => {
   if (!_heldLetter) return;
   let vx = 0, vy = 0;
