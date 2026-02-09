@@ -116,13 +116,19 @@ body.screen-locked {
 
 .workers-panel {
   position: fixed;
-  right: 15px;
-  top: 425px;
+  left: 16px;
+  top: 140px;
   width: calc((110%) / 3);
   min-width: 280px;
   max-width: 445px;
   box-sizing: border-box;
   z-index: 96;
+}
+
+.workers-panel .section {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 .column-split {
@@ -691,6 +697,10 @@ button.secondary {
   margin-top: 8px;
 }
 
+.scribe-hire-grid {
+  margin-top: 0;
+}
+
 /* Scribe Block */
 .scribe-block {
   position: relative;
@@ -705,6 +715,47 @@ button.secondary {
   cursor: pointer;
   overflow: hidden;
   user-select: none;
+}
+
+.scribe-hire-block {
+  background: rgba(15, 23, 42, 0.25);
+  border: 1px dashed rgba(148, 163, 184, 0.7);
+  box-shadow: none;
+  padding: 0;
+  color: transparent;
+}
+
+.scribe-hire-block::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.scribe-hire-block:hover::after {
+  opacity: 1;
+}
+
+.scribe-hire-block.is-preview {
+  border-style: dotted;
+  opacity: 0.45;
+  cursor: default;
+}
+
+.scribe-hire-block.is-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .scribe-block.paused {
@@ -2054,8 +2105,9 @@ button.secondary {
   .workers-panel {
     width: 220px;
     min-width: 180px;
-    top: 380px;
-    right: 10px;
+    top: 120px;
+    left: 16px;
+    right: auto;
   }
 
   .letter-basket {
@@ -2435,8 +2487,8 @@ button.secondary {
   .workers-panel {
     position: fixed;
     left: 6px;
-    top: auto;
-    bottom: calc(var(--basket-height) + 12px);
+    top: 84px;
+    bottom: auto;
     right: auto;
     width: 130px;
     min-width: 110px;
@@ -2968,8 +3020,8 @@ button.secondary {
   /* ─ Workers panel: below upgrades btn with proper spacing ─ */
   .workers-panel {
     position: fixed;
-    right: 8px;
-    top: 48px;
+    left: 8px;
+    top: 72px;
     bottom: auto;
     width: 140px;
     min-width: 120px;
@@ -3219,8 +3271,8 @@ button.secondary {
 
   /* Workers: compact */
   .workers-panel {
-    right: 4px;
-    top: 42px;
+    left: 6px;
+    top: 70px;
     width: 120px;
     min-width: 100px;
     max-width: 140px;

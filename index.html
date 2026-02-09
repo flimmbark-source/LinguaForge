@@ -102,16 +102,11 @@
     <button id="selectShovel" class="tool-button locked-hidden" data-tool="shovel"></button>
   </div>
 
-  <!-- WORKERS PANEL FIXED AT BOTTOM RIGHT -->
+  <!-- WORKERS PANEL FIXED BELOW RESOURCES -->
   <div class="workers-panel">
     <div class="section">
-      <h2>Workers</h2>
-      <h3>Apprentice Scribes</h3>
-      <div class="row">
-        <button id="buyScribeBtn">Hire Scribe</button>
-        <span style="font-size:12px;">Cost: <span id="scribeCost">10</span> Renown</span>
-      </div>
-      <div id="scribeBlocks" class="scribe-grid"></div>
+      <div id="scribeHireBlocks" class="scribe-grid scribe-hire-grid" aria-label="Hire scribes"></div>
+      <div id="scribeBlocks" class="scribe-grid" aria-label="Scribes"></div>
     </div>
   </div>
   
