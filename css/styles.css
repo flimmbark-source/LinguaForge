@@ -449,14 +449,14 @@ button.secondary {
   position: fixed;
   left: 0;
   right: auto;
-  top: 32%;
+  top: 50%;
   width: auto;
   transform: translateY(-50%);
   z-index: 505;
   pointer-events: auto;
 
   display: flex;
-  flex-direction: row;
+  flex-direction: row-reverse;
   justify-content: flex-start;
   align-items: center;
 }
@@ -521,8 +521,8 @@ button.secondary {
   padding: 0;
   opacity: 0;
   transition: max-width 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
-  border-radius: 0 8px 8px 0;
-  border-left: none;
+  border-radius: 8px 0 0 8px;
+  border-right: none;
   min-width: 0;
   margin: 0;
   display: flex;
@@ -534,7 +534,7 @@ button.secondary {
   padding: 6px;
   opacity: 1;
   border: 1px solid rgba(41, 37, 36, 0.8);
-  border-left: none;
+  border-right: none;
 }
 
 .mold-panel .mold-list {
@@ -2068,7 +2068,7 @@ button.secondary {
   .mold-viewport-wrapper {
     width: 260px;
     left: 10px;
-    top: 250px;
+    top: 50%;
   }
 
   .book-interior {
@@ -2308,6 +2308,7 @@ button.secondary {
   .hearth-opening {
     height: auto;
     min-height: 0;
+    overflow: visible;
   }
 
   .hearth-fire {
@@ -2367,7 +2368,7 @@ button.secondary {
     position: fixed;
     left: 0;
     right: auto;
-    top: 32%;
+    top: 50%;
     transform: translateY(-50%);
     width: auto;
     min-width: unset;
@@ -2573,6 +2574,7 @@ button.secondary {
   .hearth-opening {
     height: 50px;
     min-height: unset;
+    overflow: visible;
   }
 
   .hearth-fire {
@@ -2853,6 +2855,7 @@ button.secondary {
     /* Fixed height so hearth doesn't change size when fire appears/disappears */
     height: auto;
     min-height: 0;
+    overflow: visible;
   }
 
   .hearth-fire {
@@ -2894,7 +2897,7 @@ button.secondary {
     position: fixed;
     left: 0;
     right: auto;
-    top: 28%;
+    top: 50%;
     transform: translateY(-50%);
     width: auto;
     min-width: unset;
@@ -3170,6 +3173,7 @@ button.secondary {
     /* Fixed height so hearth doesn't change size when fire appears/disappears */
     height: auto;
     min-height: 0;
+    overflow: visible;
   }
 
   .hearth-fire {
@@ -3650,7 +3654,7 @@ body.book-overlay-active .magic-book {
 .tools-sidebar {
   position: fixed;
   right: 0;
-  top: calc(50% - 175px);
+  top: 50%;
   transform: translateY(-50%) translateX(calc(100% - 18px));
   z-index: 90;
   display: flex;

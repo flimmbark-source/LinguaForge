@@ -177,8 +177,11 @@ function updateAnchoredUI() {
   const hearthX = updatedMetrics.originX + HEARTH_ANCHOR.x * updatedMetrics.scale;
   const hearthY = updatedMetrics.originY + HEARTH_ANCHOR.y * updatedMetrics.scale;
   const hearthSize = HEARTH_ANCHOR.size * updatedMetrics.scale;
-  root.style.setProperty('--hearth-x', `${hearthX}px`);
-  root.style.setProperty('--hearth-y', `${hearthY}px`);
+  // In portrait, nudge hearth opening to align with background fire
+  const portraitOffsetX = isPortraitBackground() ? -30 : 0;
+  const portraitOffsetY = isPortraitBackground() ? 15 : 0;
+  root.style.setProperty('--hearth-x', `${hearthX + portraitOffsetX}px`);
+  root.style.setProperty('--hearth-y', `${hearthY + portraitOffsetY}px`);
   root.style.setProperty('--hearth-size', `${hearthSize}px`);
 
   if (hammerSystem && typeof hammerSystem.setAnvilAnchor === 'function') {
