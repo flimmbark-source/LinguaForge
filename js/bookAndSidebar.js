@@ -136,6 +136,8 @@ function isInteractiveElement(el) {
   // Check if inside the letter-board area (verse drop zone)
   if (el.closest('#grammarHebrewLine')) return true;
   if (el.closest('.line-word-chip')) return true;
+  if (el.closest('.word-selector-container')) return true;
+  if (el.closest('.word-selector-actions')) return true;
   return false;
 }
 

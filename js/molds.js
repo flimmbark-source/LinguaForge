@@ -4,7 +4,7 @@
  */
 
 import { computeWordPower, INK_PER_WORD_LETTER } from './config.js?v=9';
-import { gameState, addWord, removeWord, findWord, addInk, getNextWordId } from './state.js?v=9';
+import { gameState, addWord, removeWord, findWord, addInk, getNextWordId, recordForgedWord } from './state.js?v=9';
 
 /**
  * Set mold viewport width based on longest mold pattern
@@ -56,6 +56,7 @@ export function forgeWords() {
         power: computeWordPower(mold.pattern.length),
       };
       addWord(word);
+      recordForgedWord(word);
       forgedWords.push(word);
 
       // Reset mold slots
