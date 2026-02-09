@@ -739,27 +739,71 @@ export class PestleSystem {
       const headHeight = length * 0.3;
       ctx.translate(0, handleLength);
 
-      ctx.fillStyle = '#22c55e';
-      ctx.font = 'bold 12px system-ui';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
       const letterCount = pestle.attachedLetters.length;
       const displayCount = Math.min(3, letterCount);
 
+      // Tile styling constants to match letter tiles
+      const tileWidth = 18;
+      const tileHeight = 20;
+      const tileRadius = 4;
+      const tileSpacing = 4;
+
       for (let i = 0; i < displayCount; i++) {
-        const offsetY = headHeight / 2 + i * 8;
-        ctx.fillText(pestle.attachedLetters[pestle.attachedLetters.length - 1 - i], 0, offsetY);
+        const offsetY = headHeight / 2 + i * (tileHeight + tileSpacing);
+        const char = pestle.attachedLetters[pestle.attachedLetters.length - 1 - i];
+
+        // Draw tile background (dark gradient approximation)
+        this._drawRoundRect(ctx, -tileWidth / 2, offsetY - tileHeight / 2, tileWidth, tileHeight, tileRadius);
+
+        // Fill with dark background
+        const gradient = ctx.createLinearGradient(-tileWidth / 2, offsetY - tileHeight / 2,
+                                                  tileWidth / 2, offsetY + tileHeight / 2);
+        gradient.addColorStop(0, '#0f0f10');
+        gradient.addColorStop(1, '#1b1b1d');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // Draw gold border
+        ctx.strokeStyle = '#d1a640';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Draw letter in gold color
+        ctx.fillStyle = '#f3d27a';
+        ctx.font = 'bold 13px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(char, 0, offsetY);
       }
 
       if (letterCount > 3) {
+        const indicatorY = headHeight / 2 + displayCount * (tileHeight + tileSpacing);
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 10px system-ui';
-        ctx.fillText(`+${letterCount - 3}`, 0, headHeight + 10);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`+${letterCount - 3}`, 0, indicatorY);
       }
     }
 
     ctx.restore();
+  }
+
+  /**
+   * Helper function to draw a rounded rectangle path
+   */
+  _drawRoundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
   }
 
   /**
