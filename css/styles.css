@@ -8,7 +8,7 @@
    =============================================== */
 
 :root {
-  --letter-basket-height: 75px;
+  --letter-basket-height: 65px;
   --bg-offset-x: 0px;
   --bg-offset-y: 0px;
   --bg-pos-y: 50%;
@@ -242,7 +242,7 @@ button.secondary {
   transform: translateX(-50%);
   width: calc((100% - 32px) / 3);
   min-width: 280px;
-  max-width: 420px;
+  max-width: 470px;
   height: var(--letter-basket-height);
   box-sizing: border-box;
   padding: 2px 10px;
@@ -349,14 +349,15 @@ button.secondary {
   min-width: 24px;
   height: 28px;
   border-radius: 6px;
-  border: 1px solid #4b5563;
+  border: 2px solid #d1a640;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 18px;
-  background: #111827;
+  background: linear-gradient(135deg, #0f0f10 0%, #1b1b1d 100%);
+  color: #f3d27a;
   cursor: grab;
   user-select: none;
   position: relative;
@@ -370,7 +371,8 @@ button.secondary {
 
 .letter-count {
   font-size: 10px;
-  opacity: 0.85;
+  opacity: 0.9;
+  color: #f3d27a;
   pointer-events: none;
   margin-top: 1px;
 }
@@ -2351,10 +2353,10 @@ button.secondary {
   }
 
   .letter-tile {
-    min-width: 20px;
-    height: 20px;
-    font-size: 13px;
-    border-radius: 4px;
+    min-width: 28px;
+    height: 28px;
+    font-size: 20px;
+    border-radius: 6px;
   }
 
   .letter-board {
@@ -2888,9 +2890,9 @@ button.secondary {
   }
 
   .letter-tile {
-    min-width: 22px;
-    height: 24px;
-    font-size: 15px;
+    min-width: 28px;
+    height: 28px;
+    font-size: 20px;
   }
 
   /* ─ Mold viewport: left-edge tab, extends full height when open ─ */
@@ -3194,10 +3196,10 @@ button.secondary {
 
   /* Basket */
   .letter-tile {
-    min-width: 20px;
-    height: 22px;
-    font-size: 14px;
-    border-radius: 4px;
+    min-width: 28px;
+    height: 28px;
+    font-size: 20px;
+    border-radius: 6px;
   }
 
   .letter-board {
@@ -4099,4 +4101,174 @@ body.book-overlay-active .magic-book {
   0%   { opacity: 0.7; }
   50%  { opacity: 1; }
   100% { opacity: 0.8; }
+}
+
+/* ===============================================
+   GLOSSARY PAGE STYLES
+   =============================================== */
+
+.glossary-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: 280px;
+  padding-right: 4px;
+}
+
+.glossary-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(93, 64, 30, 0.06);
+  border: 1px solid rgba(93, 64, 30, 0.15);
+  border-radius: 6px;
+}
+
+.glossary-hebrew {
+  font-size: 28px;
+  font-weight: 700;
+  font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+  direction: rtl;
+  color: #2d1f0e;
+  line-height: 1.2;
+  min-width: 60px;
+  text-align: center;
+}
+
+.glossary-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 4px;
+}
+
+.glossary-romanization {
+  font-size: 12px;
+  font-style: italic;
+  color: #5a3d1a;
+  opacity: 0.8;
+}
+
+.glossary-english {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3d2a12;
+  text-transform: capitalize;
+}
+
+.glossary-empty {
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* ===============================================
+   WORD SELECTOR STYLES (VERSE PAGE)
+   =============================================== */
+
+.word-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  min-height: 50px;
+}
+
+.word-selector-arrow {
+  background: #5a3d1a;
+  color: #f5e6c8;
+  border: none;
+  border-radius: 4px;
+  width: 28px;
+  height: 36px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.word-selector-arrow:hover {
+  background: #7a5d3a;
+}
+
+.word-selector-arrow:active {
+  background: #4a2d0a;
+}
+
+.word-selector-display {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(93, 64, 30, 0.08);
+  border: 1px solid rgba(93, 64, 30, 0.3);
+  border-radius: 6px;
+  padding: 6px 10px;
+  min-height: 44px;
+}
+
+.word-selector-hebrew {
+  font-size: 24px;
+  font-weight: 700;
+  font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+  direction: rtl;
+  color: #2d1f0e;
+  line-height: 1.2;
+}
+
+.word-selector-count {
+  font-size: 10px;
+  color: #5a3d1a;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+.word-selector-empty {
+  font-size: 12px;
+  color: #5a3d1a;
+  opacity: 0.6;
+}
+
+.word-selector-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.word-selector-enter-btn,
+.word-selector-erase-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.word-selector-enter-btn {
+  background: #5a3d1a;
+  color: #f5e6c8;
+}
+
+.word-selector-enter-btn:hover {
+  background: #7a5d3a;
+}
+
+.word-selector-enter-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.word-selector-erase-btn {
+  background: #8b3a3a;
+  color: #f5e6c8;
+}
+
+.word-selector-erase-btn:hover {
+  background: #a04a4a;
 }

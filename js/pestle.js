@@ -31,6 +31,12 @@ export class PestleSystem {
     this.onPutAway = null;
     this.overlayRenderer = null;
 
+    // Load pestle and mortar PNG images
+    this._pestleImg = new Image();
+    this._pestleImg.src = 'Public/Pestle.png';
+    this._mortarImg = new Image();
+    this._mortarImg.src = 'Public/Mortar.png';
+
     // World physics constants
     this.gravity = 2600;
     this.airFriction = 0.9;
@@ -363,17 +369,14 @@ export class PestleSystem {
     if (this.insideMortar) {
       if (newY < m.y) {
         // Head is being pulled above the mortar top
-        if (newX >= opening.left && newX <= opening.right) {
-          // Exiting through the top opening — allow it
-          this.insideMortar = false;
-        } else {
-          // Being pulled through the wall by length constraint — block it
+        // Always constrain X to opening bounds while exiting to prevent
+        // the pestle center bottom from moving outside the mortar walls
+        if (newX < opening.left || newX > opening.right) {
           collided = true;
-          newY = m.y + 1;
-          const bounds = this.getMortarBoundsAtY(newY);
-          if (bounds) {
-            newX = Math.max(bounds.left, Math.min(bounds.right, newX));
-          }
+          newX = Math.max(opening.left, Math.min(opening.right, newX));
+        } else {
+          // Exiting cleanly through opening
+          this.insideMortar = false;
         }
       } else {
         // Inside mortar, constrain to walls and bottom
@@ -424,6 +427,48 @@ export class PestleSystem {
       // Kill head velocity on collision to prevent bouncing
       pestle.prevHeadX = newX;
       pestle.prevHeadY = newY;
+    }
+
+    // When inside mortar, constrain pivot to prevent pestle from extending
+    // too far outside the mortar bounds visually
+    if (this.insideMortar) {
+      const mortarLeft = m.x - 50;
+      const mortarRight = m.x + m.width + 50;
+      const mortarTop = m.y - 100;
+      
+      if (pestle.pivotX < mortarLeft) {
+        pestle.pivotX = mortarLeft;
+        dx = pestle.headX - pestle.pivotX;
+        dy = pestle.headY - pestle.pivotY;
+        dist = Math.hypot(dx, dy);
+        if (dist > 0) {
+          const scale = pestle.constantLength / dist;
+          pestle.headX = pestle.pivotX + dx * scale;
+          pestle.headY = pestle.pivotY + dy * scale;
+        }
+      } else if (pestle.pivotX > mortarRight) {
+        pestle.pivotX = mortarRight;
+        dx = pestle.headX - pestle.pivotX;
+        dy = pestle.headY - pestle.pivotY;
+        dist = Math.hypot(dx, dy);
+        if (dist > 0) {
+          const scale = pestle.constantLength / dist;
+          pestle.headX = pestle.pivotX + dx * scale;
+          pestle.headY = pestle.pivotY + dy * scale;
+        }
+      }
+      
+      if (pestle.pivotY < mortarTop) {
+        pestle.pivotY = mortarTop;
+        dx = pestle.headX - pestle.pivotX;
+        dy = pestle.headY - pestle.pivotY;
+        dist = Math.hypot(dx, dy);
+        if (dist > 0) {
+          const scale = pestle.constantLength / dist;
+          pestle.headX = pestle.pivotX + dx * scale;
+          pestle.headY = pestle.pivotY + dy * scale;
+        }
+      }
     }
 
     // Update angle
@@ -581,7 +626,7 @@ export class PestleSystem {
   // ─── Drawing ──────────────────────────────────────────
 
   /**
-   * Draw the pestle at its current position
+   * Draw the pestle using PNG image
    */
   drawPestle(ctx, pestle) {
     ctx.save();
@@ -589,38 +634,27 @@ export class PestleSystem {
     const pivotY = pestle.pivotY;
     const dx = pestle.headX - pivotX;
     const dy = pestle.headY - pivotY;
-    // Rotate so +y axis points from pivot toward head (grinding end)
     const angle = Math.atan2(dy, dx) - Math.PI / 2;
     const length = pestle.constantLength;
 
     ctx.translate(pivotX, pivotY);
     ctx.rotate(angle);
 
-    // Handle (near pivot / mouse - player holds this end)
-    const handleWidth = pestle.handleThickness;
-    const handleLength = length * 0.7;
-    const handleGradient = ctx.createLinearGradient(0, 0, 0, handleLength);
-    handleGradient.addColorStop(0, '#fbbf24');
-    handleGradient.addColorStop(1, '#92400e');
-    ctx.fillStyle = handleGradient;
-    ctx.fillRect(-handleWidth / 2, 0, handleWidth, handleLength);
-
-    // Pestle head (far end - the grinding end, toward physics head)
-    const headWidth = pestle.width;
-    const headHeight = length * 0.3;
-    ctx.translate(0, handleLength);
-
-    const headGradient = ctx.createLinearGradient(-headWidth / 2, 0, headWidth / 2, headHeight);
-    headGradient.addColorStop(0, '#d1d5db');
-    headGradient.addColorStop(1, '#6b7280');
-    ctx.fillStyle = headGradient;
-
-    ctx.beginPath();
-    ctx.roundRect(-headWidth / 2, 0, headWidth, headHeight, 8);
-    ctx.fill();
+    // Draw pestle PNG image
+    if (this._pestleImg && this._pestleImg.complete && this._pestleImg.naturalWidth > 0) {
+      const imgAspect = this._pestleImg.naturalWidth / this._pestleImg.naturalHeight;
+      const imgHeight = length;
+      const imgWidth = imgHeight * imgAspect;
+      // Knob (top of image) at y=0 (pivot), grinding end (bottom) extends toward head
+      ctx.drawImage(this._pestleImg, -imgWidth / 2, 0, imgWidth, imgHeight);
+    }
 
     // Draw attached letters on pestle head
     if (pestle.attachedLetters.length > 0) {
+      const handleLength = length * 0.7;
+      const headHeight = length * 0.3;
+      ctx.translate(0, handleLength);
+
       ctx.fillStyle = '#22c55e';
       ctx.font = 'bold 12px system-ui';
       ctx.textAlign = 'center';
@@ -645,88 +679,46 @@ export class PestleSystem {
   }
 
   /**
-   * Draw the mortar bowl (back layer, behind the pestle)
+   * Draw the mortar bowl using PNG image (back layer, behind the pestle)
    */
   drawMortarBack(ctx, mortar) {
     ctx.save();
-    ctx.translate(mortar.x + mortar.width / 2, mortar.y + mortar.height);
 
-    // Glow effect
-    const glowGradient = ctx.createRadialGradient(0, 0, 10, 0, 0, 100);
-    glowGradient.addColorStop(0, 'rgba(139, 92, 246, 0.25)');
-    glowGradient.addColorStop(1, 'rgba(15,23,42,0)');
-    ctx.fillStyle = glowGradient;
-    ctx.beginPath();
-    ctx.ellipse(0, 4, mortar.width * 0.6, 20, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.translate(-mortar.width / 2, -mortar.height);
-
-    // Mortar bowl gradient
-    const g = ctx.createLinearGradient(0, 0, 0, mortar.height);
-    g.addColorStop(0, '#9ca3af');
-    g.addColorStop(0.5, '#6b7280');
-    g.addColorStop(1, '#374151');
-    ctx.fillStyle = g;
-
-    // Draw mortar bowl shape
-    ctx.beginPath();
-    ctx.moveTo(mortar.width * 0.2, 0);
-    ctx.quadraticCurveTo(0, mortar.height * 0.3, mortar.width * 0.1, mortar.height);
-    ctx.lineTo(mortar.width * 0.9, mortar.height);
-    ctx.quadraticCurveTo(mortar.width, mortar.height * 0.3, mortar.width * 0.8, 0);
-    ctx.closePath();
-    ctx.fill();
-
-    // Inner shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.beginPath();
-    ctx.ellipse(mortar.width / 2, mortar.height * 0.4, mortar.width * 0.3, mortar.height * 0.15, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // Draw mortar PNG image
+    if (this._mortarImg && this._mortarImg.complete && this._mortarImg.naturalWidth > 0) {
+      const imgAspect = this._mortarImg.naturalWidth / this._mortarImg.naturalHeight;
+      const imgWidth = mortar.width * 1.15;
+      const imgHeight = imgWidth / imgAspect;
+      const imgX = mortar.x + mortar.width / 2 - imgWidth / 2;
+      // Align bottom of image with bottom of mortar
+      const imgY = mortar.y + mortar.height - imgHeight;
+      ctx.drawImage(this._mortarImg, imgX, imgY, imgWidth, imgHeight);
+    }
 
     ctx.restore();
   }
 
   /**
-   * Draw the mortar front rim (over the pestle, to create depth illusion)
+   * Draw the mortar front walls using PNG image (over the pestle, for depth illusion)
    */
   drawMortarFront(ctx, mortar) {
+    if (!this._mortarImg || !this._mortarImg.complete || !this._mortarImg.naturalWidth) return;
+
     ctx.save();
-    ctx.translate(mortar.x + mortar.width / 2, mortar.y + mortar.height);
-    ctx.translate(-mortar.width / 2, -mortar.height);
+    const imgAspect = this._mortarImg.naturalWidth / this._mortarImg.naturalHeight;
+    const imgWidth = mortar.width * 1.15;
+    const imgHeight = imgWidth / imgAspect;
+    const imgX = mortar.x + mortar.width / 2 - imgWidth / 2;
+    const imgY = mortar.y + mortar.height - imgHeight;
 
-    // Front rim highlight
-    ctx.strokeStyle = 'rgba(248,250,252,0.3)';
-    ctx.lineWidth = 2;
+    // Clip to only show the left and right wall regions (front edges)
     ctx.beginPath();
-    ctx.moveTo(mortar.width * 0.2, 5);
-    ctx.lineTo(mortar.width * 0.8, 5);
-    ctx.stroke();
+    ctx.rect(imgX, imgY, imgWidth * 0.23, imgHeight);
+    ctx.rect(imgX + imgWidth * 0.77, imgY, imgWidth * 0.23, imgHeight);
+    ctx.clip();
 
-    // Front edge of the left and right walls (thicker, to overlap the pestle)
-    const wallGradient = ctx.createLinearGradient(0, 0, 0, mortar.height * 0.5);
-    wallGradient.addColorStop(0, '#9ca3af');
-    wallGradient.addColorStop(1, 'rgba(107, 114, 128, 0)');
-
-    ctx.fillStyle = wallGradient;
-
-    // Left wall front edge
-    ctx.beginPath();
-    ctx.moveTo(mortar.width * 0.2, 0);
-    ctx.quadraticCurveTo(mortar.width * 0.05, mortar.height * 0.3, mortar.width * 0.1, mortar.height * 0.6);
-    ctx.lineTo(mortar.width * 0.15, mortar.height * 0.6);
-    ctx.quadraticCurveTo(mortar.width * 0.1, mortar.height * 0.3, mortar.width * 0.25, 0);
-    ctx.closePath();
-    ctx.fill();
-
-    // Right wall front edge
-    ctx.beginPath();
-    ctx.moveTo(mortar.width * 0.8, 0);
-    ctx.quadraticCurveTo(mortar.width * 0.95, mortar.height * 0.3, mortar.width * 0.9, mortar.height * 0.6);
-    ctx.lineTo(mortar.width * 0.85, mortar.height * 0.6);
-    ctx.quadraticCurveTo(mortar.width * 0.9, mortar.height * 0.3, mortar.width * 0.75, 0);
-    ctx.closePath();
-    ctx.fill();
+    // Redraw the mortar image clipped to the wall edges
+    ctx.drawImage(this._mortarImg, imgX, imgY, imgWidth, imgHeight);
 
     ctx.restore();
   }

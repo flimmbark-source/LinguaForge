@@ -41,6 +41,12 @@ export const gameState = {
   // Completed lines counter
   linesCompleted: 0,
 
+  // Glossary: all unique words ever forged (for glossary pages)
+  forgedWordsHistory: [],
+
+  // Word selector index for verse page
+  wordSelectorIndex: 0,
+
   // Upgrades
   upgrades: {},
 
@@ -221,6 +227,17 @@ export function clearVerseWords() {
  */
 export function incrementLinesCompleted() {
   gameState.linesCompleted++;
+}
+
+/**
+ * Record a forged word in the glossary history (deduplicates by hebrew text)
+ * @param {Object} word - Word object with text, english properties
+ */
+export function recordForgedWord(word) {
+  const exists = gameState.forgedWordsHistory.some(w => w.text === word.text);
+  if (!exists) {
+    gameState.forgedWordsHistory.push({ text: word.text, english: word.english });
+  }
 }
 
 /**

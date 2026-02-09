@@ -56,6 +56,10 @@ export class ShovelSystem {
     this.hasCenteredOnStart = false;
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
+    // Load shovel PNG image
+    this._shovelImg = new Image();
+    this._shovelImg.src = 'Public/Shovel.png';
+
     // world physics constants (mirroring hammer semantics)
     this.gravity = 2600;      // px/s^2 (optional if you want sag)
     this.airFriction = 0.7;   // 0–1, lower = more drag
@@ -488,35 +492,27 @@ resize() {
     ctx.translate(s.pivotX, s.pivotY);
     ctx.rotate(s.angle);
 
-    // handle
-    const handleW = 10;
     const handleL = s.length;
-    const grad = ctx.createLinearGradient(0, 0, 0, handleL);
-    grad.addColorStop(0, '#75533fff');
-    grad.addColorStop(1, '#0b0b0b');
-    ctx.fillStyle = grad;
-    ctx.fillRect(-handleW / 2, 0, handleW, handleL);
-
-    // shovel head (ash shovel look) - black metal scoop
-    ctx.translate(0, handleL);
-    const headW = 48;
     const headH = 148;
-    ctx.fillStyle = '#131416ff';
-    ctx.beginPath();
-    ctx.ellipse(0, headH / 2 - 6, headW / 2, headH / 2, 0, Math.PI, 2 * Math.PI);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(52, 52, 52, 0.76)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    const totalHeight = handleL + headH;
 
-    // draw collected letters on head
+    // Draw shovel PNG image
+    if (this._shovelImg && this._shovelImg.complete && this._shovelImg.naturalWidth > 0) {
+      const imgAspect = this._shovelImg.naturalWidth / this._shovelImg.naturalHeight;
+      const imgHeight = totalHeight;
+      const imgWidth = imgHeight * imgAspect;
+      // Grip (top of image) at y=0 (pivot), blade (bottom) extends away
+      ctx.drawImage(this._shovelImg, -imgWidth / 2, 0, imgWidth, imgHeight);
+    }
+
+    // Draw collected letters on head
     if (this.collected.length > 0) {
+      ctx.translate(0, handleL);
       const startX = -(this.collected.length - 1) * 10 / 2;
       for (let i = 0; i < this.collected.length; i++) {
         const ch = this.collected[i];
         ctx.save();
         ctx.translate(startX + i * 10, headH / 2 - 6 - 4);
-        // small tile
         ctx.fillStyle = '#1f2937';
         ctx.fillRect(-8, -8, 16, 16);
         ctx.strokeStyle = 'rgba(255,255,255,0.06)';

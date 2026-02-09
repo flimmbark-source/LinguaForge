@@ -4,12 +4,12 @@
  */
 
 
-import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD } from './config.js?v=9';
+import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower } from './config.js?v=9';
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
 import { setMoldViewportWidth, navigatePreviousMold, navigateNextMold } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
 import { setupVerseAreaDrop, completeVerse } from './grammar.js?v=9';
-import { initializeElements, updateUI } from './ui.js?v=9';
+import { initializeElements, updateUI, initWordSelector } from './ui.js?v=9';
 import { gameState } from './state.js?v=9';
 import { addLetters } from './state.js?v=9';
 import { HammerSystem } from './hammer.js?v=9';
@@ -17,7 +17,7 @@ import { PestleSystem } from './pestle.js?v=9';
 import { ShovelSystem } from './shovel.js?v=9';
 import { initializeHearth, updateHearth } from './RuneHearth.js?v=9';
 import { initAudio, startBackgroundMusic, getMusicVolume, getSfxVolume, setMusicVolume, setSfxVolume, unlockAudio } from './audio.js?v=9';
-import { addInk, addVerseWord /*, whatever else you need */ } from './state.js?v=9';
+import { addInk, addVerseWord, addWord, getNextWordId, recordForgedWord } from './state.js?v=9';
 import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from './upgrades.js?v=9';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
 import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
@@ -398,32 +398,21 @@ function spawnMagicalText(word, moldBounds, delay) {
         el.appendChild(sparkle);
       }
 
-      // On arrival: place word directly into verse (bypass inventory)
+      // On arrival: add word to inventory (player will manually enter via word selector)
       const zoomTime = 700;
       setTimeout(() => {
-        // If this word is already in the verse, skip it
-        const alreadyInVerse = gameState.verseWords.some(w => w.hebrew === word.text);
-        if (alreadyInVerse) {
-          wrapper.remove();
-          return;
-        }
-
-        const instanceId = 'vw-' + Date.now() + '-' + Math.random();
-        addVerseWord({ instanceId, hebrew: word.text }, gameState.verseWords.length);
+        // Add word to inventory for use via the word selector
+        const wordObj = {
+          id: getNextWordId(),
+          text: word.text,
+          english: word.english,
+          length: word.length,
+          power: computeWordPower(word.length),
+          heated: true, // Already ready for verse
+        };
+        addWord(wordObj);
+        recordForgedWord(word);
         updateUI();
-
-        // Add a flash effect to the newly added verse chip
-        const freshVerseArea = document.getElementById('grammarHebrewLine');
-        if (freshVerseArea) {
-          const verseChips = freshVerseArea.querySelectorAll('.line-word-chip');
-          const lastChip = verseChips[verseChips.length - 1];
-          if (lastChip) {
-            lastChip.classList.add('verse-arrival-flash');
-            lastChip.addEventListener('animationend', () => {
-              lastChip.classList.remove('verse-arrival-flash');
-            }, { once: true });
-          }
-        }
 
         wrapper.remove();
       }, zoomTime);
@@ -450,6 +439,9 @@ function initializeGame() {
   if (grammarHebrewLineDiv) {
     setupVerseAreaDrop(grammarHebrewLineDiv, updateUI);
   }
+
+  // Initialize word selector for verse page
+  initWordSelector();
 
   // Initialize crafting systems
   initializeCraftingSystems();
