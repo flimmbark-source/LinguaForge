@@ -2291,7 +2291,7 @@ button.secondary {
     width: 100% !important;
     height: 100% !important;
     transform: none !important;
-    z-index: 700 !important;
+    z-index: 1100 !important;
     display: flex;
     align-items: center;
     justify-content: center;
