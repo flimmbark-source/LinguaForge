@@ -350,6 +350,7 @@ export function renderScribeBlocks(force = false) {
         } else {
           block.classList.remove('paused');
         }
+        renderScribeGhosts(block, scribe);
       }
     });
     renderScribeHireBlocksInline();
@@ -378,19 +379,7 @@ export function renderScribeBlocks(force = false) {
     icon.textContent = '✒️';
     block.appendChild(icon);
 
-    // Ghosts (floating resource animations)
-    const ghosts = gameState.scribeGhosts.filter(g => g.scribeId === scribe.id);
-    ghosts.forEach((ghost, index) => {
-      const ghostEl = document.createElement('div');
-      ghostEl.className = `scribe-ghost scribe-ghost--${ghost.type}`;
-      const ratio = Math.max(0, Math.min(1, ghost.t / SCRIBE_GHOST_LIFETIME));
-      const opacity = 1 - ratio;
-      const offset = -6 - 10 * ratio - index * 10;
-      ghostEl.style.opacity = opacity.toFixed(2);
-      ghostEl.style.transform = 'translate(-50%, ' + offset + 'px)';
-      ghostEl.textContent = ghost.label;
-      block.appendChild(ghostEl);
-    });
+    renderScribeGhosts(block, scribe);
 
     // Click to toggle pause
     block.addEventListener('click', (e) => {
@@ -406,6 +395,27 @@ export function renderScribeBlocks(force = false) {
 
   // Update our tracking state
   lastRenderedScribes = gameState.scribeList.map(s => ({ id: s.id, paused: s.paused }));
+}
+
+/**
+ * Render floating resource ghosts for a scribe block.
+ * @param {HTMLElement} block - Scribe block element
+ * @param {Object} scribe - Scribe data
+ */
+function renderScribeGhosts(block, scribe) {
+  block.querySelectorAll('.scribe-ghost').forEach(el => el.remove());
+  const ghosts = gameState.scribeGhosts.filter(g => g.scribeId === scribe.id);
+  ghosts.forEach((ghost, index) => {
+    const ghostEl = document.createElement('div');
+    ghostEl.className = `scribe-ghost scribe-ghost--${ghost.type}`;
+    const ratio = Math.max(0, Math.min(1, ghost.t / SCRIBE_GHOST_LIFETIME));
+    const opacity = 1 - ratio;
+    const offset = -6 - 10 * ratio - index * 10;
+    ghostEl.style.opacity = opacity.toFixed(2);
+    ghostEl.style.transform = 'translate(-50%, ' + offset + 'px)';
+    ghostEl.textContent = ghost.label;
+    block.appendChild(ghostEl);
+  });
 }
 
 /**
