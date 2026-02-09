@@ -486,7 +486,7 @@ onPointerDown(e) {
     const targetY = this.height - 10; // Bottom of canvas minus small margin
 
     // Launch the letter from the anvil impact point with an upward arc
-    const launchSpeed = 900 + power * 500; // px/s upward
+    const launchSpeed = (900 + power * 500) * 0.5; // px/s upward
     const baseVx = (strikeVx || 0) * 0.25;
     const biasVx = (targetX - impactX) * 0.8 / Math.max(1, this.width);
     const vx = baseVx + biasVx * launchSpeed * 0.2;
@@ -1027,6 +1027,7 @@ updateFreeHammer(dt) {
         hammer.strikeCooldown = 0.25;
         const impactX = headX;
         const impactY = headY;
+        const multiplier = 1 + (4 * hammer.heatLevel);
 
         // Cool down the hammer
         hammer.heatLevel = 0;
@@ -1034,11 +1035,16 @@ updateFreeHammer(dt) {
 
         // Spawn sparks at impact point
         this.spawnSparks(impactX, impactY, 1.2);
+        playHammerClank();
 
         // Trigger forge functionality
         if (this.onForgeTriggered) {
           this.onForgeTriggered();
           console.log('Red-hot hammer struck mold viewport! Forging words...');
+        }
+
+        if (this.onLetterForged) {
+          this.onLetterForged(impactX, impactY, 1.1, hammer.headVx, multiplier);
         }
 
         // Bounce the hammer back

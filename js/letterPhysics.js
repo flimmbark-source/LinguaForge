@@ -214,10 +214,12 @@ export class LetterPhysicsSystem {
     if (!canPlaceInHearth()) return;
 
     const hr = hearthDiv.getBoundingClientRect();
+    const floorBottom = window.innerHeight - FLOOR_MARGIN;
+    const hearthBottom = Math.max(hr.bottom, floorBottom);
 
     for (const l of this.letters) {
-      if (l.consumed || l.isHeld || l.settled) continue;
-      if (l.x >= hr.left && l.x <= hr.right && l.y >= hr.top && l.y <= hr.bottom) {
+      if (l.consumed || l.isHeld) continue;
+      if (l.x >= hr.left && l.x <= hr.right && l.y >= hr.top && l.y <= hearthBottom) {
         l.consumed = true;
         heatHearth(1);
         spawnHearthSpark(l.x, l.y, 4);
