@@ -1158,14 +1158,14 @@ drawHammer(ctx, hammer) {
   const headWidth = hammer.width;
 
   // Draw subtle ambient glow behind hammer head (always on for visibility)
-  const headCenterY = -(handleLength + headHeight / 2);
+  const headCenterY = -(handleLength + headHeight - 30);
   const baseGlowRadius = 36;
   const baseGlow = ctx.createRadialGradient(0, headCenterY, 4, 0, headCenterY, baseGlowRadius);
   baseGlow.addColorStop(0, 'rgba(255, 245, 230, 0.22)');
   baseGlow.addColorStop(1, 'rgba(255, 220, 180, 0)');
   ctx.fillStyle = baseGlow;
   ctx.beginPath();
-  ctx.arc(0, headCenterY, baseGlowRadius, 0, Math.PI * 2);
+  ctx.arc(0, headCenterY, baseGlowRadius, 0, Math.PI * 3);
   ctx.fill();
 
   // Draw heat glow behind hammer head
