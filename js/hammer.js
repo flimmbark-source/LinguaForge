@@ -1027,6 +1027,7 @@ updateFreeHammer(dt) {
         hammer.strikeCooldown = 0.25;
         const impactX = headX;
         const impactY = headY;
+        const multiplier = 1 + (4 * hammer.heatLevel);
 
         // Cool down the hammer
         hammer.heatLevel = 0;
@@ -1039,6 +1040,10 @@ updateFreeHammer(dt) {
         if (this.onForgeTriggered) {
           this.onForgeTriggered();
           console.log('Red-hot hammer struck mold viewport! Forging words...');
+        }
+
+        if (this.onLetterForged) {
+          this.onLetterForged(impactX, impactY, 1.1, hammer.headVx, multiplier);
         }
 
         // Bounce the hammer back

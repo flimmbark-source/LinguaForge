@@ -76,6 +76,7 @@ document.addEventListener('pointerdown', e => {
 
 document.addEventListener('pointermove', e => {
   if (!_heldLetter) return;
+  if (e.cancelable) e.preventDefault();
   _heldLetter.x = e.clientX;
   _heldLetter.y = e.clientY;
   _mouseHist.push({ x: e.clientX, y: e.clientY, t: performance.now() });
