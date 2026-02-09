@@ -70,19 +70,19 @@ export function processScribeTick(scribe, onLetterSpawned) {
     addScribeGhost(scribe.id, {
       type: 'ink',
       amount: SCRIBE_INK_PER_BATCH,
-      label: `-${SCRIBE_INK_PER_BATCH} Ink`,
+      label: '💧',
     });
     scribe.lettersLeftInBatch = SCRIBE_LETTERS_PER_BATCH;
   }
 
   // Produce letter
   scribe.progress -= 1;
-  spawnLetter(onLetterSpawned);
+  const producedLetter = spawnLetter(onLetterSpawned);
   scribe.lettersLeftInBatch -= 1;
   addScribeGhost(scribe.id, {
     type: 'letter',
     amount: 1,
-    label: '+1 Letter',
+    label: producedLetter,
   });
   return true;
 }

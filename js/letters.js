@@ -424,7 +424,7 @@ export function spawnLetter(onDrop) {
   const char = randomAllowedLetter();
   addLetters(1);
   const letterPoolDiv = document.getElementById('letterPool');
-  if (!letterPoolDiv) return;
+  if (!letterPoolDiv) return char;
 
   // Check if we already have a tile with this character (stack them)
   const existing = Array.from(letterPoolDiv.children).find(
@@ -434,10 +434,11 @@ export function spawnLetter(onDrop) {
     const current = parseInt(existing.dataset.count || '1', 10);
     existing.dataset.count = String(current + 1);
     updateLetterTileLabel(existing);
-    return;
+    return char;
   }
 
   // Create new tile
   const tile = createLetterTile(char, onDrop);
   letterPoolDiv.appendChild(tile);
+  return char;
 }

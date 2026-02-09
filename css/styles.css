@@ -801,6 +801,15 @@ button.secondary {
   color: #bae6fd;
 }
 
+.scribe-ghost-tile {
+  min-width: 18px;
+  height: 22px;
+  border-width: 1px;
+  font-size: 12px;
+  cursor: default;
+  pointer-events: none;
+}
+
 /* ===============================================
    GRAMMAR / VERSE SYSTEM
    =============================================== */
