@@ -438,6 +438,7 @@ export class PestleSystem {
     // mouse movement into the wall while allowing all other directions.
     // The head can only exit the mortar through the top opening.
     let collided = false;
+    let positionAdjusted = false;
 
     if (this.insideMortar) {
       if (newY < m.y - headRadius) {
@@ -448,6 +449,7 @@ export class PestleSystem {
         const openingRight = opening.right - headRadius;
         if (newX < openingLeft || newX > openingRight) {
           collided = true;
+          positionAdjusted = true;
           newX = Math.max(openingLeft, Math.min(openingRight, newX));
         } else {
           // Exiting cleanly through opening
@@ -458,6 +460,7 @@ export class PestleSystem {
         const result = this.constrainToMortarInterior(newX, newY, headRadius);
         if (result.x !== newX || result.y !== newY) {
           collided = true;
+          positionAdjusted = true;
           newX = result.x;
           newY = result.y;
         }
@@ -473,12 +476,14 @@ export class PestleSystem {
           const result = this.constrainToMortarInterior(newX, newY, headRadius);
           if (result.x !== newX || result.y !== newY) {
             collided = true;
+            positionAdjusted = true;
             newX = result.x;
             newY = result.y;
           }
         } else {
           // Hitting mortar rim/wall from outside — block
           collided = true;
+          positionAdjusted = true;
           newY = m.y - headRadius;
         }
       }
@@ -491,11 +496,13 @@ export class PestleSystem {
       const shaftCollided = this.constrainPestleShaft(false);
       if (shaftCollided) {
         collided = true;
+        positionAdjusted = true;
       }
     } else {
       const shaftCollided = this.constrainPestleShaft(true);
       if (shaftCollided) {
         collided = true;
+        positionAdjusted = true;
       }
     }
 
@@ -514,8 +521,8 @@ export class PestleSystem {
       }
 
       // Kill head velocity on collision to prevent bouncing
-      pestle.prevHeadX = newX;
-      pestle.prevHeadY = newY;
+      pestle.prevHeadX = pestle.headX;
+      pestle.prevHeadY = pestle.headY;
     }
 
     // When inside mortar, constrain pivot to prevent pestle from extending
@@ -535,6 +542,7 @@ export class PestleSystem {
           pestle.headX = pestle.pivotX + dx * scale;
           pestle.headY = pestle.pivotY + dy * scale;
         }
+        positionAdjusted = true;
       } else if (pestle.pivotX > mortarRight) {
         pestle.pivotX = mortarRight;
         dx = pestle.headX - pestle.pivotX;
@@ -545,6 +553,7 @@ export class PestleSystem {
           pestle.headX = pestle.pivotX + dx * scale;
           pestle.headY = pestle.pivotY + dy * scale;
         }
+        positionAdjusted = true;
       }
       
       if (pestle.pivotY < mortarTop) {
@@ -557,7 +566,13 @@ export class PestleSystem {
           pestle.headX = pestle.pivotX + dx * scale;
           pestle.headY = pestle.pivotY + dy * scale;
         }
+        positionAdjusted = true;
       }
+    }
+
+    if (positionAdjusted) {
+      pestle.prevHeadX = pestle.headX;
+      pestle.prevHeadY = pestle.headY;
     }
 
     // Update angle
