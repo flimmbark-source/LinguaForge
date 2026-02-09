@@ -30,8 +30,7 @@ export function initializeElements() {
   elements.lettersDisplay = document.getElementById('lettersDisplay');
   elements.inkDisplay = document.getElementById('inkDisplay');
   elements.clickGainSpan = document.getElementById('clickGain');
-  elements.scribeCostSpan = document.getElementById('scribeCost');
-  elements.buyScribeBtn = document.getElementById('buyScribeBtn');
+  elements.scribeHireBlocksContainer = document.getElementById('scribeHireBlocks');
   elements.scribeBlocksContainer = document.getElementById('scribeBlocks');
   elements.moldListDiv = document.getElementById('moldList');
   elements.moldIndexLabel = document.getElementById('moldIndexLabel');
@@ -132,14 +131,44 @@ function updateShovelVisibility() {
  * Update scribe purchase button
  */
 export function updateScribePurchaseButton() {
-  const cost = getScribeCost(gameState.scribeList.length);
-  if (elements.scribeCostSpan) {
-    elements.scribeCostSpan.textContent = cost;
+  renderScribeHireBlocks();
+}
+
+function renderScribeHireBlocks() {
+  if (!elements.scribeHireBlocksContainer) return;
+  elements.scribeHireBlocksContainer.innerHTML = '';
+
+  const owned = gameState.scribeList.length;
+  const costs = [getScribeCost(owned)];
+  if (owned > 0) {
+    costs.push(getScribeCost(owned + 1));
   }
-  if (elements.buyScribeBtn) {
-    // Disable if not unlocked or can't afford
-    elements.buyScribeBtn.disabled = !gameState.scribesUnlocked || gameState.letters < cost;
-  }
+
+  costs.forEach((cost, index) => {
+    const block = document.createElement('button');
+    block.type = 'button';
+    block.className = 'scribe-block scribe-hire-block';
+    block.dataset.tooltip = `Cost: ${cost} ⭐`;
+    block.dataset.cost = String(cost);
+
+    if (index === 0) {
+      const canAfford = gameState.scribesUnlocked && gameState.letters >= cost;
+      block.classList.add('is-active');
+      block.dataset.disabled = canAfford ? 'false' : 'true';
+      block.setAttribute('aria-disabled', canAfford ? 'false' : 'true');
+      block.setAttribute('aria-label', `Hire scribe for ${cost} renown`);
+      if (!canAfford) {
+        block.classList.add('is-disabled');
+      }
+    } else {
+      block.classList.add('is-preview');
+      block.dataset.disabled = 'true';
+      block.setAttribute('aria-disabled', 'true');
+      block.setAttribute('aria-label', `Next scribe cost ${cost} renown`);
+    }
+
+    elements.scribeHireBlocksContainer.appendChild(block);
+  });
 }
 
 /**
