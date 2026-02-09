@@ -435,63 +435,78 @@ export class PestleSystem {
     }
 
     // ── Mortar collision on the head ──
-    // When the grinding end hits the mortar, the head is pinned at the
-    // collision surface and the pivot is adjusted instead — this blocks
-    // mouse movement into the wall while allowing all other directions.
-    // The head can only exit the mortar through the top opening.
+    // Simple collision: pestle head edges collide with mortar outer walls,
+    // inner walls, and bottom. Nothing fancy.
     let collided = false;
-    let positionAdjusted = false;
 
     if (this.insideMortar) {
-      const exitY = m.y - headRadius - rimBuffer;
-      if (newY < exitY) {
-        // Head is being pulled above the mortar top
-        // Always constrain X to opening bounds while exiting to prevent
-        // the pestle center bottom from moving outside the mortar walls
-        const openingLeft = opening.left + headRadius;
-        const openingRight = opening.right - headRadius;
-        if (newX < openingLeft || newX > openingRight) {
-          collided = true;
-          positionAdjusted = true;
-          newX = Math.max(openingLeft, Math.min(openingRight, newX));
-          newY = Math.max(newY, exitY);
-        } else {
-          // Exiting cleanly through opening
-          this.insideMortar = false;
-        }
-      } else {
-        // Inside mortar, constrain to walls and bottom
-        const result = this.constrainToMortarInterior(newX, newY, headRadius);
-        if (result.x !== newX || result.y !== newY) {
-          collided = true;
-          positionAdjusted = true;
-          newX = result.x;
-          newY = result.y;
-        }
-      }
-    } else {
-      const nearMortarX = newX + headRadius >= m.x && newX - headRadius <= m.x + m.width;
-      if (newY + headRadius >= m.y && nearMortarX) {
+      // Allow exiting through the top opening
+      if (newY < m.y - headRadius) {
         const openingLeft = opening.left + headRadius;
         const openingRight = opening.right - headRadius;
         if (newX >= openingLeft && newX <= openingRight) {
-          // Entering through the top opening — allowed
+          this.insideMortar = false;
+        } else {
+          // Blocked by inner rim — push back inside
+          newX = Math.max(openingLeft, Math.min(openingRight, newX));
+          newY = Math.max(newY, m.y - headRadius);
+          collided = true;
+        }
+      }
+
+      // Constrain to inner walls and bottom
+      if (this.insideMortar) {
+        const result = this.constrainToMortarInterior(newX, newY, headRadius);
+        if (result.x !== newX || result.y !== newY) {
+          collided = true;
+        }
+        newX = result.x;
+        newY = result.y;
+      }
+    } else {
+      // Outside — check collision with outer mortar edges
+      const headTop = newY - headRadius;
+      const headBottom = newY + headRadius;
+      const headLeft = newX - headRadius;
+      const headRight = newX + headRadius;
+
+      const hitsVertically = headBottom >= m.y && headTop <= m.y + m.height;
+      const hitsHorizontally = headRight >= m.x && headLeft <= m.x + m.width;
+
+      if (hitsVertically && hitsHorizontally) {
+        // Check if entering through the top opening
+        const openingLeft = opening.left + headRadius;
+        const openingRight = opening.right - headRadius;
+        const comingFromAbove = headTop <= m.y;
+
+        if (comingFromAbove && newX >= openingLeft && newX <= openingRight) {
+          // Enter the mortar
           this.insideMortar = true;
           const result = this.constrainToMortarInterior(newX, newY, headRadius);
           if (result.x !== newX || result.y !== newY) {
             collided = true;
-            positionAdjusted = true;
-            newX = result.x;
-            newY = result.y;
           }
+          newX = result.x;
+          newY = result.y;
         } else {
-          // Hitting mortar rim/wall from outside — block and slide along rim
+          // Collide with outer mortar walls — push head out
           collided = true;
-          positionAdjusted = true;
-          const rimLeft = m.x + headRadius;
-          const rimRight = m.x + m.width - headRadius;
-          newX = Math.max(rimLeft, Math.min(rimRight, newX));
-          newY = Math.min(newY, m.y - headRadius);
+          // Find shortest push-out direction
+          const pushUp = headBottom - m.y;
+          const pushDown = (m.y + m.height) - headTop;
+          const pushLeft = headRight - m.x;
+          const pushRight = (m.x + m.width) - headLeft;
+          const minPush = Math.min(pushUp, pushDown, pushLeft, pushRight);
+
+          if (minPush === pushUp) {
+            newY = m.y - headRadius;
+          } else if (minPush === pushDown) {
+            newY = m.y + m.height + headRadius;
+          } else if (minPush === pushLeft) {
+            newX = m.x - headRadius;
+          } else {
+            newX = m.x + m.width + headRadius;
+          }
         }
       }
     }
@@ -499,85 +514,18 @@ export class PestleSystem {
     pestle.headX = newX;
     pestle.headY = newY;
 
-    if (this.insideMortar) {
-      const shaftCollided = this.constrainPestleShaft(false);
-      if (shaftCollided) {
-        collided = true;
-        positionAdjusted = true;
-      }
-    } else {
-      const shaftCollided = this.constrainPestleShaft(true);
-      if (shaftCollided) {
-        collided = true;
-        positionAdjusted = true;
-      }
-    }
-
     if (collided) {
-      // Adjust pivot to maintain constant length from the constrained
-      // head. The pivot moves toward the mouse but stays at a fixed
-      // distance from the head. This blocks mouse movement into the
-      // wall while still allowing movement in other directions.
-      dx = pestle.pivotX - newX;
-      dy = pestle.pivotY - newY;
+      // Re-enforce constant length from constrained head
+      dx = pestle.pivotX - pestle.headX;
+      dy = pestle.pivotY - pestle.headY;
       dist = Math.hypot(dx, dy);
       if (dist > 0) {
         const scale = pestle.constantLength / dist;
-        pestle.pivotX = newX + dx * scale;
-        pestle.pivotY = newY + dy * scale;
+        pestle.pivotX = pestle.headX + dx * scale;
+        pestle.pivotY = pestle.headY + dy * scale;
       }
 
-      // Kill head velocity on collision to prevent bouncing
-      pestle.prevHeadX = pestle.headX;
-      pestle.prevHeadY = pestle.headY;
-    }
-
-    // When inside mortar, constrain pivot to prevent pestle from extending
-    // too far outside the mortar bounds visually
-    if (this.insideMortar) {
-      const mortarLeft = m.x - 50;
-      const mortarRight = m.x + m.width + 50;
-      const mortarTop = m.y - 100;
-      
-      if (pestle.pivotX < mortarLeft) {
-        pestle.pivotX = mortarLeft;
-        dx = pestle.headX - pestle.pivotX;
-        dy = pestle.headY - pestle.pivotY;
-        dist = Math.hypot(dx, dy);
-        if (dist > 0) {
-          const scale = pestle.constantLength / dist;
-          pestle.headX = pestle.pivotX + dx * scale;
-          pestle.headY = pestle.pivotY + dy * scale;
-        }
-        positionAdjusted = true;
-      } else if (pestle.pivotX > mortarRight) {
-        pestle.pivotX = mortarRight;
-        dx = pestle.headX - pestle.pivotX;
-        dy = pestle.headY - pestle.pivotY;
-        dist = Math.hypot(dx, dy);
-        if (dist > 0) {
-          const scale = pestle.constantLength / dist;
-          pestle.headX = pestle.pivotX + dx * scale;
-          pestle.headY = pestle.pivotY + dy * scale;
-        }
-        positionAdjusted = true;
-      }
-      
-      if (pestle.pivotY < mortarTop) {
-        pestle.pivotY = mortarTop;
-        dx = pestle.headX - pestle.pivotX;
-        dy = pestle.headY - pestle.pivotY;
-        dist = Math.hypot(dx, dy);
-        if (dist > 0) {
-          const scale = pestle.constantLength / dist;
-          pestle.headX = pestle.pivotX + dx * scale;
-          pestle.headY = pestle.pivotY + dy * scale;
-        }
-        positionAdjusted = true;
-      }
-    }
-
-    if (positionAdjusted) {
+      // Kill head velocity on collision
       pestle.prevHeadX = pestle.headX;
       pestle.prevHeadY = pestle.headY;
     }
