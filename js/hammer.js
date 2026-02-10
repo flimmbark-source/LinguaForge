@@ -348,7 +348,19 @@ export class HammerSystem {
     const cx = x1 + dx * t;
     const cy = y1 + dy * t;
     const dist = Math.hypot(px - cx, py - cy);
-    const grabDist = this.width <= MOBILE_BREAKPOINT ? 70 : 140;
+
+    // Base grab distance
+    let grabDist = this.width <= MOBILE_BREAKPOINT ? 70 : 140;
+
+    // Increase grab radius for falling hammers in bottom zone
+    const isInBottomZone = py > this.height * 0.8;
+    const isFalling = h.isFree && h.headVy > 0;
+
+    if (isInBottomZone || (isFalling && h.isFree)) {
+      // Make it 1.5x easier to grab falling hammers
+      grabDist *= 1.5;
+    }
+
     return dist < grabDist;
   }
 
@@ -382,9 +394,22 @@ onPointerDown(e) {
     return;
   }
 
-  // Free-flying hammer can only be grabbed after it has stopped spinning
-  if (hammer.isFree && Math.abs(hammer.angularVelocity) > 0.1) {
-    return;
+  // Free-flying hammer grab logic with special handling for falling hammers
+  if (hammer.isFree) {
+    // Check if hammer is in the bottom portion of the screen (bottom 20%)
+    const isInBottomZone = this.input.mouseY > this.height * 0.8;
+
+    // Allow grabbing if:
+    // 1. In bottom zone (always allow grab)
+    // 2. Hammer is falling (positive downward velocity)
+    // 3. Not spinning too fast (increased threshold from 0.1 to 3.0 rad/s for falling hammers)
+    const isFalling = hammer.headVy > 0;
+    const spinThreshold = isFalling ? 3.0 : 0.1; // More lenient for falling hammers
+
+    // Only prevent grab if not in bottom zone AND spinning too fast
+    if (!isInBottomZone && Math.abs(hammer.angularVelocity) > spinThreshold) {
+      return;
+    }
   }
 
   e.preventDefault();
