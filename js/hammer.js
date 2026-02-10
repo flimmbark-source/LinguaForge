@@ -22,6 +22,39 @@ function setBackgroundDragLocked(locked) {
   }
 }
 
+function segmentIntersectsRect(x1, y1, x2, y2, left, top, right, bottom) {
+  // Early out when either endpoint is already inside the rectangle.
+  const p1Inside = x1 >= left && x1 <= right && y1 >= top && y1 <= bottom;
+  const p2Inside = x2 >= left && x2 <= right && y2 >= top && y2 <= bottom;
+  if (p1Inside || p2Inside) return true;
+
+  // Liang-Barsky segment clipping against an axis-aligned rectangle.
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const p = [-dx, dx, -dy, dy];
+  const q = [x1 - left, right - x1, y1 - top, bottom - y1];
+  let t0 = 0;
+  let t1 = 1;
+
+  for (let i = 0; i < 4; i++) {
+    if (p[i] === 0) {
+      if (q[i] < 0) return false;
+      continue;
+    }
+
+    const r = q[i] / p[i];
+    if (p[i] < 0) {
+      t0 = Math.max(t0, r);
+    } else {
+      t1 = Math.min(t1, r);
+    }
+
+    if (t0 > t1) return false;
+  }
+
+  return true;
+}
+
 export class HammerSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -1177,11 +1210,26 @@ updateFreeHammer(dt) {
       headY > anvilTop &&
       headY < anvilBottom;
 
+    // Swept collision check to prevent fast hammer movement from tunneling
+    // through the anvil between frames.
+    const sweptOverAnvil = segmentIntersectsRect(
+      hammer.prevHeadX,
+      hammer.prevHeadY,
+      headX,
+      headY,
+      anvil.x,
+      anvilTop,
+      anvil.x + anvil.width,
+      anvilBottom
+    );
+
+    const anvilCollision = isOverAnvil || sweptOverAnvil;
+
     const spinRetentionThreshold = gameState.spinRetentionThreshold || 5;
     const isSpinningThrowPass =
       hammer.isFree &&
       hammer.throwingAxeMode &&
-      isOverAnvil &&
+      anvilCollision &&
       Math.abs(hammer.angularVelocity) >= spinRetentionThreshold;
 
     // Spinning throw: bounce off the anvil and allow repeated multi-hits.
@@ -1213,7 +1261,7 @@ updateFreeHammer(dt) {
     }
 
     // Non-throwing free-flight hammer hitting anvil (bounce behavior)
-    if (hammer.isFree && !hammer.throwingAxeMode && isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
+    if (hammer.isFree && !hammer.throwingAxeMode && anvilCollision && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
       const spinThreshold = spinRetentionThreshold; // rad/s
       const isSpinning = Math.abs(hammer.angularVelocity) >= spinThreshold;
 
@@ -1252,7 +1300,7 @@ updateFreeHammer(dt) {
       }
     }
 
-    if (!hammer.throwingAxeMode && isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
+    if (!hammer.throwingAxeMode && anvilCollision && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
       const power = Math.min(1.5, downwardSpeed / (impactThreshold * 1.3));
       const ripThreshold = gameState.ripSpeedThreshold;
 
