@@ -431,6 +431,11 @@ onPointerDown(e) {
     hammer.length = clampedLength;
   }
 
+  // Check if hammer was spinning fast BEFORE we reset it
+  // This prevents screen lock when catching fast-spinning hammers
+  const spinLockThreshold = 2.0; // rad/s - don't lock screen if was spinning faster
+  const wasSpinningFast = Math.abs(hammer.angularVelocity) > spinLockThreshold;
+
   // Player is grabbing it again → leave free-flight mode
   hammer.isFree = false;
   hammer.isHeld = true;
@@ -439,8 +444,12 @@ onPointerDown(e) {
   // Reset spinning when grabbed
   hammer.angularVelocity = 0;
   hammer.visualRotation = 0;
-  setScreenLocked(true);
-  setBackgroundDragLocked(true);
+
+  // Only lock screen/background if hammer wasn't spinning too fast
+  if (!wasSpinningFast) {
+    setScreenLocked(true);
+    setBackgroundDragLocked(true);
+  }
 }
 
 
