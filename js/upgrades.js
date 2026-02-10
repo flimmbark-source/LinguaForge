@@ -27,6 +27,7 @@ const UPGRADE_META = {
   gripStrength:      { column: 'forgecraft', tool: 'fist' },
   spinningThrow:     { column: 'forgecraft', tool: 'fist' },
   powerSwing:        { column: 'forgecraft', tool: 'fist' },
+  
   // Forgecraft ─ Scribes stats
   scribeUse:         { column: 'forgecraft', tool: 'scribes' },
   scribeSpeed:       { column: 'forgecraft', tool: 'scribes' },
@@ -145,7 +146,7 @@ gripStrength: {
     baseCost: { renown: 10, ink: 0 },
     costPerLevel: { renown: 10, ink: 5 },
     prerequisites: [{ id: 'gripStrength', minLevel: 1 }],
-    position: { x: -2, y: 2 },
+    position: { x: -1, y: 1 },
     connections: [],
     nodeShape: NODE_SHAPES.CIRCLE,
     nodeColor: NODE_COLORS.TEAL,
