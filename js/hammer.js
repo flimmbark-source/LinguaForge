@@ -34,7 +34,7 @@ export class HammerSystem {
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
     // World physics constants
-    this.gravity = 2600; // px/s^2
+    this.gravity = 6600; // px/s^2
     this.airFriction = 0.9;
 
     // Hammer state
@@ -542,7 +542,7 @@ onPointerDown(e) {
           // Not spinning enough - apply new spin based on Spinning Throw upgrade
           // Base spin: 9 rad/s, +2.2 rad/s per level
           // Tuned for fast thrown-axe style spinning.
-          const baseSpinBoost = 9;
+          const baseSpinBoost = 25;
           const spinBoostPerLevel = 2.2;
           const totalSpinBoost = baseSpinBoost + (spinningThrowLevel * spinBoostPerLevel);
 
@@ -1226,11 +1226,11 @@ updateFreeHammer(dt) {
         hammer.anvilExitReady = false;
 
         // Retain spin, dampen it slightly
-        hammer.angularVelocity *= 0.85;
+        hammer.angularVelocity *= 0.95;
 
         // Produce letters/sparks from spinning hit
         if (hammer.strikeCooldown <= 0) {
-          hammer.strikeCooldown = 0.25;
+          hammer.strikeCooldown = 0.07;
           const power = Math.min(1.5, downwardSpeed / (impactThreshold * 1.3));
           this.spawnSparks(headX, anvil.y, power);
           this.spawnClankWord(headX, anvil.y, power);
