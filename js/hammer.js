@@ -534,7 +534,8 @@ onPointerDown(e) {
           const spinDirection = hammer.headVx >= 0 ? 1 : -1;
 
           // Add velocity-based scaling (faster throws spin more)
-          const velocityFactor = Math.min(1.5, currentSpeed / 2000);
+          // Minimum 0.5x to ensure always spins, max 1.5x for fast throws
+          const velocityFactor = Math.max(0.5, Math.min(1.5, currentSpeed / 2000));
           hammer.angularVelocity = spinDirection * totalSpinBoost * velocityFactor;
         }
 
