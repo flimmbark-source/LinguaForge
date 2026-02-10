@@ -961,10 +961,11 @@ updateFreeHammer(dt) {
 
   if (hammer.throwingAxeMode) {
     // THROWING AXE MODE: Pivot flies through air, head rotates around it
-    // Apply gravity and air drag to pivot velocity
+    // Apply gravity and minimal air drag to pivot velocity
     hammer.headVy += g * dt; // Using headVx/headVy as pivot velocity
-    hammer.headVx *= frictionAir;
-    hammer.headVy *= frictionAir;
+    // Much lower friction for thrown hammers (matches spin friction)
+    hammer.headVx *= 0.995;
+    hammer.headVy *= 0.995;
 
     // Update pivot position
     hammer.pivotX += hammer.headVx * dt;
