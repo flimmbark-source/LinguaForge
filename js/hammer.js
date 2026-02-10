@@ -65,7 +65,8 @@ export class HammerSystem {
       regrabCooldown: 0,
       headMass: 3.0, // 1.0 = default mass; increase to make the head heavier/sluggish
       angularVelocity: 0, // rad/s - spin speed when thrown
-      visualRotation: 0 // Current visual rotation for drawing
+      visualRotation: 0, // Current visual rotation for drawing
+      throwingAxeMode: false // True for player throws (pivot rotation), false for rips
     };
 
     // Anvil state
@@ -439,6 +440,7 @@ onPointerDown(e) {
   // Player is grabbing it again → leave free-flight mode
   hammer.isFree = false;
   hammer.isHeld = true;
+  hammer.throwingAxeMode = false; // Exit throwing axe mode when grabbed
   hammer.pivotX = this.input.mouseX;
   hammer.pivotY = this.input.mouseY;
   // Reset spinning when grabbed
@@ -517,11 +519,14 @@ onPointerDown(e) {
 
         // Check if hammer is already spinning significantly
         const existingSpin = Math.abs(hammer.angularVelocity);
-        const spinThreshold = 2.0; // rad/s - preserve spin above this
+        const spinThreshold = 2.0; // rad/s - use throwing axe mode above this
 
         if (existingSpin >= spinThreshold) {
-          // Preserve and slightly boost existing spin
-          hammer.angularVelocity *= 1.1; // 10% boost when releasing a spinning hammer
+          // Already spinning - boost throw velocity instead of spin speed
+          const velocityBoost = 1.2; // 20% faster throw when already spinning
+          hammer.headVx *= velocityBoost;
+          hammer.headVy *= velocityBoost;
+          // Keep existing angular velocity (don't boost spin)
         } else {
           // Apply new spin based on upgrade level and current velocity
           // Base spin: 3 rad/s, +1.5 rad/s per level
@@ -537,12 +542,29 @@ onPointerDown(e) {
           hammer.angularVelocity = spinDirection * totalSpinBoost * velocityFactor;
         }
 
-        // Initialize visualRotation for throwing axe mode (rotate around pivot)
-        // Set initial angle based on current hammer orientation
+        // THROWING AXE MODE: Enable for player throws above spin threshold
         if (Math.abs(hammer.angularVelocity) >= spinThreshold) {
-          const dx = hammer.headX - hammer.pivotX;
-          const dy = hammer.headY - hammer.pivotY;
-          hammer.visualRotation = Math.atan2(dx, -dy); // Angle from pivot to head
+          hammer.throwingAxeMode = true;
+
+          // Calculate pivot point as middle of hammer haft (between grip and head)
+          const midX = (hammer.pivotX + hammer.headX) / 2;
+          const midY = (hammer.pivotY + hammer.headY) / 2;
+
+          // Calculate initial rotation angle from mid-point
+          const dx = hammer.headX - midX;
+          const dy = hammer.headY - midY;
+          hammer.visualRotation = Math.atan2(dx, -dy);
+
+          // Set new pivot to middle of haft
+          hammer.pivotX = midX;
+          hammer.pivotY = midY;
+
+          // Recalculate head position to maintain smooth transition
+          const length = hammer.length || 180;
+          hammer.headX = hammer.pivotX + Math.sin(hammer.visualRotation) * length;
+          hammer.headY = hammer.pivotY - Math.cos(hammer.visualRotation) * length;
+        } else {
+          hammer.throwingAxeMode = false;
         }
 
         // Hammer retains its current velocity (from headVx, headVy)
@@ -949,14 +971,18 @@ updateFreeHammer(dt) {
     // Stop spinning if speed is too low
     if (Math.abs(hammer.angularVelocity) < 0.1) {
       hammer.angularVelocity = 0;
+      hammer.throwingAxeMode = false; // Exit throwing axe mode when spin stops
     }
   }
 
-  // THROWING AXE PHYSICS: When spinning above threshold, rotate around pivot
-  const spinThreshold = 2.0; // rad/s - use throwing axe physics above this
-  const isSpinningFast = Math.abs(hammer.angularVelocity) >= spinThreshold;
+  // THROWING AXE PHYSICS: Use flag set during player throw
+  // Disable if spin drops below threshold
+  const spinThreshold = 2.0; // rad/s
+  if (hammer.throwingAxeMode && Math.abs(hammer.angularVelocity) < spinThreshold) {
+    hammer.throwingAxeMode = false; // Exit throwing axe mode when spin decays
+  }
 
-  if (isSpinningFast) {
+  if (hammer.throwingAxeMode) {
     // THROWING AXE MODE: Pivot flies through air, head rotates around it
     // Apply gravity and air drag to pivot velocity
     hammer.headVy += g * dt; // Using headVx/headVy as pivot velocity
@@ -999,7 +1025,7 @@ updateFreeHammer(dt) {
   if (hammer.headY + radius > floorY) {
     const penetration = hammer.headY + radius - floorY;
 
-    if (isSpinningFast) {
+    if (hammer.throwingAxeMode) {
       // THROWING AXE MODE: Adjust pivot position when head hits floor
       hammer.pivotY -= penetration;
       // Recalculate head position after pivot adjustment
@@ -1040,7 +1066,7 @@ updateFreeHammer(dt) {
   if (hammer.headY - radius < ceilingY) {
     const penetration = ceilingY - (hammer.headY - radius);
 
-    if (isSpinningFast) {
+    if (hammer.throwingAxeMode) {
       // THROWING AXE MODE: Adjust pivot position
       hammer.pivotY += penetration;
       const angle = hammer.visualRotation;
@@ -1066,7 +1092,7 @@ updateFreeHammer(dt) {
   if (hammer.headX - radius < left) {
     const penetration = left - (hammer.headX - radius);
 
-    if (isSpinningFast) {
+    if (hammer.throwingAxeMode) {
       // THROWING AXE MODE: Adjust pivot position
       hammer.pivotX += penetration;
       const angle = hammer.visualRotation;
@@ -1092,7 +1118,7 @@ updateFreeHammer(dt) {
   if (hammer.headX + radius > right) {
     const penetration = hammer.headX + radius - right;
 
-    if (isSpinningFast) {
+    if (hammer.throwingAxeMode) {
       // THROWING AXE MODE: Adjust pivot position
       hammer.pivotX -= penetration;
       const angle = hammer.visualRotation;
@@ -1115,7 +1141,7 @@ updateFreeHammer(dt) {
   }
 
   // Update pivot position for normal mode (not throwing axe mode)
-  if (!isSpinningFast) {
+  if (!hammer.throwingAxeMode) {
     // Keep pivot a fixed distance above the head so drawing still works nicely
     const freeLength = Math.min(hammer.length, this.getMaxHandleLength());
     hammer.pivotX = hammer.headX;
@@ -1232,6 +1258,7 @@ updateFreeHammer(dt) {
         hammer.isHeld = false;
         this.input.isDown = false;
         hammer.isFree = true;
+        hammer.throwingAxeMode = false; // Rips use normal physics, not throwing axe
         hammer.regrabCooldown = 0.25;
 
         // Place the head just above the anvil face
