@@ -1448,8 +1448,9 @@ drawHammer(ctx, hammer) {
   ctx.translate(pivotX, pivotY);
   ctx.rotate(angle);
 
-  // Apply additional rotation if hammer is spinning
-  if (hammer.isFree && hammer.visualRotation !== 0) {
+  // Apply additional rotation if hammer is spinning (but NOT in throwing axe mode)
+  // In throwing axe mode, the positions already encode the rotation
+  if (hammer.isFree && hammer.visualRotation !== 0 && !hammer.throwingAxeMode) {
     // Rotate around the handle-to-head axis
     const headOffsetY = -(length + 21); // Approximate center of hammer head
     ctx.translate(0, headOffsetY);
