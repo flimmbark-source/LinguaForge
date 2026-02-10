@@ -1177,9 +1177,34 @@ updateFreeHammer(dt) {
       headY > anvilTop &&
       headY < anvilBottom;
 
-    // Handle free-flight hammer hitting anvil (with spin retention)
-    if (hammer.isFree && isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
-      const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
+    const spinRetentionThreshold = gameState.spinRetentionThreshold || 5;
+    const isSpinningThrowPass =
+      hammer.isFree &&
+      hammer.throwingAxeMode &&
+      isOverAnvil &&
+      Math.abs(hammer.angularVelocity) >= spinRetentionThreshold;
+
+    // Spinning throw: pass through the anvil and strike repeatedly per rotation.
+    // Each strike only slightly reduces linear and angular speed.
+    if (isSpinningThrowPass && hammer.strikeCooldown <= 0) {
+      const spinImpactPower = Math.min(1.5, Math.max(0.6, Math.abs(hammer.angularVelocity) / 10));
+      hammer.strikeCooldown = 0.08;
+      hammer.headVx *= 0.985;
+      hammer.headVy *= 0.985;
+      hammer.angularVelocity *= 0.975;
+
+      this.spawnSparks(headX, anvil.y, spinImpactPower);
+      this.spawnClankWord(headX, anvil.y, spinImpactPower);
+      playHammerClank();
+
+      if (this.onLetterForged) {
+        this.onLetterForged(headX, anvil.y, spinImpactPower, hammer.headVx, 1);
+      }
+    }
+
+    // Non-throwing free-flight hammer hitting anvil (bounce behavior)
+    if (hammer.isFree && !hammer.throwingAxeMode && isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
+      const spinThreshold = spinRetentionThreshold; // rad/s
       const isSpinning = Math.abs(hammer.angularVelocity) >= spinThreshold;
 
       if (isSpinning) {
@@ -1217,7 +1242,7 @@ updateFreeHammer(dt) {
       }
     }
 
-    if (isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
+    if (!hammer.throwingAxeMode && isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
       const power = Math.min(1.5, downwardSpeed / (impactThreshold * 1.3));
       const ripThreshold = gameState.ripSpeedThreshold;
 
