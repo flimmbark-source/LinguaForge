@@ -22,8 +22,10 @@ const UPGRADE_META = {
   emberRetention:    { column: 'forgecraft', tool: 'forge' },
   heatPerLetter:     { column: 'forgecraft', tool: 'forge' },
   lettersPerRedHot:  { column: 'forgecraft', tool: 'forge' },
+  fastHeat:          { column: 'forgecraft', tool: 'forge' },
   // Forgecraft ─ Fist stats
   gripStrength:      { column: 'forgecraft', tool: 'fist' },
+  spinningThrow:     { column: 'forgecraft', tool: 'fist' },
   // Forgecraft ─ Scribes stats
   scribeUse:         { column: 'forgecraft', tool: 'scribes' },
   scribeSpeed:       { column: 'forgecraft', tool: 'scribes' },
@@ -82,7 +84,7 @@ export const UPGRADE_TREE = {
     costPerLevel: { renown: 0, ink: 0 },
     prerequisites: [],
     position: { x: 0, y: 0 },
-    connections: ['gripStrength','heatLevel', 'unlockPestle'],
+    connections: ['heatLevel', 'unlockPestle', 'fastHeat'],
     nodeShape: NODE_SHAPES.CIRCLE,
     nodeColor: NODE_COLORS.PINK,
     onPurchase: () => {
@@ -103,14 +105,33 @@ gripStrength: {
     maxLevel: 5,
     baseCost: { renown: 10, ink: 0 },
     costPerLevel: { renown: 10, ink: 0 },
-    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
+    prerequisites: [],
     position: { x: -2, y: 1 },
-    connections: [],
+    connections: ['spinningThrow'],
     nodeShape: NODE_SHAPES.SQUARE,
     nodeColor: NODE_COLORS.TEAL,
     onPurchase: (level) => {
       const baseThreshold = 3400;
       gameState.ripSpeedThreshold = baseThreshold * Math.pow(1.1, level);
+    }
+  },
+
+  spinningThrow: {
+    id: 'spinningThrow',
+    name: 'Spinning Throw',
+    description: 'When hammer is ripped free, it spins in the air. Decreases spin retention threshold by 0.5 rad/s per level.',
+    icon: '🌪️',
+    maxLevel: 5,
+    baseCost: { renown: 15, ink: 5 },
+    costPerLevel: { renown: 10, ink: 5 },
+    prerequisites: [{ id: 'gripStrength', minLevel: 1 }],
+    position: { x: -2, y: 2 },
+    connections: [],
+    nodeShape: NODE_SHAPES.CIRCLE,
+    nodeColor: NODE_COLORS.TEAL,
+    onPurchase: (level) => {
+      const baseThreshold = 5; // rad/s
+      gameState.spinRetentionThreshold = baseThreshold - (level * 0.5);
     }
   },
 
@@ -204,6 +225,24 @@ gripStrength: {
     nodeColor: NODE_COLORS.PINK,
     onPurchase: (level) => {
       gameState.heatLevels = level + 1;
+    }
+  },
+
+  fastHeat: {
+    id: 'fastHeat',
+    name: 'Fast Heat',
+    description: 'Reduce heating time by 1 second per level (min 2s per heat level).',
+    icon: '🔥',
+    maxLevel: 3,
+    baseCost: { renown: 20, ink: 10 },
+    costPerLevel: { renown: 15, ink: 10 },
+    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
+    position: { x: -3.5, y: 3 },
+    connections: [],
+    nodeShape: NODE_SHAPES.CIRCLE,
+    nodeColor: NODE_COLORS.PINK,
+    onPurchase: (level) => {
+      gameState.fastHeatLevel = level;
     }
   },
 
@@ -527,6 +566,9 @@ export function getVisibleUpgrades() {
 
   // Always show starting node
   visible.add('activateHearth');
+  visible.add('gripStrength');
+  visible.add('spinningThrow');
+  visible.add('unlockPestle');
 
   // First pass: find all purchased upgrades and their connections
   for (const [upgradeId, upgrade] of Object.entries(UPGRADE_TREE)) {
