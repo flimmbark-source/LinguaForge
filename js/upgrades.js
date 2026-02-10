@@ -25,8 +25,8 @@ const UPGRADE_META = {
   fastHeat:          { column: 'forgecraft', tool: 'forge' },
   // Forgecraft ─ Fist stats
   gripStrength:      { column: 'forgecraft', tool: 'fist' },
-  powerSwing:        { column: 'forgecraft', tool: 'fist' },
   spinningThrow:     { column: 'forgecraft', tool: 'fist' },
+  powerSwing:        { column: 'forgecraft', tool: 'fist' },
   // Forgecraft ─ Scribes stats
   scribeUse:         { column: 'forgecraft', tool: 'scribes' },
   scribeSpeed:       { column: 'forgecraft', tool: 'scribes' },

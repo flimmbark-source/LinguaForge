@@ -542,7 +542,7 @@ onPointerDown(e) {
           // Not spinning enough - apply new spin based on Spinning Throw upgrade
           // Base spin: 9 rad/s, +2.2 rad/s per level
           // Tuned for fast thrown-axe style spinning.
-          const baseSpinBoost = 25;
+          const baseSpinBoost = 15;
           const spinBoostPerLevel = 2.2;
           const totalSpinBoost = baseSpinBoost + (spinningThrowLevel * spinBoostPerLevel);
 
@@ -967,8 +967,8 @@ updateFreeHammer(dt) {
   const hammer = this.hammer;
   const g = this.gravity;
   const frictionAir = this.airFriction * 1.033;
-  const rotationSettleSpeed = 1.15; // 1/s - lower value for a heavier, slower return to resting orientation
-  const maxSettleRate = 1.2; // rad/s - cap settle velocity so the final shift never looks snappy
+  const rotationSettleSpeed = 8.15; // 1/s - lower value for a heavier, slower return to resting orientation
+  const maxSettleRate = 2.2; // rad/s - cap settle velocity so the final shift never looks snappy
 
   // --- Update spinning rotation ---
   if (hammer.angularVelocity !== 0) {
