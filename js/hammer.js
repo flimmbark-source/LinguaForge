@@ -66,7 +66,8 @@ export class HammerSystem {
       headMass: 3.0, // 1.0 = default mass; increase to make the head heavier/sluggish
       angularVelocity: 0, // rad/s - spin speed when thrown
       visualRotation: 0, // Current visual rotation for drawing
-      throwingAxeMode: false // True for player throws (pivot rotation), false for rips
+      throwingAxeMode: false, // True for player throws (pivot rotation), false for rips
+      throwOrbitRadius: 0 // Distance from throw pivot to head during spinning throw
     };
 
     // Anvil state
@@ -516,6 +517,19 @@ onPointerDown(e) {
         hammer.isFree = true;
         hammer.regrabCooldown = 0.05; // Short cooldown before re-grab
 
+        // Shift pivot down the handle so the hammer spins like a thrown hand axe.
+        // This keeps the head path continuous while moving the rotation center closer
+        // to the hammer's center of mass instead of the end of the handle.
+        const dx = hammer.headX - hammer.pivotX;
+        const dy = hammer.headY - hammer.pivotY;
+        const currentLength = Math.hypot(dx, dy) || hammer.length || 180;
+        const axisX = dx / currentLength;
+        const axisY = dy / currentLength;
+        hammer.throwOrbitRadius = Math.max(58, currentLength * 0.5);
+        const pivotShift = currentLength - hammer.throwOrbitRadius;
+        hammer.pivotX += axisX * pivotShift;
+        hammer.pivotY += axisY * pivotShift;
+
         // Check if hammer is already spinning significantly
         const existingSpin = Math.abs(hammer.angularVelocity);
         const spinThreshold = 2.0; // rad/s - use throwing axe mode above this
@@ -525,9 +539,10 @@ onPointerDown(e) {
           hammer.angularVelocity *= 1.15; // 15% spin boost
         } else {
           // Not spinning enough - apply new spin based on Spinning Throw upgrade
-          // Base spin: 3 rad/s, +1.5 rad/s per level
-          const baseSpinBoost = 3;
-          const spinBoostPerLevel = 1.5;
+          // Base spin: 9 rad/s, +2.2 rad/s per level
+          // Tuned for fast thrown-axe style spinning.
+          const baseSpinBoost = 9;
+          const spinBoostPerLevel = 2.2;
           const totalSpinBoost = baseSpinBoost + (spinningThrowLevel * spinBoostPerLevel);
 
           // Spin direction based on horizontal velocity direction
@@ -541,9 +556,7 @@ onPointerDown(e) {
 
         // Enable throwing axe mode and initialize rotation
         hammer.throwingAxeMode = true;
-        const dx = hammer.headX - hammer.pivotX;
-        const dy = hammer.headY - hammer.pivotY;
-        hammer.visualRotation = Math.atan2(dx, -dy);
+        hammer.visualRotation = Math.atan2(hammer.headX - hammer.pivotX, -(hammer.headY - hammer.pivotY));
 
         // Hammer retains its current velocity (from headVx, headVy)
         // Physics and gravity will be applied in updateFreeHammer()
@@ -974,9 +987,9 @@ updateFreeHammer(dt) {
 
     // Calculate head position relative to pivot based on rotation angle
     const angle = hammer.visualRotation;
-    const length = hammer.length || 180;
-    hammer.headX = hammer.pivotX + Math.sin(angle) * length;
-    hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+    const orbitRadius = hammer.throwOrbitRadius || Math.max(58, (hammer.length || 180) * 0.5);
+    hammer.headX = hammer.pivotX + Math.sin(angle) * orbitRadius;
+    hammer.headY = hammer.pivotY - Math.cos(angle) * orbitRadius;
 
   } else {
     // NORMAL FREE-FLIGHT: Head flies through air (original behavior)
@@ -1009,9 +1022,9 @@ updateFreeHammer(dt) {
       hammer.pivotY -= penetration;
       // Recalculate head position after pivot adjustment
       const angle = hammer.visualRotation;
-      const length = hammer.length || 180;
-      hammer.headX = hammer.pivotX + Math.sin(angle) * length;
-      hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+      const orbitRadius = hammer.throwOrbitRadius || Math.max(58, (hammer.length || 180) * 0.5);
+      hammer.headX = hammer.pivotX + Math.sin(angle) * orbitRadius;
+      hammer.headY = hammer.pivotY - Math.cos(angle) * orbitRadius;
     } else {
       // NORMAL MODE: Just push head back above floor
       hammer.headY -= penetration;
@@ -1049,9 +1062,9 @@ updateFreeHammer(dt) {
       // THROWING AXE MODE: Adjust pivot position
       hammer.pivotY += penetration;
       const angle = hammer.visualRotation;
-      const length = hammer.length || 180;
-      hammer.headX = hammer.pivotX + Math.sin(angle) * length;
-      hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+      const orbitRadius = hammer.throwOrbitRadius || Math.max(58, (hammer.length || 180) * 0.5);
+      hammer.headX = hammer.pivotX + Math.sin(angle) * orbitRadius;
+      hammer.headY = hammer.pivotY - Math.cos(angle) * orbitRadius;
     } else {
       hammer.headY += penetration;
     }
@@ -1075,9 +1088,9 @@ updateFreeHammer(dt) {
       // THROWING AXE MODE: Adjust pivot position
       hammer.pivotX += penetration;
       const angle = hammer.visualRotation;
-      const length = hammer.length || 180;
-      hammer.headX = hammer.pivotX + Math.sin(angle) * length;
-      hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+      const orbitRadius = hammer.throwOrbitRadius || Math.max(58, (hammer.length || 180) * 0.5);
+      hammer.headX = hammer.pivotX + Math.sin(angle) * orbitRadius;
+      hammer.headY = hammer.pivotY - Math.cos(angle) * orbitRadius;
     } else {
       hammer.headX += penetration;
     }
@@ -1101,9 +1114,9 @@ updateFreeHammer(dt) {
       // THROWING AXE MODE: Adjust pivot position
       hammer.pivotX -= penetration;
       const angle = hammer.visualRotation;
-      const length = hammer.length || 180;
-      hammer.headX = hammer.pivotX + Math.sin(angle) * length;
-      hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+      const orbitRadius = hammer.throwOrbitRadius || Math.max(58, (hammer.length || 180) * 0.5);
+      hammer.headX = hammer.pivotX + Math.sin(angle) * orbitRadius;
+      hammer.headY = hammer.pivotY - Math.cos(angle) * orbitRadius;
     } else {
       hammer.headX -= penetration;
     }
