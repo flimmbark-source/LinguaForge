@@ -522,13 +522,16 @@ onPointerDown(e) {
         const spinThreshold = 2.0; // rad/s - use throwing axe mode above this
 
         if (existingSpin >= spinThreshold) {
-          // Already spinning - boost throw velocity instead of spin speed
-          const velocityBoost = 1.2; // 20% faster throw when already spinning
-          hammer.headVx *= velocityBoost;
-          hammer.headVy *= velocityBoost;
-          // Keep existing angular velocity (don't boost spin)
+          // Already spinning - enable throwing axe mode and boost spin slightly
+          hammer.throwingAxeMode = true;
+          hammer.angularVelocity *= 1.15; // 15% spin boost
+          // Initialize visualRotation from current angle for smooth continuation
+          const dx = hammer.headX - hammer.pivotX;
+          const dy = hammer.headY - hammer.pivotY;
+          hammer.visualRotation = Math.atan2(dx, -dy);
         } else {
-          // Apply new spin based on upgrade level and current velocity
+          // Not spinning enough - apply new spin based on upgrade level
+          hammer.throwingAxeMode = false;
           // Base spin: 3 rad/s, +1.5 rad/s per level
           const baseSpinBoost = 3;
           const spinBoostPerLevel = 1.5;
@@ -540,31 +543,6 @@ onPointerDown(e) {
           // Add velocity-based scaling (faster throws spin more)
           const velocityFactor = Math.min(1.5, currentSpeed / 2000);
           hammer.angularVelocity = spinDirection * totalSpinBoost * velocityFactor;
-        }
-
-        // THROWING AXE MODE: Enable for player throws above spin threshold
-        if (Math.abs(hammer.angularVelocity) >= spinThreshold) {
-          hammer.throwingAxeMode = true;
-
-          // Calculate pivot point as middle of hammer haft (between grip and head)
-          const midX = (hammer.pivotX + hammer.headX) / 2;
-          const midY = (hammer.pivotY + hammer.headY) / 2;
-
-          // Calculate initial rotation angle from mid-point
-          const dx = hammer.headX - midX;
-          const dy = hammer.headY - midY;
-          hammer.visualRotation = Math.atan2(dx, -dy);
-
-          // Set new pivot to middle of haft
-          hammer.pivotX = midX;
-          hammer.pivotY = midY;
-
-          // Recalculate head position to maintain smooth transition
-          const length = hammer.length || 180;
-          hammer.headX = hammer.pivotX + Math.sin(hammer.visualRotation) * length;
-          hammer.headY = hammer.pivotY - Math.cos(hammer.visualRotation) * length;
-        } else {
-          hammer.throwingAxeMode = false;
         }
 
         // Hammer retains its current velocity (from headVx, headVy)
