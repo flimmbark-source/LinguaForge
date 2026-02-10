@@ -61,7 +61,9 @@ export class HammerSystem {
       maxLength: 180, // maximum length when the handle is stretched by the player
       isFree: false,
       regrabCooldown: 0,
-      headMass: 3.0 // 1.0 = default mass; increase to make the head heavier/sluggish
+      headMass: 3.0, // 1.0 = default mass; increase to make the head heavier/sluggish
+      angularVelocity: 0, // rad/s - spin speed when thrown
+      visualRotation: 0 // Current visual rotation for drawing
     };
 
     // Anvil state
@@ -395,6 +397,9 @@ onPointerDown(e) {
   hammer.isHeld = true;
   hammer.pivotX = this.input.mouseX;
   hammer.pivotY = this.input.mouseY;
+  // Reset spinning when grabbed
+  hammer.angularVelocity = 0;
+  hammer.visualRotation = 0;
   setScreenLocked(true);
   setBackgroundDragLocked(true);
 }
@@ -682,6 +687,12 @@ updateHammer(dt) {
 // -------------------------
 // HEATING / COOLING LOGIC
 // -------------------------
+// Apply Fast Heat upgrade to reduce heating time
+const baseHeatingTime = 5; // base seconds per heat level
+const fastHeatReduction = gameState.fastHeatLevel || 0;
+const heatingRequired = Math.max(2, baseHeatingTime - fastHeatReduction); // minimum 2 seconds
+hammer.heatingRequired = heatingRequired;
+
 if (isHearthHeated() && this.isHammerOverHearth()) {
   // Over heated hearth → accumulate heat
   hammer.heatingTimer += dt;
@@ -693,13 +704,13 @@ if (isHearthHeated() && this.isHammerOverHearth()) {
   // Compute desired heat level from total time in hearth
   const targetLevel = Math.min(
     effectiveMax,
-    Math.floor(hammer.heatingTimer / hammer.heatingRequired)
+    Math.floor(hammer.heatingTimer / heatingRequired)
   );
 
   // Prevent timer from storing progress beyond the unlocked cap
   hammer.heatingTimer = Math.min(
     hammer.heatingTimer,
-    effectiveMax * hammer.heatingRequired
+    effectiveMax * heatingRequired
   );
 
   // Only ever go UP in level here
@@ -714,7 +725,7 @@ if (isHearthHeated() && this.isHammerOverHearth()) {
   // - Only the PROGRESS TOWARD THE NEXT LEVEL cools down
 
   if (hammer.heatLevel > 0) {
-    const currentLevelTime = hammer.heatLevel * hammer.heatingRequired;
+    const currentLevelTime = hammer.heatLevel * heatingRequired;
     const extra = hammer.heatingTimer - currentLevelTime;
 
     if (extra > 0) {
@@ -785,6 +796,17 @@ updateFreeHammer(dt) {
   const g = this.gravity;
   const frictionAir = this.airFriction * 1.033;
 
+  // --- Update spinning rotation ---
+  if (hammer.angularVelocity !== 0) {
+    hammer.visualRotation += hammer.angularVelocity * dt;
+    // Apply air friction to spin
+    hammer.angularVelocity *= frictionAir;
+    // Stop spinning if speed is too low
+    if (Math.abs(hammer.angularVelocity) < 0.1) {
+      hammer.angularVelocity = 0;
+    }
+  }
+
   // --- Integrate velocity with gravity + air drag ---
   hammer.headVy += g * dt;
   hammer.headVx *= frictionAir;
@@ -819,6 +841,17 @@ updateFreeHammer(dt) {
       // kill tiny bounces
       if (Math.abs(hammer.headVy) < stopThreshold) {
         hammer.headVy = 0;
+      }
+
+      // If spinning above threshold when hitting floor, keep spinning
+      const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
+      if (Math.abs(hammer.angularVelocity) >= spinThreshold) {
+        // Retain spin, just dampen it slightly
+        hammer.angularVelocity *= 0.9;
+      } else {
+        // Below threshold, stop spinning
+        hammer.angularVelocity = 0;
+        hammer.visualRotation = 0;
       }
     }
   }
@@ -913,6 +946,46 @@ updateFreeHammer(dt) {
       headY > anvilTop &&
       headY < anvilBottom;
 
+    // Handle free-flight hammer hitting anvil (with spin retention)
+    if (hammer.isFree && isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
+      const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
+      const isSpinning = Math.abs(hammer.angularVelocity) >= spinThreshold;
+
+      if (isSpinning) {
+        // Spinning hammer hits anvil - bounce and retain spin
+        const massFactor = hammer.headMass || 1;
+        hammer.headVy = -downwardSpeed * 0.7 / massFactor;
+        hammer.headVx *= 0.8;
+        hammer.headY = anvil.y - 18;
+        hammer.anvilExitReady = false;
+
+        // Retain spin, dampen it slightly
+        hammer.angularVelocity *= 0.85;
+
+        // Produce letters/sparks from spinning hit
+        if (hammer.strikeCooldown <= 0) {
+          hammer.strikeCooldown = 0.25;
+          const power = Math.min(1.5, downwardSpeed / (impactThreshold * 1.3));
+          this.spawnSparks(headX, anvil.y, power);
+          this.spawnClankWord(headX, anvil.y, power);
+          playHammerClank();
+
+          if (this.onLetterForged) {
+            this.onLetterForged(headX, anvil.y, power, hammer.headVx, 1);
+          }
+        }
+      } else {
+        // Not spinning enough - normal bounce and stop spinning
+        const massFactor = hammer.headMass || 1;
+        hammer.headVy = -downwardSpeed * 0.7 / massFactor;
+        hammer.headVx *= 0.8;
+        hammer.headY = anvil.y - 18;
+        hammer.anvilExitReady = false;
+        hammer.angularVelocity = 0;
+        hammer.visualRotation = 0;
+      }
+    }
+
     if (isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
       const power = Math.min(1.5, downwardSpeed / (impactThreshold * 1.3));
       const ripThreshold = gameState.ripSpeedThreshold;
@@ -955,6 +1028,10 @@ updateFreeHammer(dt) {
         // Give it the "flung back" velocity
         hammer.headVx = dirX * backSpeed;
         hammer.headVy = dirY * backSpeed;
+
+        // Add angular velocity based on the impact power (spinning hammer throw)
+        const spinPower = Math.min(1, downwardSpeed / ripThreshold);
+        hammer.angularVelocity = (incomingVx >= 0 ? 1 : -1) * (8 + spinPower * 12); // rad/s
 
         // Encode that into prevHead* for the verlet integrator
         hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
@@ -1153,6 +1230,15 @@ drawHammer(ctx, hammer) {
   ctx.translate(pivotX, pivotY);
   ctx.rotate(angle);
 
+  // Apply additional rotation if hammer is spinning
+  if (hammer.isFree && hammer.visualRotation !== 0) {
+    // Rotate around the handle-to-head axis
+    const headOffsetY = -(length + 21); // Approximate center of hammer head
+    ctx.translate(0, headOffsetY);
+    ctx.rotate(hammer.visualRotation);
+    ctx.translate(0, -headOffsetY);
+  }
+
   const handleLength = Math.min(length, this.getMaxHandleLength());
   const headHeight = 42;
   const headWidth = hammer.width;
@@ -1204,8 +1290,13 @@ drawHammer(ctx, hammer) {
 
   // Show progress indicator for heating to next level
   if (hammer.heatingTimer > 0) {
-    const currentLevelTime = hammer.heatLevel * hammer.heatingRequired;
-    const progressToNextLevel = (hammer.heatingTimer - currentLevelTime) / hammer.heatingRequired;
+    // Use dynamic heating required time
+    const baseHeatingTime = 5;
+    const fastHeatReduction = gameState.fastHeatLevel || 0;
+    const heatingRequired = Math.max(2, baseHeatingTime - fastHeatReduction);
+
+    const currentLevelTime = hammer.heatLevel * heatingRequired;
+    const progressToNextLevel = (hammer.heatingTimer - currentLevelTime) / heatingRequired;
 
     if (progressToNextLevel > 0 && progressToNextLevel < 1) {
       const barHeight = 4;

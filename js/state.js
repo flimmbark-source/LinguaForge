@@ -66,6 +66,8 @@ export const gameState = {
   scribeLettersPerInk: 5,
   inkPerChurn: 1,
   ripSpeedThreshold: 3400, // Base threshold for hammer rip
+  spinRetentionThreshold: 5, // rad/s - threshold for spin retention when hitting ground/anvil
+  fastHeatLevel: 0, // Level of Fast Heat upgrade (reduces heating time)
 };
 
 /**
