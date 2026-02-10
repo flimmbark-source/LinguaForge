@@ -508,9 +508,6 @@ onPointerDown(e) {
       const hammer = this.hammer;
       const spinningThrowLevel = getUpgradeLevel('spinningThrow');
 
-      // Calculate current velocity from Verlet integration
-      const currentSpeed = Math.hypot(hammer.headVx, hammer.headVy);
-
       // SPINNING THROW: Activate if upgrade is purchased
       if (spinningThrowLevel > 0) {
         // Enter free-flight mode
@@ -533,13 +530,14 @@ onPointerDown(e) {
         // Check if hammer is already spinning significantly
         const existingSpin = Math.abs(hammer.angularVelocity);
         const spinThreshold = 2.0; // rad/s - use throwing axe mode above this
+        const swingSpinMultiplier = Math.max(1, gameState.powerSwingMultiplier || 1);
 
         if (existingSpin >= spinThreshold) {
           // Already spinning from Power Swing - snap to a rapid throw spin floor.
           // This ensures a high-speed thrown spin when releasing above threshold.
           const spinDirection = Math.sign(hammer.angularVelocity) || (hammer.headVx >= 0 ? 1 : -1);
-          const rapidThrowSpin = 12 + spinningThrowLevel * 2.5;
-          hammer.angularVelocity = spinDirection * Math.max(existingSpin * 1.2, rapidThrowSpin);
+          const rapidThrowSpin = (12 + spinningThrowLevel * 2.5) * swingSpinMultiplier;
+          hammer.angularVelocity = spinDirection * Math.max(existingSpin * 1.2 * swingSpinMultiplier, rapidThrowSpin);
         } else {
           // Not spinning enough - apply new spin based on Spinning Throw upgrade
           // Base spin: 9 rad/s, +2.2 rad/s per level
@@ -551,10 +549,9 @@ onPointerDown(e) {
           // Spin direction based on horizontal velocity direction
           const spinDirection = hammer.headVx >= 0 ? 1 : -1;
 
-          // Add velocity-based scaling (faster throws spin more)
-          // Minimum 0.5x to ensure always spins, max 1.5x for fast throws
-          const velocityFactor = Math.max(0.5, Math.min(1.5, currentSpeed / 2000));
-          hammer.angularVelocity = spinDirection * totalSpinBoost * velocityFactor;
+          // Scale spins-per-second directly from swing multiplier so upgrades
+          // affect rotational frequency, not translational throw speed.
+          hammer.angularVelocity = spinDirection * totalSpinBoost * swingSpinMultiplier;
         }
 
         // Enable throwing axe mode and initialize rotation
