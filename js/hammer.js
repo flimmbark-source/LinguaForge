@@ -49,6 +49,7 @@ export class HammerSystem {
       width: 90,
       handleThickness: 20,
       angle: 0,
+      prevAngle: 0, // Previous angle for calculating angular velocity during swings
       headVx: 0,
       headVy: 0,
       isHeld: false,
@@ -505,18 +506,27 @@ onPointerDown(e) {
         hammer.isFree = true;
         hammer.regrabCooldown = 0.15; // Short cooldown before re-grab
 
-        // Apply spin based on upgrade level and current velocity
-        // Base spin: 3 rad/s, +1.5 rad/s per level
-        const baseSpinBoost = 3;
-        const spinBoostPerLevel = 1.5;
-        const totalSpinBoost = baseSpinBoost + (spinningThrowLevel * spinBoostPerLevel);
+        // Check if hammer is already spinning significantly
+        const existingSpin = Math.abs(hammer.angularVelocity);
+        const spinThreshold = 2.0; // rad/s - preserve spin above this
 
-        // Spin direction based on horizontal velocity direction
-        const spinDirection = hammer.headVx >= 0 ? 1 : -1;
+        if (existingSpin >= spinThreshold) {
+          // Preserve and slightly boost existing spin
+          hammer.angularVelocity *= 1.1; // 10% boost when releasing a spinning hammer
+        } else {
+          // Apply new spin based on upgrade level and current velocity
+          // Base spin: 3 rad/s, +1.5 rad/s per level
+          const baseSpinBoost = 3;
+          const spinBoostPerLevel = 1.5;
+          const totalSpinBoost = baseSpinBoost + (spinningThrowLevel * spinBoostPerLevel);
 
-        // Add velocity-based scaling (faster throws spin more)
-        const velocityFactor = Math.min(1.5, currentSpeed / 2000);
-        hammer.angularVelocity = spinDirection * totalSpinBoost * velocityFactor;
+          // Spin direction based on horizontal velocity direction
+          const spinDirection = hammer.headVx >= 0 ? 1 : -1;
+
+          // Add velocity-based scaling (faster throws spin more)
+          const velocityFactor = Math.min(1.5, currentSpeed / 2000);
+          hammer.angularVelocity = spinDirection * totalSpinBoost * velocityFactor;
+        }
 
         // Hammer retains its current velocity (from headVx, headVy)
         // Physics and gravity will be applied in updateFreeHammer()
@@ -859,6 +869,43 @@ if (isHearthHeated() && this.isHammerOverHearth()) {
     hammer.headY - hammer.pivotY,
     hammer.headX - hammer.pivotX
   ) + Math.PI / 2;
+
+  // POWER SWING: Build up angular velocity while swinging
+  if (hammer.isHeld && !hammer.isFree) {
+    const powerSwingLevel = getUpgradeLevel('powerSwing');
+    if (powerSwingLevel > 0) {
+      // Calculate angular velocity from change in angle
+      let angleDelta = hammer.angle - hammer.prevAngle;
+
+      // Normalize angle delta to [-PI, PI] range to handle wraparound
+      while (angleDelta > Math.PI) angleDelta -= 2 * Math.PI;
+      while (angleDelta < -Math.PI) angleDelta += 2 * Math.PI;
+
+      // Calculate instantaneous angular velocity (rad/s)
+      const instantAngularVel = angleDelta / safeDt;
+
+      // Build up spin gradually based on swing speed
+      // Base acceleration: 2 rad/s² per level
+      const spinAcceleration = powerSwingLevel * 2.0;
+      const swingSpeed = Math.abs(instantAngularVel);
+
+      // Only build spin if swinging fast enough (> 1 rad/s)
+      if (swingSpeed > 1.0) {
+        // Accumulate angular velocity in the direction of swing
+        const spinDirection = Math.sign(instantAngularVel);
+        hammer.angularVelocity += spinDirection * spinAcceleration * safeDt;
+
+        // Cap maximum spin during swing at 15 rad/s
+        hammer.angularVelocity = Math.max(-15, Math.min(15, hammer.angularVelocity));
+      } else {
+        // Decay spin if not swinging hard
+        hammer.angularVelocity *= 0.95;
+      }
+    }
+  }
+
+  // Store current angle for next frame
+  hammer.prevAngle = hammer.angle;
 }
 
 
@@ -870,8 +917,18 @@ updateFreeHammer(dt) {
   // --- Update spinning rotation ---
   if (hammer.angularVelocity !== 0) {
     hammer.visualRotation += hammer.angularVelocity * dt;
-    // Apply air friction to spin
-    hammer.angularVelocity *= frictionAir;
+
+    // Reduced air friction for spinning hammers with Spinning Throw
+    const spinningThrowLevel = getUpgradeLevel('spinningThrow');
+    if (spinningThrowLevel > 0) {
+      // Much lower friction for spinning hammers (0.995 vs 0.93)
+      // This allows the hammer to spin continuously until hitting ground
+      hammer.angularVelocity *= 0.995;
+    } else {
+      // Normal air friction for non-upgraded spinning
+      hammer.angularVelocity *= frictionAir;
+    }
+
     // Stop spinning if speed is too low
     if (Math.abs(hammer.angularVelocity) < 0.1) {
       hammer.angularVelocity = 0;
