@@ -949,10 +949,16 @@ endThrowingAxeModeSmoothly() {
   const hammer = this.hammer;
   if (!hammer.throwingAxeMode) return;
 
-  // Throwing-axe mode encodes orientation directly in pivot/head geometry.
-  // Normal free mode uses a vertical base + visualRotation, so remap by -PI/2
-  // to prevent an abrupt apparent angle jump when transitioning modes.
-  hammer.visualRotation = this.normalizeAngle(hammer.visualRotation - (Math.PI / 2));
+  // Preserve the *rendered* orientation when leaving throwing-axe mode.
+  // Throwing mode encodes orientation in pivot->head geometry; normal free mode
+  // uses a vertical base angle (PI) plus visualRotation.
+  const currentRenderedAngle = Math.atan2(
+    hammer.headY - hammer.pivotY,
+    hammer.headX - hammer.pivotX
+  ) + Math.PI / 2;
+
+  const normalFreeBaseAngle = Math.PI;
+  hammer.visualRotation = this.normalizeAngle(currentRenderedAngle - normalFreeBaseAngle);
   hammer.throwingAxeMode = false;
 }
 
