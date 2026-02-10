@@ -537,6 +537,14 @@ onPointerDown(e) {
           hammer.angularVelocity = spinDirection * totalSpinBoost * velocityFactor;
         }
 
+        // Initialize visualRotation for throwing axe mode (rotate around pivot)
+        // Set initial angle based on current hammer orientation
+        if (Math.abs(hammer.angularVelocity) >= spinThreshold) {
+          const dx = hammer.headX - hammer.pivotX;
+          const dy = hammer.headY - hammer.pivotY;
+          hammer.visualRotation = Math.atan2(dx, -dy); // Angle from pivot to head
+        }
+
         // Hammer retains its current velocity (from headVx, headVy)
         // Physics and gravity will be applied in updateFreeHammer()
       }
@@ -944,13 +952,37 @@ updateFreeHammer(dt) {
     }
   }
 
-  // --- Integrate velocity with gravity + air drag ---
-  hammer.headVy += g * dt;
-  hammer.headVx *= frictionAir;
-  hammer.headVy *= frictionAir;
+  // THROWING AXE PHYSICS: When spinning above threshold, rotate around pivot
+  const spinThreshold = 2.0; // rad/s - use throwing axe physics above this
+  const isSpinningFast = Math.abs(hammer.angularVelocity) >= spinThreshold;
 
-  hammer.headX += hammer.headVx * dt;
-  hammer.headY += hammer.headVy * dt;
+  if (isSpinningFast) {
+    // THROWING AXE MODE: Pivot flies through air, head rotates around it
+    // Apply gravity and air drag to pivot velocity
+    hammer.headVy += g * dt; // Using headVx/headVy as pivot velocity
+    hammer.headVx *= frictionAir;
+    hammer.headVy *= frictionAir;
+
+    // Update pivot position
+    hammer.pivotX += hammer.headVx * dt;
+    hammer.pivotY += hammer.headVy * dt;
+
+    // Calculate head position relative to pivot based on rotation angle
+    const angle = hammer.visualRotation;
+    const length = hammer.length || 180;
+    hammer.headX = hammer.pivotX + Math.sin(angle) * length;
+    hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+
+  } else {
+    // NORMAL FREE-FLIGHT: Head flies through air (original behavior)
+    // --- Integrate velocity with gravity + air drag ---
+    hammer.headVy += g * dt;
+    hammer.headVx *= frictionAir;
+    hammer.headVy *= frictionAir;
+
+    hammer.headX += hammer.headVx * dt;
+    hammer.headY += hammer.headVy * dt;
+  }
 
   // --- Collision params ---
   const radius = hammer.width * 0.5;     // approximate hammer-head radius
@@ -966,7 +998,19 @@ updateFreeHammer(dt) {
   // ----- FLOOR -----
   if (hammer.headY + radius > floorY) {
     const penetration = hammer.headY + radius - floorY;
-    hammer.headY -= penetration; // push back above floor
+
+    if (isSpinningFast) {
+      // THROWING AXE MODE: Adjust pivot position when head hits floor
+      hammer.pivotY -= penetration;
+      // Recalculate head position after pivot adjustment
+      const angle = hammer.visualRotation;
+      const length = hammer.length || 180;
+      hammer.headX = hammer.pivotX + Math.sin(angle) * length;
+      hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+    } else {
+      // NORMAL MODE: Just push head back above floor
+      hammer.headY -= penetration;
+    }
 
     if (hammer.headVy > 0) {
       // reflect vertical velocity, damp it and account for head mass
@@ -995,7 +1039,17 @@ updateFreeHammer(dt) {
   // ----- CEILING -----
   if (hammer.headY - radius < ceilingY) {
     const penetration = ceilingY - (hammer.headY - radius);
-    hammer.headY += penetration;
+
+    if (isSpinningFast) {
+      // THROWING AXE MODE: Adjust pivot position
+      hammer.pivotY += penetration;
+      const angle = hammer.visualRotation;
+      const length = hammer.length || 180;
+      hammer.headX = hammer.pivotX + Math.sin(angle) * length;
+      hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+    } else {
+      hammer.headY += penetration;
+    }
 
     if (hammer.headVy < 0) {
       const massFactor = hammer.headMass || 1;
@@ -1011,7 +1065,17 @@ updateFreeHammer(dt) {
   // ----- LEFT WALL -----
   if (hammer.headX - radius < left) {
     const penetration = left - (hammer.headX - radius);
-    hammer.headX += penetration;
+
+    if (isSpinningFast) {
+      // THROWING AXE MODE: Adjust pivot position
+      hammer.pivotX += penetration;
+      const angle = hammer.visualRotation;
+      const length = hammer.length || 180;
+      hammer.headX = hammer.pivotX + Math.sin(angle) * length;
+      hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+    } else {
+      hammer.headX += penetration;
+    }
 
     if (hammer.headVx < 0) {
       const massFactor = hammer.headMass || 1;
@@ -1027,7 +1091,17 @@ updateFreeHammer(dt) {
   // ----- RIGHT WALL -----
   if (hammer.headX + radius > right) {
     const penetration = hammer.headX + radius - right;
-    hammer.headX -= penetration;
+
+    if (isSpinningFast) {
+      // THROWING AXE MODE: Adjust pivot position
+      hammer.pivotX -= penetration;
+      const angle = hammer.visualRotation;
+      const length = hammer.length || 180;
+      hammer.headX = hammer.pivotX + Math.sin(angle) * length;
+      hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+    } else {
+      hammer.headX -= penetration;
+    }
 
     if (hammer.headVx > 0) {
       const massFactor = hammer.headMass || 1;
@@ -1040,10 +1114,13 @@ updateFreeHammer(dt) {
     }
   }
 
-  // Keep pivot a fixed distance above the head so drawing still works nicely
-  const freeLength = Math.min(hammer.length, this.getMaxHandleLength());
-  hammer.pivotX = hammer.headX;
-  hammer.pivotY = hammer.headY - freeLength;
+  // Update pivot position for normal mode (not throwing axe mode)
+  if (!isSpinningFast) {
+    // Keep pivot a fixed distance above the head so drawing still works nicely
+    const freeLength = Math.min(hammer.length, this.getMaxHandleLength());
+    hammer.pivotX = hammer.headX;
+    hammer.pivotY = hammer.headY - freeLength;
+  }
 
   // Keep prevHead* coherent for other code using a verlet-ish scheme
   hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
