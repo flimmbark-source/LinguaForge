@@ -25,6 +25,7 @@ const UPGRADE_META = {
   fastHeat:          { column: 'forgecraft', tool: 'forge' },
   // Forgecraft ─ Fist stats
   gripStrength:      { column: 'forgecraft', tool: 'fist' },
+  powerSwing:        { column: 'forgecraft', tool: 'fist' },
   spinningThrow:     { column: 'forgecraft', tool: 'fist' },
   // Forgecraft ─ Scribes stats
   scribeUse:         { column: 'forgecraft', tool: 'scribes' },
@@ -107,7 +108,7 @@ gripStrength: {
     costPerLevel: { renown: 10, ink: 0 },
     prerequisites: [],
     position: { x: -2, y: 1 },
-    connections: ['spinningThrow'],
+    connections: ['powerSwing', 'spinningThrow'],
     nodeShape: NODE_SHAPES.SQUARE,
     nodeColor: NODE_COLORS.TEAL,
     onPurchase: (level) => {
@@ -116,10 +117,29 @@ gripStrength: {
     }
   },
 
+  powerSwing: {
+    id: 'powerSwing',
+    name: 'Power Swing',
+    description: 'Hammer builds up spin while swinging. +2 rad/s angular acceleration per level. Faster swings generate more spin.',
+    icon: '⚡',
+    maxLevel: 5,
+    baseCost: { renown: 12, ink: 3 },
+    costPerLevel: { renown: 8, ink: 3 },
+    prerequisites: [{ id: 'gripStrength', minLevel: 1 }],
+    position: { x: -3, y: 1.5 },
+    connections: ['spinningThrow'],
+    nodeShape: NODE_SHAPES.CIRCLE,
+    nodeColor: NODE_COLORS.TEAL,
+    onPurchase: (level) => {
+      // Power swing multiplier stored in game state
+      gameState.powerSwingMultiplier = 1 + (level * 0.2); // 1.2x to 2.0x
+    }
+  },
+
   spinningThrow: {
     id: 'spinningThrow',
     name: 'Spinning Throw',
-    description: 'When hammer is ripped free, it spins in the air. Decreases spin retention threshold by 0.5 rad/s per level.',
+    description: 'Release hammer to throw it with spin. Hammer enters free-flight and can hit anvil multiple times. +1.5 rad/s spin per level. Also decreases spin retention threshold by 0.5 rad/s per level.',
     icon: '🌪️',
     maxLevel: 5,
     baseCost: { renown: 15, ink: 5 },
