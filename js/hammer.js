@@ -316,12 +316,18 @@ export class HammerSystem {
    */
   setupEventListeners() {
     // Listen on document to capture events even when canvas has pointer-events: none
-    document.addEventListener('mousedown', this.onPointerDown);
-    document.addEventListener('mousemove', this.onPointerMove);
-    document.addEventListener('mouseup', this.onPointerUp);
-    document.addEventListener('touchstart', this.onPointerDown, { passive: false });
-    document.addEventListener('touchmove', this.onPointerMove, { passive: false });
-    document.addEventListener('touchend', this.onPointerUp);
+    document.addEventListener('pointerdown', this.onPointerDown, true);
+    document.addEventListener('pointermove', this.onPointerMove, true);
+    document.addEventListener('pointerup', this.onPointerUp, true);
+    document.addEventListener('pointercancel', this.onPointerUp, true);
+
+    // Fallbacks for browsers that do not support Pointer Events.
+    document.addEventListener('mousedown', this.onPointerDown, true);
+    document.addEventListener('mousemove', this.onPointerMove, true);
+    document.addEventListener('mouseup', this.onPointerUp, true);
+    document.addEventListener('touchstart', this.onPointerDown, { passive: false, capture: true });
+    document.addEventListener('touchmove', this.onPointerMove, { passive: false, capture: true });
+    document.addEventListener('touchend', this.onPointerUp, true);
     window.addEventListener('resize', this.resize);
   }
 
@@ -351,6 +357,7 @@ export class HammerSystem {
    */
 onPointerDown(e) {
   if (!this.isRunning) return;
+  if (window.PointerEvent && (e.type === 'mousedown' || e.type === 'touchstart')) return;
   // Refresh cached rect on pointer down
   this._cachedCanvasRect = this.canvas.getBoundingClientRect();
   this._canvasRectAge = 0;
@@ -372,6 +379,11 @@ onPointerDown(e) {
 
   // If hammer is flying free, use the dedicated regrab cooldown
   if (hammer.isFree && hammer.regrabCooldown > 0) {
+    return;
+  }
+
+  // Free-flying hammer can only be grabbed after it has stopped spinning
+  if (hammer.isFree && Math.abs(hammer.angularVelocity) > 0.1) {
     return;
   }
 
@@ -410,6 +422,7 @@ onPointerDown(e) {
    * Handle pointer move event
    */
   onPointerMove(e) {
+    if (window.PointerEvent && (e.type === 'mousemove' || e.type === 'touchmove')) return;
      // Cache canvas rect to avoid layout thrashing on every pointermove
      if (!this._cachedCanvasRect || this._canvasRectAge++ > 10) {
        this._cachedCanvasRect = this.canvas.getBoundingClientRect();
@@ -434,6 +447,7 @@ onPointerDown(e) {
    * Handle pointer up event
    */
   onPointerUp(e) {
+    if (window.PointerEvent && (e.type === 'mouseup' || e.type === 'touchend')) return;
     if (this.hammer.isHeld) {
       e.preventDefault();
       e.stopPropagation();
@@ -851,7 +865,6 @@ updateFreeHammer(dt) {
       } else {
         // Below threshold, stop spinning
         hammer.angularVelocity = 0;
-        hammer.visualRotation = 0;
       }
     }
   }
@@ -1547,12 +1560,17 @@ drawHammer(ctx, hammer) {
    */
   destroy() {
     this.stop();
-    document.removeEventListener('mousedown', this.onPointerDown);
-    document.removeEventListener('mousemove', this.onPointerMove);
-    document.removeEventListener('mouseup', this.onPointerUp);
-    document.removeEventListener('touchstart', this.onPointerDown);
-    document.removeEventListener('touchmove', this.onPointerMove);
-    document.removeEventListener('touchend', this.onPointerUp);
+    document.removeEventListener('pointerdown', this.onPointerDown, true);
+    document.removeEventListener('pointermove', this.onPointerMove, true);
+    document.removeEventListener('pointerup', this.onPointerUp, true);
+    document.removeEventListener('pointercancel', this.onPointerUp, true);
+
+    document.removeEventListener('mousedown', this.onPointerDown, true);
+    document.removeEventListener('mousemove', this.onPointerMove, true);
+    document.removeEventListener('mouseup', this.onPointerUp, true);
+    document.removeEventListener('touchstart', this.onPointerDown, true);
+    document.removeEventListener('touchmove', this.onPointerMove, true);
+    document.removeEventListener('touchend', this.onPointerUp, true);
     window.removeEventListener('resize', this.resize);
   }
 }

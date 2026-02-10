@@ -84,7 +84,7 @@ export const UPGRADE_TREE = {
     costPerLevel: { renown: 0, ink: 0 },
     prerequisites: [],
     position: { x: 0, y: 0 },
-    connections: ['gripStrength','heatLevel', 'unlockPestle'],
+    connections: ['heatLevel', 'unlockPestle', 'fastHeat'],
     nodeShape: NODE_SHAPES.CIRCLE,
     nodeColor: NODE_COLORS.PINK,
     onPurchase: () => {
@@ -105,7 +105,7 @@ gripStrength: {
     maxLevel: 5,
     baseCost: { renown: 10, ink: 0 },
     costPerLevel: { renown: 10, ink: 0 },
-    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
+    prerequisites: [],
     position: { x: -2, y: 1 },
     connections: ['spinningThrow'],
     nodeShape: NODE_SHAPES.SQUARE,
@@ -220,7 +220,7 @@ gripStrength: {
     costPerLevel: { renown: 40, ink: 0 },
     prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
     position: { x: -2.5, y: 2.2 },
-    connections: [ 'lettersPerRedHot', 'redHotDurability', 'heatPerLetter', 'fastHeat' ],
+    connections: [ 'lettersPerRedHot', 'redHotDurability', 'heatPerLetter' ],
     nodeShape: NODE_SHAPES.SQUARE,
     nodeColor: NODE_COLORS.PINK,
     onPurchase: (level) => {
@@ -236,7 +236,7 @@ gripStrength: {
     maxLevel: 3,
     baseCost: { renown: 20, ink: 10 },
     costPerLevel: { renown: 15, ink: 10 },
-    prerequisites: [{ id: 'heatLevel', minLevel: 1 }],
+    prerequisites: [{ id: 'activateHearth', minLevel: 1 }],
     position: { x: -3.5, y: 3 },
     connections: [],
     nodeShape: NODE_SHAPES.CIRCLE,
@@ -566,6 +566,9 @@ export function getVisibleUpgrades() {
 
   // Always show starting node
   visible.add('activateHearth');
+  visible.add('gripStrength');
+  visible.add('spinningThrow');
+  visible.add('unlockPestle');
 
   // First pass: find all purchased upgrades and their connections
   for (const [upgradeId, upgrade] of Object.entries(UPGRADE_TREE)) {
