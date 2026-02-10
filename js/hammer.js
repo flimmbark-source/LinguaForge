@@ -595,19 +595,9 @@ onPointerDown(e) {
           const blended = existingSpin + (mediumTarget - existingSpin) * stabilityLerp;
           hammer.angularVelocity = spinDirection * (blended * swingSpinMultiplier);
         } else {
-          // Not spinning enough - apply new spin based on Spinning Throw upgrade
-          // Base spin: 9 rad/s, +2.2 rad/s per level
-          // Tuned for fast thrown-axe style spinning.
-          const baseSpinBoost = 15;
-          const spinBoostPerLevel = 2.2;
-          const totalSpinBoost = baseSpinBoost + (spinningThrowLevel * spinBoostPerLevel);
-
-          // Spin direction based on horizontal velocity direction
-          const spinDirection = hammer.headVx >= 0 ? 1 : -1;
-
-          // Scale spins-per-second directly from swing multiplier so upgrades
-          // affect rotational frequency, not translational throw speed.
-          hammer.angularVelocity = spinDirection * totalSpinBoost * swingSpinMultiplier;
+          // Give a modest throw spin floor without pushing straight to max-spin.
+          const baseSpinBoost = mediumTarget;
+          hammer.angularVelocity = spinDirection * baseSpinBoost * swingSpinMultiplier;
         }
 
         // Enable throwing axe mode and initialize rotation
@@ -998,30 +988,6 @@ if (isHearthHeated() && this.isHammerOverHearth()) {
   hammer.prevAngle = hammer.angle;
 }
 
-normalizeAngle(angle) {
-  let normalized = angle;
-  while (normalized > Math.PI) normalized -= Math.PI * 2;
-  while (normalized < -Math.PI) normalized += Math.PI * 2;
-  return normalized;
-}
-
-endThrowingAxeModeSmoothly() {
-  const hammer = this.hammer;
-  if (!hammer.throwingAxeMode) return;
-
-  // Preserve the *rendered* orientation when leaving throwing-axe mode.
-  // Throwing mode encodes orientation in pivot->head geometry; normal free mode
-  // uses a vertical base angle (PI) plus visualRotation.
-  const currentRenderedAngle = Math.atan2(
-    hammer.headY - hammer.pivotY,
-    hammer.headX - hammer.pivotX
-  ) + Math.PI / 2;
-
-  const normalFreeBaseAngle = Math.PI;
-  hammer.visualRotation = this.normalizeAngle(currentRenderedAngle - normalFreeBaseAngle);
-  hammer.throwingAxeMode = false;
-}
-
 
   getThrowBodyAxis() {
     const hammer = this.hammer;
@@ -1086,8 +1052,7 @@ updateFreeHammer(dt) {
   const hammer = this.hammer;
   const g = this.gravity;
   const frictionAir = this.airFriction * 1.033;
-  const rotationSettleSpeed = 8.15; // 1/s - lower value for a heavier, slower return to resting orientation
-  const maxSettleRate = 2.2; // rad/s - cap settle velocity so the final shift never looks snappy
+  const profile = this.throwPhysics;
 
   // --- Update spinning rotation ---
   if (hammer.angularVelocity !== 0) {
@@ -1103,22 +1068,7 @@ updateFreeHammer(dt) {
     // Stop spinning if speed is too low
     if (Math.abs(hammer.angularVelocity) < 0.1) {
       hammer.angularVelocity = 0;
-      this.endThrowingAxeModeSmoothly(); // Exit throwing axe mode when spin stops
-    }
-  } else if (!hammer.throwingAxeMode && Math.abs(hammer.visualRotation) > 0.001) {
-    // Smoothly settle the spin-only visual twist so the hammer does not freeze at a random angle.
-    // Normalize to [-PI, PI] first so it always settles via the shortest route (no extra full spins).
-    hammer.visualRotation = this.normalizeAngle(hammer.visualRotation);
-
-    // We cap settle speed to keep the final orientation shift feeling heavy and deliberate.
-    const settleStep = Math.min(1, rotationSettleSpeed * dt);
-    const desiredDelta = (0 - hammer.visualRotation) * settleStep;
-    const maxDelta = maxSettleRate * dt;
-    const clampedDelta = Math.max(-maxDelta, Math.min(maxDelta, desiredDelta));
-    hammer.visualRotation += clampedDelta;
-
-    if (Math.abs(hammer.visualRotation) < 0.001) {
-      hammer.visualRotation = 0;
+      hammer.throwingAxeMode = false; // Exit throwing axe mode when spin stops
     }
   }
 
@@ -1126,7 +1076,7 @@ updateFreeHammer(dt) {
   // Disable if spin drops below threshold
   const spinThreshold = 2.0; // rad/s
   if (hammer.throwingAxeMode && Math.abs(hammer.angularVelocity) < spinThreshold) {
-    this.endThrowingAxeModeSmoothly(); // Exit throwing axe mode when spin decays
+    hammer.throwingAxeMode = false; // Exit throwing axe mode when spin decays
   }
 
   const absSpin = Math.abs(hammer.angularVelocity);
@@ -1418,7 +1368,7 @@ updateFreeHammer(dt) {
         hammer.headY = anvil.y - 18;
         hammer.anvilExitReady = false;
         hammer.angularVelocity = 0;
-        // Keep current visualRotation and let the settle logic ease it down smoothly.
+        hammer.visualRotation = 0;
       }
     }
 
