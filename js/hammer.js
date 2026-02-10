@@ -86,7 +86,7 @@ export class HammerSystem {
         heldLiftCoupling: 0.28
       }
     };
-    this.throwPhysicsPresetName = 'guided';
+    this.throwPhysicsPresetName = 'realistic';
     this.throwPhysics = this.throwPhysicsPresets[this.throwPhysicsPresetName];
 
     // Hammer state
@@ -218,9 +218,9 @@ export class HammerSystem {
     // Position anvil just above the hearth
     // Canvas now covers full viewport, so position relative to bottom
     const letterPoolBarHeight = 160;
-    this.anvil.width = Math.min(260, this.width * 0.35);
+    this.anvil.width = Math.min(260, this.width * 0.35) + 40;
     this.anvil.height = 70;
-    this.anvil.x = this.width * 0.5 - this.anvil.width / 2;
+    this.anvil.x = this.width * 0.5 - this.anvil.width / 2 - 20;
     if (!this._isMobile) {
       this.anvil.x -= 300;
     }
@@ -1127,7 +1127,7 @@ updateFreeHammer(dt) {
   const left = radius;
   const right = this.width - radius;
 
-  const restitution = 0.7;   // 1.0 = perfectly bouncy, <1 loses energy
+  const restitution = 1;   // 1.0 = perfectly bouncy, <1 loses energy
   const tangentialDamp = 0.85; // reduce sideways motion on impacts
   const stopThreshold = 40;    // below this speed we just stop bouncing
 
