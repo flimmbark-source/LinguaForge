@@ -508,11 +508,10 @@ onPointerDown(e) {
       const spinningThrowLevel = getUpgradeLevel('spinningThrow');
 
       // Calculate current velocity from Verlet integration
-      // (Current position - previous position gives velocity direction)
       const currentSpeed = Math.hypot(hammer.headVx, hammer.headVy);
 
-      // Only activate spinning throw if hammer has some momentum
-      if (spinningThrowLevel > 0 && currentSpeed > 500) {
+      // SPINNING THROW: Activate if upgrade is purchased
+      if (spinningThrowLevel > 0) {
         // Enter free-flight mode
         hammer.isFree = true;
         hammer.regrabCooldown = 0.15; // Short cooldown before re-grab
