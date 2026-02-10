@@ -7,6 +7,7 @@ import { isHearthHeated, getHearthBounds, getHearthLevel } from './RuneHearth.js
 import { gameState } from './state.js?v=9';
 import { playHammerClank } from './audio.js?v=9';
 import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
+import { getUpgradeLevel } from './upgrades.js?v=9';
 
 const MOBILE_BREAKPOINT = 900;
 function setScreenLocked(locked) {
@@ -489,6 +490,37 @@ onPointerDown(e) {
         return;
       }
       cleanupToolDragSidebar();
+
+      // SPINNING THROW: When player releases, enter free-flight mode
+      const hammer = this.hammer;
+      const spinningThrowLevel = getUpgradeLevel('spinningThrow');
+
+      // Calculate current velocity from Verlet integration
+      // (Current position - previous position gives velocity direction)
+      const currentSpeed = Math.hypot(hammer.headVx, hammer.headVy);
+
+      // Only activate spinning throw if hammer has some momentum
+      if (spinningThrowLevel > 0 && currentSpeed > 500) {
+        // Enter free-flight mode
+        hammer.isFree = true;
+        hammer.regrabCooldown = 0.15; // Short cooldown before re-grab
+
+        // Apply spin based on upgrade level and current velocity
+        // Base spin: 3 rad/s, +1.5 rad/s per level
+        const baseSpinBoost = 3;
+        const spinBoostPerLevel = 1.5;
+        const totalSpinBoost = baseSpinBoost + (spinningThrowLevel * spinBoostPerLevel);
+
+        // Spin direction based on horizontal velocity direction
+        const spinDirection = hammer.headVx >= 0 ? 1 : -1;
+
+        // Add velocity-based scaling (faster throws spin more)
+        const velocityFactor = Math.min(1.5, currentSpeed / 2000);
+        hammer.angularVelocity = spinDirection * totalSpinBoost * velocityFactor;
+
+        // Hammer retains its current velocity (from headVx, headVy)
+        // Physics and gravity will be applied in updateFreeHammer()
+      }
     }
     this.input.isDown = false;
     this.hammer.isHeld = false;

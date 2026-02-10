@@ -119,7 +119,7 @@ gripStrength: {
   spinningThrow: {
     id: 'spinningThrow',
     name: 'Spinning Throw',
-    description: 'When hammer is ripped free, it spins in the air. Decreases spin retention threshold by 0.5 rad/s per level.',
+    description: 'Release hammer to throw it with spin. Hammer enters free-flight and can hit anvil multiple times. +1.5 rad/s spin per level. Also decreases spin retention threshold by 0.5 rad/s per level.',
     icon: '🌪️',
     maxLevel: 5,
     baseCost: { renown: 15, ink: 5 },
