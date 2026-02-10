@@ -514,7 +514,7 @@ onPointerDown(e) {
       if (spinningThrowLevel > 0) {
         // Enter free-flight mode
         hammer.isFree = true;
-        hammer.regrabCooldown = 0.15; // Short cooldown before re-grab
+        hammer.regrabCooldown = 0.05; // Short cooldown before re-grab
 
         // Check if hammer is already spinning significantly
         const existingSpin = Math.abs(hammer.angularVelocity);
