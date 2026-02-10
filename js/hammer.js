@@ -1266,7 +1266,7 @@ updateFreeHammer(dt) {
         hammer.headY = anvil.y - 18;
         hammer.anvilExitReady = false;
         hammer.angularVelocity = 0;
-        hammer.visualRotation = 0;
+        // Keep current visualRotation and let the settle logic ease it down smoothly.
       }
     }
 
