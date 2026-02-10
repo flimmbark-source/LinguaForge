@@ -522,16 +522,10 @@ onPointerDown(e) {
         const spinThreshold = 2.0; // rad/s - use throwing axe mode above this
 
         if (existingSpin >= spinThreshold) {
-          // Already spinning - enable throwing axe mode and boost spin slightly
-          hammer.throwingAxeMode = true;
+          // Already spinning from Power Swing - boost it slightly
           hammer.angularVelocity *= 1.15; // 15% spin boost
-          // Initialize visualRotation from current angle for smooth continuation
-          const dx = hammer.headX - hammer.pivotX;
-          const dy = hammer.headY - hammer.pivotY;
-          hammer.visualRotation = Math.atan2(dx, -dy);
         } else {
-          // Not spinning enough - apply new spin based on upgrade level
-          hammer.throwingAxeMode = false;
+          // Not spinning enough - apply new spin based on Spinning Throw upgrade
           // Base spin: 3 rad/s, +1.5 rad/s per level
           const baseSpinBoost = 3;
           const spinBoostPerLevel = 1.5;
@@ -544,6 +538,12 @@ onPointerDown(e) {
           const velocityFactor = Math.min(1.5, currentSpeed / 2000);
           hammer.angularVelocity = spinDirection * totalSpinBoost * velocityFactor;
         }
+
+        // Enable throwing axe mode and initialize rotation
+        hammer.throwingAxeMode = true;
+        const dx = hammer.headX - hammer.pivotX;
+        const dy = hammer.headY - hammer.pivotY;
+        hammer.visualRotation = Math.atan2(dx, -dy);
 
         // Hammer retains its current velocity (from headVx, headVy)
         // Physics and gravity will be applied in updateFreeHammer()
