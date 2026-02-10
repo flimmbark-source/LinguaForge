@@ -1184,14 +1184,24 @@ updateFreeHammer(dt) {
       isOverAnvil &&
       Math.abs(hammer.angularVelocity) >= spinRetentionThreshold;
 
-    // Spinning throw: pass through the anvil and strike repeatedly per rotation.
-    // Each strike only slightly reduces linear and angular speed.
+    // Spinning throw: bounce off the anvil and allow repeated multi-hits.
+    // Keep spin rate effectively intact while only slightly damping travel speed.
     if (isSpinningThrowPass && hammer.strikeCooldown <= 0) {
       const spinImpactPower = Math.min(1.5, Math.max(0.6, Math.abs(hammer.angularVelocity) / 10));
-      hammer.strikeCooldown = 0.08;
-      hammer.headVx *= 0.985;
-      hammer.headVy *= 0.985;
-      hammer.angularVelocity *= 0.975;
+      hammer.strikeCooldown = 0.07;
+
+      // Bounce vertically off the anvil face while preserving orbiting spin.
+      if (hammer.headVy > 0) {
+        hammer.headVy = -Math.abs(hammer.headVy) * 0.92;
+        hammer.headY = anvil.y - 18;
+      } else {
+        hammer.headVy = Math.abs(hammer.headVy) * 0.92;
+        hammer.headY = anvilBottom;
+      }
+      hammer.headVx *= 0.99;
+
+      // Keep rotational speed through impacts (tiny loss to avoid runaway energy).
+      hammer.angularVelocity *= 0.998;
 
       this.spawnSparks(headX, anvil.y, spinImpactPower);
       this.spawnClankWord(headX, anvil.y, spinImpactPower);
