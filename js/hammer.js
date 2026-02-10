@@ -1088,6 +1088,7 @@ updateFreeHammer(dt) {
   const frictionAir = this.airFriction * 1.033;
   const rotationSettleSpeed = 8.15; // 1/s - lower value for a heavier, slower return to resting orientation
   const maxSettleRate = 2.2; // rad/s - cap settle velocity so the final shift never looks snappy
+  const profile = this.throwPhysics;
 
   // --- Update spinning rotation ---
   if (hammer.angularVelocity !== 0) {
