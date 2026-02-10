@@ -938,6 +938,24 @@ if (isHearthHeated() && this.isHammerOverHearth()) {
   hammer.prevAngle = hammer.angle;
 }
 
+normalizeAngle(angle) {
+  let normalized = angle;
+  while (normalized > Math.PI) normalized -= Math.PI * 2;
+  while (normalized < -Math.PI) normalized += Math.PI * 2;
+  return normalized;
+}
+
+endThrowingAxeModeSmoothly() {
+  const hammer = this.hammer;
+  if (!hammer.throwingAxeMode) return;
+
+  // Throwing-axe mode encodes orientation directly in pivot/head geometry.
+  // Normal free mode uses a vertical base + visualRotation, so remap by -PI/2
+  // to prevent an abrupt apparent angle jump when transitioning modes.
+  hammer.visualRotation = this.normalizeAngle(hammer.visualRotation - (Math.PI / 2));
+  hammer.throwingAxeMode = false;
+}
+
 
 updateFreeHammer(dt) {
   const hammer = this.hammer;
@@ -964,13 +982,12 @@ updateFreeHammer(dt) {
     // Stop spinning if speed is too low
     if (Math.abs(hammer.angularVelocity) < 0.1) {
       hammer.angularVelocity = 0;
-      hammer.throwingAxeMode = false; // Exit throwing axe mode when spin stops
+      this.endThrowingAxeModeSmoothly(); // Exit throwing axe mode when spin stops
     }
   } else if (!hammer.throwingAxeMode && Math.abs(hammer.visualRotation) > 0.001) {
     // Smoothly settle the spin-only visual twist so the hammer does not freeze at a random angle.
     // Normalize to [-PI, PI] first so it always settles via the shortest route (no extra full spins).
-    while (hammer.visualRotation > Math.PI) hammer.visualRotation -= Math.PI * 2;
-    while (hammer.visualRotation < -Math.PI) hammer.visualRotation += Math.PI * 2;
+    hammer.visualRotation = this.normalizeAngle(hammer.visualRotation);
 
     // We cap settle speed to keep the final orientation shift feeling heavy and deliberate.
     const settleStep = Math.min(1, rotationSettleSpeed * dt);
@@ -988,7 +1005,7 @@ updateFreeHammer(dt) {
   // Disable if spin drops below threshold
   const spinThreshold = 2.0; // rad/s
   if (hammer.throwingAxeMode && Math.abs(hammer.angularVelocity) < spinThreshold) {
-    hammer.throwingAxeMode = false; // Exit throwing axe mode when spin decays
+    this.endThrowingAxeModeSmoothly(); // Exit throwing axe mode when spin decays
   }
 
   if (hammer.throwingAxeMode) {
