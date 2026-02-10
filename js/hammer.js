@@ -34,7 +34,7 @@ export class HammerSystem {
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
     // World physics constants
-    this.gravity = 2600; // px/s^2
+    this.gravity = 6600; // px/s^2
     this.airFriction = 0.9;
 
     // Hammer state
@@ -66,7 +66,8 @@ export class HammerSystem {
       headMass: 3.0, // 1.0 = default mass; increase to make the head heavier/sluggish
       angularVelocity: 0, // rad/s - spin speed when thrown
       visualRotation: 0, // Current visual rotation for drawing
-      throwingAxeMode: false // True for player throws (pivot rotation), false for rips
+      throwingAxeMode: false, // True for player throws (pivot rotation), false for rips
+      throwOrbitRadius: 0 // Distance from throw pivot to head during spinning throw
     };
 
     // Anvil state
@@ -507,43 +508,55 @@ onPointerDown(e) {
       const hammer = this.hammer;
       const spinningThrowLevel = getUpgradeLevel('spinningThrow');
 
-      // Calculate current velocity from Verlet integration
-      const currentSpeed = Math.hypot(hammer.headVx, hammer.headVy);
-
       // SPINNING THROW: Activate if upgrade is purchased
       if (spinningThrowLevel > 0) {
         // Enter free-flight mode
         hammer.isFree = true;
         hammer.regrabCooldown = 0.05; // Short cooldown before re-grab
 
+        // Shift pivot down the handle so the hammer spins like a thrown hand axe.
+        // This keeps the head path continuous while moving the rotation center closer
+        // to the hammer's center of mass instead of the end of the handle.
+        const dx = hammer.headX - hammer.pivotX;
+        const dy = hammer.headY - hammer.pivotY;
+        const currentLength = Math.hypot(dx, dy) || hammer.length || 180;
+        const axisX = dx / currentLength;
+        const axisY = dy / currentLength;
+        hammer.throwOrbitRadius = Math.max(58, currentLength * 0.5);
+        const pivotShift = currentLength - hammer.throwOrbitRadius;
+        hammer.pivotX += axisX * pivotShift;
+        hammer.pivotY += axisY * pivotShift;
+
         // Check if hammer is already spinning significantly
         const existingSpin = Math.abs(hammer.angularVelocity);
         const spinThreshold = 2.0; // rad/s - use throwing axe mode above this
+        const swingSpinMultiplier = Math.max(1, gameState.powerSwingMultiplier || 1);
 
         if (existingSpin >= spinThreshold) {
-          // Already spinning from Power Swing - boost it slightly
-          hammer.angularVelocity *= 1.15; // 15% spin boost
+          // Already spinning from Power Swing - snap to a rapid throw spin floor.
+          // This ensures a high-speed thrown spin when releasing above threshold.
+          const spinDirection = Math.sign(hammer.angularVelocity) || (hammer.headVx >= 0 ? 1 : -1);
+          const rapidThrowSpin = (12 + spinningThrowLevel * 2.5) * swingSpinMultiplier;
+          hammer.angularVelocity = spinDirection * Math.max(existingSpin * 1.2 * swingSpinMultiplier, rapidThrowSpin);
         } else {
           // Not spinning enough - apply new spin based on Spinning Throw upgrade
-          // Base spin: 3 rad/s, +1.5 rad/s per level
-          const baseSpinBoost = 3;
-          const spinBoostPerLevel = 1.5;
+          // Base spin: 9 rad/s, +2.2 rad/s per level
+          // Tuned for fast thrown-axe style spinning.
+          const baseSpinBoost = 15;
+          const spinBoostPerLevel = 2.2;
           const totalSpinBoost = baseSpinBoost + (spinningThrowLevel * spinBoostPerLevel);
 
           // Spin direction based on horizontal velocity direction
           const spinDirection = hammer.headVx >= 0 ? 1 : -1;
 
-          // Add velocity-based scaling (faster throws spin more)
-          // Minimum 0.5x to ensure always spins, max 1.5x for fast throws
-          const velocityFactor = Math.max(0.5, Math.min(1.5, currentSpeed / 2000));
-          hammer.angularVelocity = spinDirection * totalSpinBoost * velocityFactor;
+          // Scale spins-per-second directly from swing multiplier so upgrades
+          // affect rotational frequency, not translational throw speed.
+          hammer.angularVelocity = spinDirection * totalSpinBoost * swingSpinMultiplier;
         }
 
         // Enable throwing axe mode and initialize rotation
         hammer.throwingAxeMode = true;
-        const dx = hammer.headX - hammer.pivotX;
-        const dy = hammer.headY - hammer.pivotY;
-        hammer.visualRotation = Math.atan2(dx, -dy);
+        hammer.visualRotation = Math.atan2(hammer.headX - hammer.pivotX, -(hammer.headY - hammer.pivotY));
 
         // Hammer retains its current velocity (from headVx, headVy)
         // Physics and gravity will be applied in updateFreeHammer()
@@ -925,11 +938,37 @@ if (isHearthHeated() && this.isHammerOverHearth()) {
   hammer.prevAngle = hammer.angle;
 }
 
+normalizeAngle(angle) {
+  let normalized = angle;
+  while (normalized > Math.PI) normalized -= Math.PI * 2;
+  while (normalized < -Math.PI) normalized += Math.PI * 2;
+  return normalized;
+}
+
+endThrowingAxeModeSmoothly() {
+  const hammer = this.hammer;
+  if (!hammer.throwingAxeMode) return;
+
+  // Preserve the *rendered* orientation when leaving throwing-axe mode.
+  // Throwing mode encodes orientation in pivot->head geometry; normal free mode
+  // uses a vertical base angle (PI) plus visualRotation.
+  const currentRenderedAngle = Math.atan2(
+    hammer.headY - hammer.pivotY,
+    hammer.headX - hammer.pivotX
+  ) + Math.PI / 2;
+
+  const normalFreeBaseAngle = Math.PI;
+  hammer.visualRotation = this.normalizeAngle(currentRenderedAngle - normalFreeBaseAngle);
+  hammer.throwingAxeMode = false;
+}
+
 
 updateFreeHammer(dt) {
   const hammer = this.hammer;
   const g = this.gravity;
   const frictionAir = this.airFriction * 1.033;
+  const rotationSettleSpeed = 8.15; // 1/s - lower value for a heavier, slower return to resting orientation
+  const maxSettleRate = 2.2; // rad/s - cap settle velocity so the final shift never looks snappy
 
   // --- Update spinning rotation ---
   if (hammer.angularVelocity !== 0) {
@@ -949,7 +988,22 @@ updateFreeHammer(dt) {
     // Stop spinning if speed is too low
     if (Math.abs(hammer.angularVelocity) < 0.1) {
       hammer.angularVelocity = 0;
-      hammer.throwingAxeMode = false; // Exit throwing axe mode when spin stops
+      this.endThrowingAxeModeSmoothly(); // Exit throwing axe mode when spin stops
+    }
+  } else if (!hammer.throwingAxeMode && Math.abs(hammer.visualRotation) > 0.001) {
+    // Smoothly settle the spin-only visual twist so the hammer does not freeze at a random angle.
+    // Normalize to [-PI, PI] first so it always settles via the shortest route (no extra full spins).
+    hammer.visualRotation = this.normalizeAngle(hammer.visualRotation);
+
+    // We cap settle speed to keep the final orientation shift feeling heavy and deliberate.
+    const settleStep = Math.min(1, rotationSettleSpeed * dt);
+    const desiredDelta = (0 - hammer.visualRotation) * settleStep;
+    const maxDelta = maxSettleRate * dt;
+    const clampedDelta = Math.max(-maxDelta, Math.min(maxDelta, desiredDelta));
+    hammer.visualRotation += clampedDelta;
+
+    if (Math.abs(hammer.visualRotation) < 0.001) {
+      hammer.visualRotation = 0;
     }
   }
 
@@ -957,7 +1011,7 @@ updateFreeHammer(dt) {
   // Disable if spin drops below threshold
   const spinThreshold = 2.0; // rad/s
   if (hammer.throwingAxeMode && Math.abs(hammer.angularVelocity) < spinThreshold) {
-    hammer.throwingAxeMode = false; // Exit throwing axe mode when spin decays
+    this.endThrowingAxeModeSmoothly(); // Exit throwing axe mode when spin decays
   }
 
   if (hammer.throwingAxeMode) {
@@ -974,9 +1028,9 @@ updateFreeHammer(dt) {
 
     // Calculate head position relative to pivot based on rotation angle
     const angle = hammer.visualRotation;
-    const length = hammer.length || 180;
-    hammer.headX = hammer.pivotX + Math.sin(angle) * length;
-    hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+    const orbitRadius = hammer.throwOrbitRadius || Math.max(58, (hammer.length || 180) * 0.5);
+    hammer.headX = hammer.pivotX + Math.sin(angle) * orbitRadius;
+    hammer.headY = hammer.pivotY - Math.cos(angle) * orbitRadius;
 
   } else {
     // NORMAL FREE-FLIGHT: Head flies through air (original behavior)
@@ -1009,9 +1063,9 @@ updateFreeHammer(dt) {
       hammer.pivotY -= penetration;
       // Recalculate head position after pivot adjustment
       const angle = hammer.visualRotation;
-      const length = hammer.length || 180;
-      hammer.headX = hammer.pivotX + Math.sin(angle) * length;
-      hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+      const orbitRadius = hammer.throwOrbitRadius || Math.max(58, (hammer.length || 180) * 0.5);
+      hammer.headX = hammer.pivotX + Math.sin(angle) * orbitRadius;
+      hammer.headY = hammer.pivotY - Math.cos(angle) * orbitRadius;
     } else {
       // NORMAL MODE: Just push head back above floor
       hammer.headY -= penetration;
@@ -1049,9 +1103,9 @@ updateFreeHammer(dt) {
       // THROWING AXE MODE: Adjust pivot position
       hammer.pivotY += penetration;
       const angle = hammer.visualRotation;
-      const length = hammer.length || 180;
-      hammer.headX = hammer.pivotX + Math.sin(angle) * length;
-      hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+      const orbitRadius = hammer.throwOrbitRadius || Math.max(58, (hammer.length || 180) * 0.5);
+      hammer.headX = hammer.pivotX + Math.sin(angle) * orbitRadius;
+      hammer.headY = hammer.pivotY - Math.cos(angle) * orbitRadius;
     } else {
       hammer.headY += penetration;
     }
@@ -1075,9 +1129,9 @@ updateFreeHammer(dt) {
       // THROWING AXE MODE: Adjust pivot position
       hammer.pivotX += penetration;
       const angle = hammer.visualRotation;
-      const length = hammer.length || 180;
-      hammer.headX = hammer.pivotX + Math.sin(angle) * length;
-      hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+      const orbitRadius = hammer.throwOrbitRadius || Math.max(58, (hammer.length || 180) * 0.5);
+      hammer.headX = hammer.pivotX + Math.sin(angle) * orbitRadius;
+      hammer.headY = hammer.pivotY - Math.cos(angle) * orbitRadius;
     } else {
       hammer.headX += penetration;
     }
@@ -1101,9 +1155,9 @@ updateFreeHammer(dt) {
       // THROWING AXE MODE: Adjust pivot position
       hammer.pivotX -= penetration;
       const angle = hammer.visualRotation;
-      const length = hammer.length || 180;
-      hammer.headX = hammer.pivotX + Math.sin(angle) * length;
-      hammer.headY = hammer.pivotY - Math.cos(angle) * length;
+      const orbitRadius = hammer.throwOrbitRadius || Math.max(58, (hammer.length || 180) * 0.5);
+      hammer.headX = hammer.pivotX + Math.sin(angle) * orbitRadius;
+      hammer.headY = hammer.pivotY - Math.cos(angle) * orbitRadius;
     } else {
       hammer.headX -= penetration;
     }
@@ -1164,9 +1218,44 @@ updateFreeHammer(dt) {
       headY > anvilTop &&
       headY < anvilBottom;
 
-    // Handle free-flight hammer hitting anvil (with spin retention)
-    if (hammer.isFree && isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
-      const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
+    const spinRetentionThreshold = gameState.spinRetentionThreshold || 5;
+    const isSpinningThrowPass =
+      hammer.isFree &&
+      hammer.throwingAxeMode &&
+      isOverAnvil &&
+      Math.abs(hammer.angularVelocity) >= spinRetentionThreshold;
+
+    // Spinning throw: bounce off the anvil and allow repeated multi-hits.
+    // Keep spin rate effectively intact while only slightly damping travel speed.
+    if (isSpinningThrowPass && hammer.strikeCooldown <= 0) {
+      const spinImpactPower = Math.min(1.5, Math.max(0.6, Math.abs(hammer.angularVelocity) / 10));
+      hammer.strikeCooldown = 0.07;
+
+      // Bounce vertically off the anvil face while preserving orbiting spin.
+      if (hammer.headVy > 0) {
+        hammer.headVy = -Math.abs(hammer.headVy) * 0.92;
+        hammer.headY = anvil.y - 18;
+      } else {
+        hammer.headVy = Math.abs(hammer.headVy) * 0.92;
+        hammer.headY = anvilBottom;
+      }
+      hammer.headVx *= 0.99;
+
+      // Keep rotational speed through impacts (tiny loss to avoid runaway energy).
+      hammer.angularVelocity *= 0.998;
+
+      this.spawnSparks(headX, anvil.y, spinImpactPower);
+      this.spawnClankWord(headX, anvil.y, spinImpactPower);
+      playHammerClank();
+
+      if (this.onLetterForged) {
+        this.onLetterForged(headX, anvil.y, spinImpactPower, hammer.headVx, 1);
+      }
+    }
+
+    // Non-throwing free-flight hammer hitting anvil (bounce behavior)
+    if (hammer.isFree && !hammer.throwingAxeMode && isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
+      const spinThreshold = spinRetentionThreshold; // rad/s
       const isSpinning = Math.abs(hammer.angularVelocity) >= spinThreshold;
 
       if (isSpinning) {
@@ -1178,11 +1267,11 @@ updateFreeHammer(dt) {
         hammer.anvilExitReady = false;
 
         // Retain spin, dampen it slightly
-        hammer.angularVelocity *= 0.85;
+        hammer.angularVelocity *= 0.95;
 
         // Produce letters/sparks from spinning hit
         if (hammer.strikeCooldown <= 0) {
-          hammer.strikeCooldown = 0.25;
+          hammer.strikeCooldown = 0.07;
           const power = Math.min(1.5, downwardSpeed / (impactThreshold * 1.3));
           this.spawnSparks(headX, anvil.y, power);
           this.spawnClankWord(headX, anvil.y, power);
@@ -1200,11 +1289,11 @@ updateFreeHammer(dt) {
         hammer.headY = anvil.y - 18;
         hammer.anvilExitReady = false;
         hammer.angularVelocity = 0;
-        hammer.visualRotation = 0;
+        // Keep current visualRotation and let the settle logic ease it down smoothly.
       }
     }
 
-    if (isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
+    if (!hammer.throwingAxeMode && isOverAnvil && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
       const power = Math.min(1.5, downwardSpeed / (impactThreshold * 1.3));
       const ripThreshold = gameState.ripSpeedThreshold;
 
