@@ -1149,6 +1149,81 @@ updateFreeHammer(dt) {
     hammer.headY - hammer.pivotY,
     hammer.headX - hammer.pivotX
   ) + Math.PI / 2;
+
+  this.ensureLandedHammerFacesPlayerArea();
+}
+
+ensureLandedHammerFacesPlayerArea() {
+  const hammer = this.hammer;
+  const speed = Math.hypot(hammer.headVx || 0, hammer.headVy || 0);
+  const angularSpeed = Math.abs(hammer.angularVelocity || 0);
+
+  // Only correct when the hammer has effectively landed.
+  if (speed > 6 || angularSpeed > 0.15) return;
+
+  const radius = hammer.width * 0.5;
+  const floorY = this.height - 10;
+  const ceilingY = 10;
+  const left = radius;
+  const right = this.width - radius;
+  const touchTolerance = 6;
+
+  const edgeDistances = {
+    left: Math.abs((hammer.headX - radius) - left),
+    right: Math.abs((hammer.headX + radius) - right),
+    top: Math.abs((hammer.headY - radius) - ceilingY),
+    bottom: Math.abs((hammer.headY + radius) - floorY)
+  };
+
+  const touching = Object.entries(edgeDistances)
+    .filter(([, d]) => d <= touchTolerance)
+    .sort((a, b) => a[1] - b[1]);
+
+  if (touching.length === 0) return;
+
+  const primaryEdge = touching[0][0];
+  const inwardNormals = {
+    left: 0,
+    right: Math.PI,
+    top: Math.PI / 2,
+    bottom: -Math.PI / 2
+  };
+
+  const minInwardAngleDeg = 50;
+  const maxDeviation = ((90 - minInwardAngleDeg) * Math.PI) / 180;
+  const inward = inwardNormals[primaryEdge];
+
+  // Haft direction should point from the hammer head toward the pivot (handle into play area).
+  const haftDx = hammer.pivotX - hammer.headX;
+  const haftDy = hammer.pivotY - hammer.headY;
+  const haftAngle = Math.atan2(haftDy, haftDx);
+  const angleFromInward = this.normalizeRadians(haftAngle - inward);
+
+  if (Math.abs(angleFromInward) <= maxDeviation) return;
+
+  const correctedDelta = Math.max(-maxDeviation, Math.min(maxDeviation, angleFromInward));
+  const correctedHaftAngle = inward + correctedDelta;
+  const handleLength = Math.min(hammer.length, this.getMaxHandleLength());
+
+  // Shift slightly inward so we do not leave the head visually glued to the edge.
+  const pushIn = 6;
+  if (primaryEdge === 'left') hammer.headX += pushIn;
+  if (primaryEdge === 'right') hammer.headX -= pushIn;
+  if (primaryEdge === 'top') hammer.headY += pushIn;
+  if (primaryEdge === 'bottom') hammer.headY -= pushIn;
+
+  hammer.pivotX = hammer.headX + Math.cos(correctedHaftAngle) * handleLength;
+  hammer.pivotY = hammer.headY + Math.sin(correctedHaftAngle) * handleLength;
+
+  hammer.throwingAxeMode = false;
+  hammer.visualRotation = correctedHaftAngle;
+}
+
+normalizeRadians(angle) {
+  let normalized = angle;
+  while (normalized > Math.PI) normalized -= Math.PI * 2;
+  while (normalized < -Math.PI) normalized += Math.PI * 2;
+  return normalized;
 }
   /**
    * Update physics simulation
