@@ -943,7 +943,8 @@ updateFreeHammer(dt) {
   const hammer = this.hammer;
   const g = this.gravity;
   const frictionAir = this.airFriction * 1.033;
-  const rotationSettleSpeed = 8; // rad/s - how quickly spin-only rotation eases back to resting orientation
+  const rotationSettleSpeed = 1.15; // 1/s - lower value for a heavier, slower return to resting orientation
+  const maxSettleRate = 1.2; // rad/s - cap settle velocity so the final shift never looks snappy
 
   // --- Update spinning rotation ---
   if (hammer.angularVelocity !== 0) {
@@ -966,9 +967,13 @@ updateFreeHammer(dt) {
       hammer.throwingAxeMode = false; // Exit throwing axe mode when spin stops
     }
   } else if (!hammer.throwingAxeMode && Math.abs(hammer.visualRotation) > 0.001) {
-    // Smoothly settle the spin-only visual twist so the hammer does not freeze at a random angle
+    // Smoothly settle the spin-only visual twist so the hammer does not freeze at a random angle.
+    // We cap settle speed to keep the final orientation shift feeling heavy and deliberate.
     const settleStep = Math.min(1, rotationSettleSpeed * dt);
-    hammer.visualRotation += (0 - hammer.visualRotation) * settleStep;
+    const desiredDelta = (0 - hammer.visualRotation) * settleStep;
+    const maxDelta = maxSettleRate * dt;
+    const clampedDelta = Math.max(-maxDelta, Math.min(maxDelta, desiredDelta));
+    hammer.visualRotation += clampedDelta;
 
     if (Math.abs(hammer.visualRotation) < 0.001) {
       hammer.visualRotation = 0;
