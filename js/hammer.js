@@ -160,7 +160,7 @@ export class HammerSystem {
     this.anvil = {
       x: 0,
       y: 0,
-      width: 220,
+      width: 320,
       height: 70
     };
 
@@ -251,7 +251,7 @@ export class HammerSystem {
     // Position anvil just above the hearth
     // Canvas now covers full viewport, so position relative to bottom
     const letterPoolBarHeight = 160;
-    this.anvil.width = Math.min(260, this.width * 0.35) + 40;
+    this.anvil.width = Math.min(260, this.width * 0.35) + 100;
     this.anvil.height = 70;
     this.anvil.x = this.width * 0.5 - this.anvil.width / 2 - 20;
     if (!this._isMobile) {
@@ -314,10 +314,11 @@ export class HammerSystem {
     const oldCenterX = this.anvil.x + this.anvil.width / 2;
     const oldCenterY = this.anvil.y + this.anvil.height / 2;
 
-    this.anvil.width = this.anvilAnchor.width;
+    this.anvil.width = this.anvilAnchor.width + 100;
     this.anvil.height = this.anvilAnchor.height;
     this.anvil.x = this.anvilAnchor.x - canvasRect.left - this.anvil.width / 2;
     this.anvil.y = this.anvilAnchor.y - canvasRect.top - this.anvil.height / 2;
+
 
     const newCenterX = this.anvil.x + this.anvil.width / 2;
     const newCenterY = this.anvil.y + this.anvil.height / 2;

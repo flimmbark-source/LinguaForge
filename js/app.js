@@ -49,7 +49,7 @@ const HEARTH_ANCHOR = {
 const ANVIL_ANCHOR = {
   x: 460,
   y: 600,
-  width: 260,
+  width: 360,
   height: 70
 };
 
