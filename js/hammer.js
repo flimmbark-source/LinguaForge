@@ -535,8 +535,11 @@ onPointerDown(e) {
         const spinThreshold = 2.0; // rad/s - use throwing axe mode above this
 
         if (existingSpin >= spinThreshold) {
-          // Already spinning from Power Swing - boost it slightly
-          hammer.angularVelocity *= 1.15; // 15% spin boost
+          // Already spinning from Power Swing - snap to a rapid throw spin floor.
+          // This ensures a high-speed thrown spin when releasing above threshold.
+          const spinDirection = Math.sign(hammer.angularVelocity) || (hammer.headVx >= 0 ? 1 : -1);
+          const rapidThrowSpin = 12 + spinningThrowLevel * 2.5;
+          hammer.angularVelocity = spinDirection * Math.max(existingSpin * 1.2, rapidThrowSpin);
         } else {
           // Not spinning enough - apply new spin based on Spinning Throw upgrade
           // Base spin: 9 rad/s, +2.2 rad/s per level
