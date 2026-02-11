@@ -195,6 +195,7 @@ export class HammerSystem {
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
     this.onPointerUp = this.onPointerUp.bind(this);
+    this.onViewportChange = this.onViewportChange.bind(this);
 
     // Cached gradients (rebuilt on resize)
     this._cachedGradients = {};
@@ -213,6 +214,24 @@ export class HammerSystem {
     // Initialize
     this.resize();
     this.setupEventListeners();
+
+    // Mobile browser chrome can settle a few frames after first paint, which can
+    // temporarily place the hearth/anvil outside canvas coordinates. Re-sync once
+    // layout stabilizes so the hammer always spawns in view.
+    this.scheduleViewportResync();
+  }
+
+  scheduleViewportResync() {
+    const delays = [0, 150, 450];
+    delays.forEach((delay) => {
+      window.setTimeout(() => {
+        this.resize();
+      }, delay);
+    });
+  }
+
+  onViewportChange() {
+    this.resize();
   }
 
   /**
@@ -482,6 +501,11 @@ export class HammerSystem {
     document.addEventListener('touchmove', this.onPointerMove, { passive: false, capture: true });
     document.addEventListener('touchend', this.onPointerUp, true);
     window.addEventListener('resize', this.resize);
+    window.addEventListener('orientationchange', this.onViewportChange);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', this.onViewportChange);
+      window.visualViewport.addEventListener('scroll', this.onViewportChange);
+    }
   }
 
   /**
@@ -2137,5 +2161,10 @@ drawHammer(ctx, hammer) {
     document.removeEventListener('touchmove', this.onPointerMove, true);
     document.removeEventListener('touchend', this.onPointerUp, true);
     window.removeEventListener('resize', this.resize);
+    window.removeEventListener('orientationchange', this.onViewportChange);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this.onViewportChange);
+      window.visualViewport.removeEventListener('scroll', this.onViewportChange);
+    }
   }
 }
