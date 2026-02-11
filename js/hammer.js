@@ -218,7 +218,8 @@ export class HammerSystem {
    */
   resize() {
     const rect = this.canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    const rawDpr = window.devicePixelRatio || 1;
+    const dpr = this._isMobile ? Math.min(rawDpr, 1.5) : rawDpr;
     this.canvas.width = rect.width * dpr;
     this.canvas.height = rect.height * dpr;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1622,9 +1623,14 @@ updateFreeHammer(dt) {
         hammer.headVx = dirX * backSpeed;
         hammer.headVy = dirY * backSpeed;
 
-        // Add angular velocity based on the impact power (spinning hammer throw)
+        // Add only a modest amount of spin on rip hits so the hammer stays recoverable.
+        // Reuse the existing spin-retention threshold as a soft cap to keep this behavior consistent
+        // with anvil/floor spin logic elsewhere in the file.
         const spinPower = Math.min(1, downwardSpeed / ripThreshold);
-        hammer.angularVelocity = (incomingVx >= 0 ? 1 : -1) * (8 + spinPower * 12); // rad/s
+        const ripSpinDirection = incomingVx >= 0 ? 1 : -1;
+        const ripSpinCap = Math.max(1.8, spinRetentionThreshold * 0.85);
+        const ripSpin = Math.min(ripSpinCap, 1.6 + spinPower * 2.4); // ~1.6 to ~4.0 rad/s max
+        hammer.angularVelocity = ripSpinDirection * ripSpin;
 
         // Encode that into prevHead* for the verlet integrator
         hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
@@ -1880,6 +1886,28 @@ drawHammer(ctx, hammer) {
     // Head (top of image) anchored to physics head position;
     // handle extends past the grip point when grabbing mid-haft
     ctx.drawImage(this._hammerImg, -imgWidth / 2, -(handleLength + headHeight), imgWidth, imgHeight);
+  } else {
+    // Fast fallback so the hammer is visible immediately while image is still loading.
+    const handleWidth = Math.max(8, hammer.handleThickness * 0.6);
+    const headY = -(handleLength + headHeight);
+
+    ctx.fillStyle = '#6b4f2a';
+    ctx.fillRect(-handleWidth / 2, -handleLength, handleWidth, handleLength + 4);
+
+    const fallbackHeadGradient = ctx.createLinearGradient(
+      -headWidth * 0.5,
+      headY,
+      headWidth * 0.5,
+      headY + headHeight
+    );
+    fallbackHeadGradient.addColorStop(0, '#f3f4f6');
+    fallbackHeadGradient.addColorStop(0.5, '#9ca3af');
+    fallbackHeadGradient.addColorStop(1, '#4b5563');
+    ctx.fillStyle = fallbackHeadGradient;
+    ctx.fillRect(-headWidth / 2, headY, headWidth, headHeight);
+
+    ctx.fillStyle = 'rgba(17, 24, 39, 0.32)';
+    ctx.fillRect(-headWidth / 2, headY + headHeight - 8, headWidth, 8);
   }
 
   // Show progress indicator for heating to next level
