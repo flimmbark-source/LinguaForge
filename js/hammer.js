@@ -222,7 +222,10 @@ export class HammerSystem {
   }
 
   scheduleViewportResync() {
-    const delays = [0, 150, 450];
+    // Mobile browser UI (URL bar/toolbars) can finish settling well after first paint.
+    // Keep re-syncing for a short window so the hammer is anchored once viewport
+    // metrics stabilize, even before the player interacts with browser chrome.
+    const delays = [0, 150, 450, 900, 1400, 2000];
     delays.forEach((delay) => {
       window.setTimeout(() => {
         this.resize();
