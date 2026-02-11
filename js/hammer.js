@@ -11,6 +11,31 @@ import { getUpgradeLevel } from './upgrades.js?v=9';
 import { getHeatedMoldAtPoint } from './molds.js?v=9';
 
 const MOBILE_BREAKPOINT = 900;
+const MOBILE_ANVIL_PORTRAIT_OFFSET_X = 70;
+const MOBILE_ANVIL_PORTRAIT_OFFSET_Y = 20;
+const MOBILE_ANVIL_LANDSCAPE_OFFSET_X = 70;
+const MOBILE_ANVIL_LANDSCAPE_OFFSET_Y = 14;
+
+function getMobileAnvilVisualOffset() {
+  const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+  if (!isMobile) {
+    return { x: 0, y: 0 };
+  }
+
+  const isLandscape = window.innerWidth > window.innerHeight;
+  if (isLandscape) {
+    return {
+      x: MOBILE_ANVIL_LANDSCAPE_OFFSET_X,
+      y: MOBILE_ANVIL_LANDSCAPE_OFFSET_Y
+    };
+  }
+
+  return {
+    x: MOBILE_ANVIL_PORTRAIT_OFFSET_X,
+    y: MOBILE_ANVIL_PORTRAIT_OFFSET_Y
+  };
+}
+
 function setScreenLocked(locked) {
   if (window.setScreenLocked) {
     window.setScreenLocked(locked);
@@ -281,9 +306,10 @@ export class HammerSystem {
     const letterPoolBarHeight = 160;
     this.anvil.width = Math.min(260, this.width * 0.35) + 50;
     this.anvil.height = 70;
+    const mobileAnvilOffset = getMobileAnvilVisualOffset();
     this.anvil.x = this.width * 0.5 - this.anvil.width / 2 - 20;
-    // Nudge anvil right by 50px (reduced)
-    this.anvil.x += 50;
+    // Nudge anvil right to align with the background anvil art.
+    this.anvil.x += mobileAnvilOffset.x;
     if (!this._isMobile) {
       this.anvil.x -= 300;
     }
@@ -292,10 +318,10 @@ export class HammerSystem {
     const isMobilePortrait = window.innerWidth <= MOBILE_BREAKPOINT && window.innerHeight > window.innerWidth;
     if (isMobilePortrait) {
       // Hearth top is at 100vh - 164px; overlap anvil base onto hearth mantle
-      this.anvil.y = this.height - 164 - this.anvil.height + 4;
+      this.anvil.y = this.height - 164 - this.anvil.height + 4 + mobileAnvilOffset.y;
     } else if (isMobileLandscape && typeof anvilBottom === 'number') {
       // Sit the anvil directly on the hearth in landscape
-      this.anvil.y = anvilBottom - this.anvil.height;
+      this.anvil.y = anvilBottom - this.anvil.height + mobileAnvilOffset.y;
     } else {
       this.anvil.y = this.height - letterPoolBarHeight - this.anvil.height - 10;
     }
@@ -351,9 +377,10 @@ export class HammerSystem {
 
     this.anvil.width = this.anvilAnchor.width + 50;
     this.anvil.height = this.anvilAnchor.height;
-    // Position anvil centered on anchor, then shift right by 50px
-    this.anvil.x = this.anvilAnchor.x - canvasRect.left - this.anvil.width / 2 + 50;
-    this.anvil.y = this.anvilAnchor.y - canvasRect.top - this.anvil.height / 2;
+    const mobileAnvilOffset = getMobileAnvilVisualOffset();
+    // Position anvil centered on anchor, then nudge to align with the background art.
+    this.anvil.x = this.anvilAnchor.x - canvasRect.left - this.anvil.width / 2 + mobileAnvilOffset.x;
+    this.anvil.y = this.anvilAnchor.y - canvasRect.top - this.anvil.height / 2 + mobileAnvilOffset.y;
 
 
     const newCenterX = this.anvil.x + this.anvil.width / 2;
