@@ -170,9 +170,13 @@ export function renderMolds() {
   renderMoldsInViewport(elements.moldListDiv);
 
   if (elements.moldIndexLabel) {
-    const total = gameState.currentLine.molds.length;
-    const stored = gameState.currentLine.molds.filter(m => m.runtime?.inViewport && !m.runtime?.consumed).length;
-    elements.moldIndexLabel.textContent = `${stored} stored / ${total} total`;
+    const storedMolds = gameState.currentLine.molds.filter(m => m.runtime?.inViewport && !m.runtime?.consumed);
+    if (!storedMolds.length) {
+      elements.moldIndexLabel.textContent = 'No molds stored';
+    } else {
+      const current = Math.min(gameState.currentMoldIndex + 1, storedMolds.length);
+      elements.moldIndexLabel.textContent = `${current} / ${storedMolds.length}`;
+    }
   }
 }
 

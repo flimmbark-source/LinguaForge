@@ -6,7 +6,7 @@
 
 import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower } from './config.js?v=9';
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
-import { setMoldViewportWidth, initializeMoldSystem, getWorldMoldElement, forgeSingleMold } from './molds.js?v=9';
+import { setMoldViewportWidth, initializeMoldSystem, getWorldMoldElement, forgeSingleMold, navigatePreviousMold, navigateNextMold } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
 import { setupVerseAreaDrop, completeVerse } from './grammar.js?v=9';
 import { initializeElements, updateUI, initWordSelector } from './ui.js?v=9';
@@ -869,6 +869,18 @@ function setupEventHandlers() {
   }
 
   // Mold navigation buttons
+  const prevMoldBtn = document.getElementById('prevMoldBtn');
+  const nextMoldBtn = document.getElementById('nextMoldBtn');
+  if (prevMoldBtn && nextMoldBtn) {
+    prevMoldBtn.addEventListener('click', () => {
+      navigatePreviousMold();
+      updateUI();
+    });
+    nextMoldBtn.addEventListener('click', () => {
+      navigateNextMold();
+      updateUI();
+    });
+  }
 
   // Audio controls
   const audioToggleBtn = document.getElementById('audioToggleBtn');

@@ -294,6 +294,14 @@ function tickMoldPhysics(now) {
   moldWorldState.rafId = requestAnimationFrame(tickMoldPhysics);
 }
 
+
+function getStoredMolds() {
+  return gameState.currentLine.molds.filter((mold) => {
+    const runtime = ensureMoldRuntime(mold);
+    return runtime.inViewport && !runtime.consumed;
+  });
+}
+
 /**
  * Set mold viewport width based on longest mold pattern
  */
@@ -310,10 +318,27 @@ export function setMoldViewportWidth() {
   moldViewportDiv.style.width = viewportWidth + 'px';
 }
 
-/** Kept for backward compatibility; molds are now freeform. */
-export function navigatePreviousMold() {}
-/** Kept for backward compatibility; molds are now freeform. */
-export function navigateNextMold() {}
+export function navigatePreviousMold() {
+  const stored = getStoredMolds();
+  if (!stored.length) {
+    gameState.currentMoldIndex = 0;
+    return;
+  }
+  const total = stored.length;
+  const current = ((gameState.currentMoldIndex % total) + total) % total;
+  gameState.currentMoldIndex = (current - 1 + total) % total;
+}
+
+export function navigateNextMold() {
+  const stored = getStoredMolds();
+  if (!stored.length) {
+    gameState.currentMoldIndex = 0;
+    return;
+  }
+  const total = stored.length;
+  const current = ((gameState.currentMoldIndex % total) + total) % total;
+  gameState.currentMoldIndex = (current + 1) % total;
+}
 
 export function initializeMoldSystem() {
   setupPointerHandlers();
@@ -420,20 +445,26 @@ export function renderMoldsInViewport(container) {
   container.innerHTML = '';
 
   const worldLayer = ensureWorldLayer();
-  gameState.currentLine.molds.forEach((mold) => {
-    const runtime = ensureMoldRuntime(mold);
-    if (!runtime.inViewport || runtime.consumed) return;
+  const stored = getStoredMolds();
 
-    const card = createMoldCard(mold, { world: false });
-    hydrateMoldCard(card, mold, { world: false });
-    card.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      beginDragFromCard(card, e, true);
-    });
-    container.appendChild(card);
+  if (!stored.length) {
+    gameState.currentMoldIndex = 0;
+    return;
+  }
 
-    const worldCard = worldLayer.querySelector(`.world-mold[data-mold-id="${mold.id}"]`);
-    if (worldCard) worldCard.remove();
+  if (gameState.currentMoldIndex < 0) gameState.currentMoldIndex = 0;
+  if (gameState.currentMoldIndex >= stored.length) gameState.currentMoldIndex = stored.length - 1;
+
+  const mold = stored[gameState.currentMoldIndex];
+  const card = createMoldCard(mold, { world: false });
+  hydrateMoldCard(card, mold, { world: false });
+  card.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    beginDragFromCard(card, e, true);
   });
+  container.appendChild(card);
+
+  const worldCard = worldLayer.querySelector(`.world-mold[data-mold-id="${mold.id}"]`);
+  if (worldCard) worldCard.remove();
 }
