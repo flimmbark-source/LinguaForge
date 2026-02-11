@@ -703,7 +703,7 @@ onPointerDown(e) {
         const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
         const isLandscape = window.innerWidth > window.innerHeight;
         const snapRadius = isMobile
-          ? (isLandscape ? 96 : 110)
+          ? (isLandscape ? 80 : 88)
           : 70;
 
         if (Math.min(pointerDist, headDist) < snapRadius) {
