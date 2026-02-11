@@ -716,7 +716,7 @@ onPointerDown(e) {
 
     this.flyingLetters.push({
       x: impactX,
-      y: impactY - 24,
+      y: impactY - 17,
       letter: letterChar,
       targetX,
       targetY,
@@ -1905,52 +1905,35 @@ drawHammer(ctx, hammer) {
   drawFlyingLetters(ctx, letters) {
     ctx.save();
     const isMobile = this.width <= MOBILE_BREAKPOINT;
-    const size = 28;
+    const tileWidth = 22;
+    const tileHeight = 34;
 
-    // On mobile, skip per-letter gradients and use flat fill for perf
-    if (isMobile) {
-      ctx.font = 'bold 20px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-    }
+    // Match the letter basket visual style (same type treatment)
+    ctx.font = 'bold 18px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
     for (const letter of letters) {
       ctx.save();
       ctx.translate(letter.x, letter.y);
       ctx.rotate(letter.angle);
 
-      if (isMobile) {
-        // Flat fill — no gradient, no stroke
-        ctx.fillStyle = '#0b0b0c';
-        ctx.beginPath();
-        ctx.roundRect(-size / 2, -size / 2, size, size, 6);
-        ctx.fill();
-        ctx.strokeStyle = '#d1a640';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      } else {
-        // Letter tile background
-        const grad = ctx.createLinearGradient(-size / 2, -size / 2, size / 2, size / 2);
-        grad.addColorStop(0, '#0f0f10');
-        grad.addColorStop(1, '#1b1b1d');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.roundRect(-size / 2, -size / 2, size, size, 6);
-        ctx.fill();
+      // Letter tile background
+      const grad = ctx.createLinearGradient(-tileWidth / 2, -tileHeight / 2, tileWidth / 2, tileHeight / 2);
+      grad.addColorStop(0, '#0f0f10');
+      grad.addColorStop(1, '#1b1b1d');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(-tileWidth / 2, -tileHeight / 2, tileWidth, tileHeight, 6);
+      ctx.fill();
 
-        // Border
-        ctx.strokeStyle = '#d1a640';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
+      // Border
+      ctx.strokeStyle = '#d1a640';
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
       // Hebrew letter
       ctx.fillStyle = '#f3d27a';
-      if (!isMobile) {
-        ctx.font = 'bold 20px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-      }
       ctx.fillText(letter.letter, 0, 0);
 
       ctx.restore();

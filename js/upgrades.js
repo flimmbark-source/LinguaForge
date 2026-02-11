@@ -589,7 +589,6 @@ export function getVisibleUpgrades() {
   visible.add('activateHearth');
   visible.add('gripStrength');
   visible.add('spinningThrow');
-  visible.add('unlockPestle');
 
   // First pass: find all purchased upgrades and their connections
   for (const [upgradeId, upgrade] of Object.entries(UPGRADE_TREE)) {
