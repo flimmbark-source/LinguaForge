@@ -202,6 +202,8 @@ export class HammerSystem {
 
     // Load hammer PNG image
     this._hammerImg = new Image();
+    this._hammerImg.decoding = 'sync';
+    this._hammerImg.fetchPriority = 'high';
     this._hammerImg.src = 'Public/Hammer.png';
     this.anvilAnchor = null;
 
