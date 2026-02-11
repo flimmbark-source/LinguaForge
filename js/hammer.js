@@ -1674,7 +1674,6 @@ updateFreeHammer(dt) {
         hammer.isHeld = false;
         this.input.isDown = false;
         hammer.isFree = true;
-        hammer.throwingAxeMode = false; // Rips use normal physics, not throwing axe
         hammer.regrabCooldown = 0.25;
 
         // Place the head just above the anvil face
@@ -1693,6 +1692,20 @@ updateFreeHammer(dt) {
         const ripSpinCap = Math.max(1.8, spinRetentionThreshold * 4.35);
         const ripSpin = Math.min(ripSpinCap, 1.6 + spinPower * 2.4); // ~1.6 to ~4.0 rad/s max
         hammer.angularVelocity = ripSpinDirection * ripSpin;
+
+        // Ripped releases now use throwing-axe mode so haft/tail contacts are part of
+        // the physical collision body instead of being only a visual spin effect.
+        const dx = hammer.headX - hammer.pivotX;
+        const dy = hammer.headY - hammer.pivotY;
+        const currentLength = Math.hypot(dx, dy) || hammer.length || 180;
+        const axisX = dx / currentLength;
+        const axisY = dy / currentLength;
+        hammer.throwOrbitRadius = Math.max(58, currentLength * 0.5);
+        const pivotShift = currentLength - hammer.throwOrbitRadius;
+        hammer.pivotX += axisX * pivotShift;
+        hammer.pivotY += axisY * pivotShift;
+        hammer.throwingAxeMode = true;
+        hammer.visualRotation = Math.atan2(hammer.headX - hammer.pivotX, -(hammer.headY - hammer.pivotY));
 
         // Encode that into prevHead* for the verlet integrator
         hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
