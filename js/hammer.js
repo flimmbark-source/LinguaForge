@@ -36,6 +36,58 @@ export class HammerSystem {
     // World physics constants
     this.gravity = 6600; // px/s^2
     this.airFriction = 0.9;
+    this.throwPhysicsPresets = {
+      realistic: {
+        comOffsetPct: 0.61,
+        inertiaAxisRatio: 0.58,
+        mediumSpinBand: 9.5,
+        overspinStart: 13.0,
+        overspinDamping: 0.98,
+        baseAngularDampingPerSec: 0.22,
+        dragHeadLeading: 0.075,
+        dragBroadside: 0.35,
+        dragTailPenalty: 0.08,
+        wobbleGain: 28,
+        wobbleFreq: 8,
+        heldPendulumTorque: 18,
+        heldPlaneRestore: 7,
+        heldLiftCoupling: 0.19
+      },
+      guided: {
+        comOffsetPct: 0.65,
+        inertiaAxisRatio: 0.54,
+        mediumSpinBand: 10.5,
+        overspinStart: 14.0,
+        overspinDamping: 0.975,
+        baseAngularDampingPerSec: 0.2,
+        dragHeadLeading: 0.06,
+        dragBroadside: 0.29,
+        dragTailPenalty: 0.06,
+        wobbleGain: 22,
+        wobbleFreq: 7,
+        heldPendulumTorque: 15,
+        heldPlaneRestore: 6,
+        heldLiftCoupling: 0.22
+      },
+      arcade: {
+        comOffsetPct: 0.69,
+        inertiaAxisRatio: 0.5,
+        mediumSpinBand: 11.5,
+        overspinStart: 15.5,
+        overspinDamping: 0.985,
+        baseAngularDampingPerSec: 0.14,
+        dragHeadLeading: 0.05,
+        dragBroadside: 0.22,
+        dragTailPenalty: 0.03,
+        wobbleGain: 12,
+        wobbleFreq: 6,
+        heldPendulumTorque: 11,
+        heldPlaneRestore: 4,
+        heldLiftCoupling: 0.28
+      }
+    };
+    this.throwPhysicsPresetName = 'realistic';
+    this.throwPhysics = this.throwPhysicsPresets[this.throwPhysicsPresetName];
 
     // Hammer state
     this.hammer = {
@@ -67,7 +119,8 @@ export class HammerSystem {
       angularVelocity: 0, // rad/s - spin speed when thrown
       visualRotation: 0, // Current visual rotation for drawing
       throwingAxeMode: false, // True for player throws (pivot rotation), false for rips
-      throwOrbitRadius: 0 // Distance from throw pivot to head during spinning throw
+      throwOrbitRadius: 0, // Distance from throw pivot to head during spinning throw
+      spinTimer: 0
     };
 
     // Anvil state
@@ -165,9 +218,9 @@ export class HammerSystem {
     // Position anvil just above the hearth
     // Canvas now covers full viewport, so position relative to bottom
     const letterPoolBarHeight = 160;
-    this.anvil.width = Math.min(260, this.width * 0.35);
+    this.anvil.width = Math.min(260, this.width * 0.35) + 40;
     this.anvil.height = 70;
-    this.anvil.x = this.width * 0.5 - this.anvil.width / 2;
+    this.anvil.x = this.width * 0.5 - this.anvil.width / 2 - 20;
     if (!this._isMobile) {
       this.anvil.x -= 300;
     }
@@ -532,17 +585,20 @@ onPointerDown(e) {
         const spinThreshold = 2.0; // rad/s - use throwing axe mode above this
         const swingSpinMultiplier = Math.max(1, gameState.powerSwingMultiplier || 1);
 
+        const profile = this.throwPhysics;
+        const spinDirection = Math.sign(hammer.angularVelocity) || (hammer.headVx >= 0 ? 1 : -1);
+        const mediumTarget = profile.mediumSpinBand + spinningThrowLevel * 0.8;
+
         if (existingSpin >= spinThreshold) {
-          // Already spinning from Power Swing - snap to a rapid throw spin floor.
-          // This ensures a high-speed thrown spin when releasing above threshold.
-          const spinDirection = Math.sign(hammer.angularVelocity) || (hammer.headVx >= 0 ? 1 : -1);
-          const rapidThrowSpin = (12 + spinningThrowLevel * 2.5) * swingSpinMultiplier;
-          hammer.angularVelocity = spinDirection * Math.max(existingSpin * 1.2 * swingSpinMultiplier, rapidThrowSpin);
+          // Preserve player-earned spin, but softly converge toward medium-spin for control.
+          const stabilityLerp = existingSpin > profile.overspinStart ? 0.2 : 0.35;
+          const blended = existingSpin + (mediumTarget - existingSpin) * stabilityLerp;
+          hammer.angularVelocity = spinDirection * (blended * swingSpinMultiplier);
         } else {
           // Not spinning enough - apply new spin based on Spinning Throw upgrade
           // Base spin: 9 rad/s, +2.2 rad/s per level
           // Tuned for fast thrown-axe style spinning.
-          const baseSpinBoost = 25;
+          const baseSpinBoost = 15;
           const spinBoostPerLevel = 2.2;
           const totalSpinBoost = baseSpinBoost + (spinningThrowLevel * spinBoostPerLevel);
 
@@ -934,35 +990,135 @@ if (isHearthHeated() && this.isHammerOverHearth()) {
     }
   }
 
+  if (hammer.isHeld && !hammer.isFree) {
+    this.applyHeldSpinBias(dt, safeDt);
+  }
+
   // Store current angle for next frame
   hammer.prevAngle = hammer.angle;
 }
+
+normalizeAngle(angle) {
+  let normalized = angle;
+  while (normalized > Math.PI) normalized -= Math.PI * 2;
+  while (normalized < -Math.PI) normalized += Math.PI * 2;
+  return normalized;
+}
+
+endThrowingAxeModeSmoothly() {
+  const hammer = this.hammer;
+  if (!hammer.throwingAxeMode) return;
+
+  // Preserve the *rendered* orientation when leaving throwing-axe mode.
+  // Throwing mode encodes orientation in pivot->head geometry; normal free mode
+  // uses a vertical base angle (PI) plus visualRotation.
+  const currentRenderedAngle = Math.atan2(
+    hammer.headY - hammer.pivotY,
+    hammer.headX - hammer.pivotX
+  ) + Math.PI / 2;
+
+  const normalFreeBaseAngle = Math.PI;
+  hammer.visualRotation = this.normalizeAngle(currentRenderedAngle - normalFreeBaseAngle);
+  hammer.throwingAxeMode = false;
+}
+
+
+  getThrowBodyAxis() {
+    const hammer = this.hammer;
+    const dx = hammer.headX - hammer.pivotX;
+    const dy = hammer.headY - hammer.pivotY;
+    const length = Math.hypot(dx, dy) || 1;
+    return { x: dx / length, y: dy / length };
+  }
+
+  getOrientationDrag(vx, vy) {
+    const speed = Math.hypot(vx, vy) || 1;
+    const axis = this.getThrowBodyAxis();
+    const flowX = vx / speed;
+    const flowY = vy / speed;
+    const alignment = Math.abs(axis.x * flowX + axis.y * flowY);
+    const broadside = 1 - alignment;
+    const profile = this.throwPhysics.dragHeadLeading + broadside * (this.throwPhysics.dragBroadside - this.throwPhysics.dragHeadLeading);
+    const tailPenalty = (axis.x * flowX + axis.y * flowY < 0) ? this.throwPhysics.dragTailPenalty : 0;
+    return profile + tailPenalty;
+  }
+
+  applyHeldSpinBias(dt, safeDt) {
+    const hammer = this.hammer;
+    const profile = this.throwPhysics;
+    const dx = hammer.headX - hammer.pivotX;
+    const dy = hammer.headY - hammer.pivotY;
+    const handleLen = Math.hypot(dx, dy) || 1;
+    const axisX = dx / handleLen;
+    const axisY = dy / handleLen;
+    const headBiasLen = handleLen * profile.comOffsetPct;
+
+    // Pendulum-like gravity torque from head-biased COM while held.
+    const comX = hammer.pivotX + axisX * headBiasLen;
+    const gravityDirX = 0;
+    const gravityDirY = 1;
+    const torque = (comX - hammer.pivotX) * gravityDirY * profile.heldPendulumTorque;
+
+    const swingPlaneError = Math.atan2(axisY, axisX) - Math.PI / 2;
+    const planeRestore = -swingPlaneError * profile.heldPlaneRestore;
+
+    hammer.angularVelocity += (torque + planeRestore) * safeDt * 0.01;
+
+    // Medium-spin is stable, over-spin gets naturally less controllable.
+    const absSpin = Math.abs(hammer.angularVelocity);
+    if (absSpin > profile.overspinStart) {
+      const over = absSpin - profile.overspinStart;
+      const offAxisFactor = Math.max(0.1, 1 - profile.inertiaAxisRatio);
+      const wobble = Math.sin(hammer.spinTimer * profile.wobbleFreq) * over * profile.wobbleGain * offAxisFactor;
+      hammer.headVx += wobble * safeDt;
+      hammer.headVy -= Math.abs(wobble) * safeDt * 0.25;
+      hammer.angularVelocity *= profile.overspinDamping;
+    }
+
+    // Gentle lift coupling nudges the natural release toward forward + slight upward.
+    const lift = Math.min(1, absSpin / profile.mediumSpinBand) * profile.heldLiftCoupling;
+    hammer.headVy -= this.gravity * lift * safeDt * 0.06;
+    hammer.spinTimer += dt;
+  }
 
 
 updateFreeHammer(dt) {
   const hammer = this.hammer;
   const g = this.gravity;
   const frictionAir = this.airFriction * 1.033;
+  const rotationSettleSpeed = 8.15; // 1/s - lower value for a heavier, slower return to resting orientation
+  const maxSettleRate = 2.2; // rad/s - cap settle velocity so the final shift never looks snappy
 
   // --- Update spinning rotation ---
   if (hammer.angularVelocity !== 0) {
     hammer.visualRotation += hammer.angularVelocity * dt;
 
-    // Reduced air friction for spinning hammers with Spinning Throw
     const spinningThrowLevel = getUpgradeLevel('spinningThrow');
-    if (spinningThrowLevel > 0) {
-      // Much lower friction for spinning hammers (0.995 vs 0.93)
-      // This allows the hammer to spin continuously until hitting ground
-      hammer.angularVelocity *= 0.995;
-    } else {
-      // Normal air friction for non-upgraded spinning
-      hammer.angularVelocity *= frictionAir;
-    }
+    const spinNorm = Math.abs(hammer.angularVelocity) / Math.max(1, profile.mediumSpinBand);
+    const baseDamp = Math.exp(-profile.baseAngularDampingPerSec * dt);
+    const overspinLoss = spinNorm > 1.2 ? Math.exp(-(spinNorm - 1.2) * 0.12 * dt * 60) : 1;
+    const upgradeRetention = spinningThrowLevel > 0 ? 1.01 : 1;
+    hammer.angularVelocity *= Math.min(0.9995, baseDamp * overspinLoss * upgradeRetention);
 
     // Stop spinning if speed is too low
     if (Math.abs(hammer.angularVelocity) < 0.1) {
       hammer.angularVelocity = 0;
-      hammer.throwingAxeMode = false; // Exit throwing axe mode when spin stops
+      this.endThrowingAxeModeSmoothly(); // Exit throwing axe mode when spin stops
+    }
+  } else if (!hammer.throwingAxeMode && Math.abs(hammer.visualRotation) > 0.001) {
+    // Smoothly settle the spin-only visual twist so the hammer does not freeze at a random angle.
+    // Normalize to [-PI, PI] first so it always settles via the shortest route (no extra full spins).
+    hammer.visualRotation = this.normalizeAngle(hammer.visualRotation);
+
+    // We cap settle speed to keep the final orientation shift feeling heavy and deliberate.
+    const settleStep = Math.min(1, rotationSettleSpeed * dt);
+    const desiredDelta = (0 - hammer.visualRotation) * settleStep;
+    const maxDelta = maxSettleRate * dt;
+    const clampedDelta = Math.max(-maxDelta, Math.min(maxDelta, desiredDelta));
+    hammer.visualRotation += clampedDelta;
+
+    if (Math.abs(hammer.visualRotation) < 0.001) {
+      hammer.visualRotation = 0;
     }
   }
 
@@ -970,16 +1126,26 @@ updateFreeHammer(dt) {
   // Disable if spin drops below threshold
   const spinThreshold = 2.0; // rad/s
   if (hammer.throwingAxeMode && Math.abs(hammer.angularVelocity) < spinThreshold) {
-    hammer.throwingAxeMode = false; // Exit throwing axe mode when spin decays
+    this.endThrowingAxeModeSmoothly(); // Exit throwing axe mode when spin decays
+  }
+
+  const absSpin = Math.abs(hammer.angularVelocity);
+  if (absSpin > profile.overspinStart) {
+    const over = absSpin - profile.overspinStart;
+    const offAxisFactor = Math.max(0.1, 1 - profile.inertiaAxisRatio);
+    const noise = Math.sin(hammer.spinTimer * profile.wobbleFreq) * over * profile.wobbleGain * offAxisFactor;
+    hammer.headVx += noise * dt;
+    hammer.headVy += Math.cos(hammer.spinTimer * (profile.wobbleFreq * 0.7)) * over * dt * 8;
   }
 
   if (hammer.throwingAxeMode) {
     // THROWING AXE MODE: Pivot flies through air, head rotates around it
     // Apply gravity and minimal air drag to pivot velocity
     hammer.headVy += g * dt; // Using headVx/headVy as pivot velocity
-    // Much lower friction for thrown hammers (matches spin friction)
-    hammer.headVx *= 0.995;
-    hammer.headVy *= 0.995;
+    const orientationDrag = this.getOrientationDrag(hammer.headVx, hammer.headVy);
+    const dragMul = Math.max(0.82, 1 - orientationDrag * dt * 3.1);
+    hammer.headVx *= dragMul;
+    hammer.headVy *= dragMul;
 
     // Update pivot position
     hammer.pivotX += hammer.headVx * dt;
@@ -995,8 +1161,10 @@ updateFreeHammer(dt) {
     // NORMAL FREE-FLIGHT: Head flies through air (original behavior)
     // --- Integrate velocity with gravity + air drag ---
     hammer.headVy += g * dt;
-    hammer.headVx *= frictionAir;
-    hammer.headVy *= frictionAir;
+    const orientationDrag = this.getOrientationDrag(hammer.headVx, hammer.headVy);
+    const dragMul = Math.max(0.8, frictionAir - orientationDrag * dt * 2.6);
+    hammer.headVx *= dragMul;
+    hammer.headVy *= dragMul;
 
     hammer.headX += hammer.headVx * dt;
     hammer.headY += hammer.headVy * dt;
@@ -1009,7 +1177,7 @@ updateFreeHammer(dt) {
   const left = radius;
   const right = this.width - radius;
 
-  const restitution = 0.7;   // 1.0 = perfectly bouncy, <1 loses energy
+  const restitution = 1;   // 1.0 = perfectly bouncy, <1 loses energy
   const tangentialDamp = 0.85; // reduce sideways motion on impacts
   const stopThreshold = 40;    // below this speed we just stop bouncing
 
@@ -1140,6 +1308,8 @@ updateFreeHammer(dt) {
     hammer.pivotY = hammer.headY - freeLength;
   }
 
+  hammer.spinTimer += dt;
+
   // Keep prevHead* coherent for other code using a verlet-ish scheme
   hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
   hammer.prevHeadY = hammer.headY - hammer.headVy * dt;
@@ -1248,7 +1418,7 @@ updateFreeHammer(dt) {
         hammer.headY = anvil.y - 18;
         hammer.anvilExitReady = false;
         hammer.angularVelocity = 0;
-        hammer.visualRotation = 0;
+        // Keep current visualRotation and let the settle logic ease it down smoothly.
       }
     }
 
