@@ -155,6 +155,7 @@ export class HammerSystem {
       throwingAxeMode: false, // True for player throws (pivot rotation), false for rips
       throwOrbitRadius: 0, // Distance from throw pivot to head during spinning throw
       spinTimer: 0,
+      floorSpinContactTime: 0,
       isHanging: false,
       hangX: 0,
       hangY: 0
@@ -1318,9 +1319,12 @@ updateFreeHammer(dt) {
   const restitution = 1;   // 1.0 = perfectly bouncy, <1 loses energy
   const tangentialDamp = 0.85; // reduce sideways motion on impacts
   const stopThreshold = 40;    // below this speed we just stop bouncing
+  const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
+  let touchingFloor = false;
 
   // ----- FLOOR -----
   if (hammer.headY + radius > floorY) {
+    touchingFloor = true;
     const penetration = hammer.headY + radius - floorY;
 
     if (hammer.throwingAxeMode) {
@@ -1349,15 +1353,31 @@ updateFreeHammer(dt) {
       }
 
       // If spinning above threshold when hitting floor, keep spinning
-      const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
       if (Math.abs(hammer.angularVelocity) >= spinThreshold) {
-        // Retain spin, just dampen it slightly
-        hammer.angularVelocity *= 0.9;
+        // Start with a snappy post-impact spin response.
+        const quickStartBoost = 1.1;
+        const maxLandingSpin = Math.max(spinThreshold * 2.6, 16);
+        hammer.angularVelocity = Math.max(
+          -maxLandingSpin,
+          Math.min(maxLandingSpin, hammer.angularVelocity * quickStartBoost)
+        );
       } else {
         // Below threshold, stop spinning
         hammer.angularVelocity = 0;
       }
     }
+  }
+
+  if (touchingFloor && Math.abs(hammer.angularVelocity) > 0) {
+    // Progressive floor friction: starts loose, then tightens while the hammer keeps rotating.
+    // This gives a quick initial shift followed by a heavy slowdown into final rest.
+    hammer.floorSpinContactTime += dt;
+    const contactT = hammer.floorSpinContactTime;
+    const progressiveFriction = 1 + (Math.min(contactT, 0.75) / 0.75) * 5.2;
+    const floorSpinDamp = Math.exp(-progressiveFriction * dt);
+    hammer.angularVelocity *= floorSpinDamp;
+  } else {
+    hammer.floorSpinContactTime = 0;
   }
 
   // ----- CEILING -----
