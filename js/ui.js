@@ -5,7 +5,7 @@
 
 import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON, computeWordPower } from './config.js?v=9';
 import { gameState, addVerseWord, findWord, removeWord, addWord, getNextWordId } from './state.js?v=9';
-import { setupWordChipDrag, sellWord } from './molds.js?v=9';
+import { setupWordChipDrag, sellWord, renderMoldsInViewport } from './molds.js?v=9';
 import { toggleScribePaused } from './scribes.js?v=9';
 import { evaluateVerse, setupVerseWordChipDrag, isVerseSolved } from './grammar.js?v=9';
 import { updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
@@ -167,80 +167,16 @@ function renderScribeHireBlocksInline() {
  */
 export function renderMolds() {
   if (!elements.moldListDiv) return;
-  if (!gameState.currentLine.molds.length) {
-    if (lastRenderedMoldIndex !== -1) {
-      elements.moldListDiv.innerHTML = '';
-      lastRenderedMoldIndex = -1;
-      lastRenderedMoldSlots = '';
-    }
-    return;
-  }
+  renderMoldsInViewport(elements.moldListDiv);
 
-  // Ensure index is valid
-  if (gameState.currentMoldIndex < 0) gameState.currentMoldIndex = 0;
-  if (gameState.currentMoldIndex >= gameState.currentLine.molds.length) {
-    gameState.currentMoldIndex = gameState.currentLine.molds.length - 1;
-  }
-
-  const mold = gameState.currentLine.molds[gameState.currentMoldIndex];
-
-  // Skip full DOM rebuild if mold state hasn't changed
-  const slotsKey = mold.id + ':' + mold.slots.map(s => s ? '1' : '0').join('');
-  if (gameState.currentMoldIndex === lastRenderedMoldIndex && slotsKey === lastRenderedMoldSlots) {
-    return;
-  }
-  lastRenderedMoldIndex = gameState.currentMoldIndex;
-  lastRenderedMoldSlots = slotsKey;
-
-  elements.moldListDiv.innerHTML = '';
-
-  // Create mold card
-  const card = document.createElement('div');
-  card.className = 'mold-card';
-  card.dataset.moldId = String(mold.id);
-
-  // Header
-  const header = document.createElement('div');
-  header.className = 'mold-header';
-  const left = document.createElement('div');
-  left.textContent = mold.english;
-  const right = document.createElement('div');
-  right.style.fontSize = '11px';
-  right.style.opacity = '0.8';
-  const filledCount = mold.slots.filter(x => x).length;
-  right.textContent = filledCount + '/' + mold.slots.length + ' letters';
-  header.appendChild(left);
-  header.appendChild(right);
-
-  // Slots
-  const slotsRow = document.createElement('div');
-  slotsRow.className = 'mold-slots';
-
-  const chars = mold.pattern.split('');
-  chars.forEach((ch, idx) => {
-    const slot = document.createElement('div');
-    slot.className = 'slot';
-    slot.dataset.moldId = String(mold.id);
-    slot.dataset.slotIndex = String(idx);
-    slot.textContent = ch;
-
-    if (mold.slots[idx]) {
-      slot.classList.add('filled');
-      slot.style.opacity = '1';
-    } else {
-      slot.style.opacity = '0.4';
-    }
-
-    slotsRow.appendChild(slot);
-  });
-
-  card.appendChild(header);
-  card.appendChild(slotsRow);
-  elements.moldListDiv.appendChild(card);
-
-  // Update index label
   if (elements.moldIndexLabel) {
-    elements.moldIndexLabel.textContent = (gameState.currentMoldIndex + 1) + ' / ' + gameState.currentLine.molds.length;
+    const storedMolds = gameState.currentLine.molds.filter(m => m.runtime?.inViewport && !m.runtime?.consumed);
+    if (!storedMolds.length) {
+      elements.moldIndexLabel.textContent = 'No molds stored';
+    } else {
+      const current = Math.min(gameState.currentMoldIndex + 1, storedMolds.length);
+      elements.moldIndexLabel.textContent = `${current} / ${storedMolds.length}`;
+    }
   }
 }
 

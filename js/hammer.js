@@ -8,6 +8,7 @@ import { gameState } from './state.js?v=9';
 import { playHammerClank } from './audio.js?v=9';
 import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 import { getUpgradeLevel } from './upgrades.js?v=9';
+import { getHeatedMoldAtPoint } from './molds.js?v=9';
 
 const MOBILE_BREAKPOINT = 900;
 function setScreenLocked(locked) {
@@ -63,7 +64,7 @@ export class HammerSystem {
     // Callbacks set by app
     this.onLetterForged = null;
     this.onLetterLanded = null;
-    this.onForgeTriggered = null; // Called when red-hot hammer hits mold viewport
+    this.onForgeTriggered = null; // Called when red-hot hammer hits a heated mold
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
     // World physics constants
@@ -153,7 +154,10 @@ export class HammerSystem {
       visualRotation: 0, // Current visual rotation for drawing
       throwingAxeMode: false, // True for player throws (pivot rotation), false for rips
       throwOrbitRadius: 0, // Distance from throw pivot to head during spinning throw
-      spinTimer: 0
+      spinTimer: 0,
+      isHanging: false,
+      hangX: 0,
+      hangY: 0
     };
 
     // Anvil state
@@ -531,6 +535,7 @@ onPointerDown(e) {
   // Player is grabbing it again → leave free-flight mode
   hammer.isFree = false;
   hammer.isHeld = true;
+  hammer.isHanging = false;
   hammer.throwingAxeMode = false; // Exit throwing axe mode when grabbed
   hammer.pivotX = this.input.mouseX;
   hammer.pivotY = this.input.mouseY;
@@ -593,6 +598,36 @@ onPointerDown(e) {
         return;
       }
       cleanupToolDragSidebar();
+
+      const hearth = document.getElementById('hearth');
+      if (hearth) {
+        const hearthRect = hearth.getBoundingClientRect();
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const hangClientX = hearthRect.left + hearthRect.width / 2;
+        const hangClientY = hearthRect.top + 40;
+        const dist = Math.hypot(client.clientX - hangClientX, client.clientY - hangClientY + 120);
+        if (dist < 70) {
+          const hx = hangClientX - canvasRect.left;
+          const hy = hangClientY - canvasRect.top;
+          this.hammer.headX = hx;
+          this.hammer.headY = hy;
+          this.hammer.prevHeadX = hx;
+          this.hammer.prevHeadY = hy;
+          this.hammer.pivotX = hx;
+          this.hammer.pivotY = hy - this.hammer.length;
+          this.hammer.headVx = 0;
+          this.hammer.headVy = 0;
+          this.hammer.isFree = false;
+          this.hammer.isHeld = false;
+          this.hammer.isHanging = true;
+          this.hammer.hangX = hx;
+          this.hammer.hangY = hy;
+          this.input.isDown = false;
+          setScreenLocked(false);
+          setBackgroundDragLocked(false);
+          return;
+        }
+      }
 
       // SPINNING THROW: When player releases, enter free-flight mode
       const hammer = this.hammer;
@@ -846,27 +881,78 @@ spawnSparks(x, y, power, options = {}) {
   }
 
   /**
-   * Check if hammer head is over mold viewport
+   * Check if hammer head is over a heated mold in world space
+   * @returns {Object|null}
    */
-  isHammerOverMoldViewport() {
-    const moldViewport = document.querySelector('.mold-viewport');
-    if (!moldViewport) return false;
-
-    const moldBounds = moldViewport.getBoundingClientRect();
-    const headX = this.hammer.headX;
-    const headY = this.hammer.headY;
-
-    // Convert canvas coordinates to viewport coordinates
+  getHeatedMoldUnderHammer() {
     const canvasRect = this.canvas.getBoundingClientRect();
-    const viewportX = canvasRect.left + headX;
-    const viewportY = canvasRect.top + headY;
+    const viewportX = canvasRect.left + this.hammer.headX;
+    const viewportY = canvasRect.top + this.hammer.headY;
+    return getHeatedMoldAtPoint(viewportX, viewportY);
+  }
 
-    return (
-      viewportX > moldBounds.left &&
-      viewportX < moldBounds.right &&
-      viewportY > moldBounds.top &&
-      viewportY < moldBounds.bottom
-    );
+  /**
+   * Heating / cooling logic for the hammer. Extracted so it can run
+   * while the hammer is hanging in the hearth as well as during normal updates.
+   */
+  updateHeating(dt) {
+    const hammer = this.hammer;
+    // Apply Fast Heat upgrade to reduce heating time
+    const baseHeatingTime = 5; // base seconds per heat level
+    const fastHeatReduction = gameState.fastHeatLevel || 0;
+    const heatingRequired = Math.max(2, baseHeatingTime - fastHeatReduction); // minimum 2 seconds
+    hammer.heatingRequired = heatingRequired;
+
+    if (isHearthHeated() && this.isHammerOverHearth()) {
+      // Over heated hearth → accumulate heat
+      hammer.heatingTimer += dt;
+
+      const maxHeatLevel = Math.max(1, gameState.heatLevels || 0);
+      const hearthLevel  = getHearthLevel() || 0;
+      const effectiveMax = Math.min(maxHeatLevel, hearthLevel);
+
+      // Compute desired heat level from total time in hearth
+      const targetLevel = Math.min(
+        effectiveMax,
+        Math.floor(hammer.heatingTimer / heatingRequired)
+      );
+
+      // Prevent timer from storing progress beyond the unlocked cap
+      hammer.heatingTimer = Math.min(
+        hammer.heatingTimer,
+        effectiveMax * heatingRequired
+      );
+
+      // Only ever go UP in level here
+      if (targetLevel > hammer.heatLevel) {
+        hammer.heatLevel = targetLevel;
+        hammer.isHeated  = hammer.heatLevel > 0;
+        console.log(`Hammer heat level increased to ${hammer.heatLevel}!`);
+      }
+    } else {
+      // Not over hearth:
+      // - Heat LEVEL stays as-is (hammer remains red-hot)
+      // - Only the PROGRESS TOWARD THE NEXT LEVEL cools down
+
+      if (hammer.heatLevel > 0) {
+        const currentLevelTime = hammer.heatLevel * heatingRequired;
+        const extra = hammer.heatingTimer - currentLevelTime;
+
+        if (extra > 0) {
+          const cooledExtra = Math.max(0, extra - dt * 0.5);
+          hammer.heatingTimer = currentLevelTime + cooledExtra;
+        }
+
+        // Don't touch hammer.heatLevel here; it will be cleared only on impact
+        hammer.isHeated = true; // already hot; stay hot
+      } else {
+        // Level 0: we can cool the bar all the way back to zero
+        if (hammer.heatingTimer > 0) {
+          hammer.heatingTimer = Math.max(0, hammer.heatingTimer - dt * 0.5);
+        }
+        hammer.isHeated = false;
+      }
+    }
   }
 
   /**
@@ -887,66 +973,24 @@ updateHammer(dt) {
     return;
   }
 
-
-// -------------------------
-// HEATING / COOLING LOGIC
-// -------------------------
-// Apply Fast Heat upgrade to reduce heating time
-const baseHeatingTime = 5; // base seconds per heat level
-const fastHeatReduction = gameState.fastHeatLevel || 0;
-const heatingRequired = Math.max(2, baseHeatingTime - fastHeatReduction); // minimum 2 seconds
-hammer.heatingRequired = heatingRequired;
-
-if (isHearthHeated() && this.isHammerOverHearth()) {
-  // Over heated hearth → accumulate heat
-  hammer.heatingTimer += dt;
-
-  const maxHeatLevel = Math.max(1, gameState.heatLevels || 0);
-  const hearthLevel  = getHearthLevel() || 0;
-  const effectiveMax = Math.min(maxHeatLevel, hearthLevel);
-
-  // Compute desired heat level from total time in hearth
-  const targetLevel = Math.min(
-    effectiveMax,
-    Math.floor(hammer.heatingTimer / heatingRequired)
-  );
-
-  // Prevent timer from storing progress beyond the unlocked cap
-  hammer.heatingTimer = Math.min(
-    hammer.heatingTimer,
-    effectiveMax * heatingRequired
-  );
-
-  // Only ever go UP in level here
-  if (targetLevel > hammer.heatLevel) {
-    hammer.heatLevel = targetLevel;
-    hammer.isHeated  = hammer.heatLevel > 0;
-    console.log(`Hammer heat level increased to ${hammer.heatLevel}!`);
+  if (hammer.isHanging && !hammer.isHeld) {
+    hammer.headX = hammer.hangX;
+    hammer.headY = hammer.hangY;
+    hammer.prevHeadX = hammer.hangX;
+    hammer.prevHeadY = hammer.hangY;
+    hammer.headVx = 0;
+    hammer.headVy = 0;
+    hammer.pivotX = hammer.hangX;
+    hammer.pivotY = hammer.hangY - hammer.length;
+    hammer.angle = Math.PI / 2;
+    // Allow heating while hanging in the hearth
+    this.updateHeating(dt);
+    return;
   }
-} else {
-  // Not over hearth:
-  // - Heat LEVEL stays as-is (hammer remains red-hot)
-  // - Only the PROGRESS TOWARD THE NEXT LEVEL cools down
 
-  if (hammer.heatLevel > 0) {
-    const currentLevelTime = hammer.heatLevel * heatingRequired;
-    const extra = hammer.heatingTimer - currentLevelTime;
 
-    if (extra > 0) {
-      const cooledExtra = Math.max(0, extra - dt * 0.5);
-      hammer.heatingTimer = currentLevelTime + cooledExtra;
-    }
-
-    // Don't touch hammer.heatLevel here; it will be cleared only on impact
-    hammer.isHeated = true; // already hot; stay hot
-  } else {
-    // Level 0: we can cool the bar all the way back to zero
-    if (hammer.heatingTimer > 0) {
-      hammer.heatingTimer = Math.max(0, hammer.heatingTimer - dt * 0.5);
-    }
-    hammer.isHeated = false;
-  }
-}
+    // Heating/cooling handled in helper so it can also run while hanging
+    this.updateHeating(dt);
 
   const x = hammer.headX;
   const y = hammer.headY;
@@ -1592,13 +1636,13 @@ updateFreeHammer(dt) {
       }
     }
 
-    // Check for mold viewport collision (only when hammer is heated and moving down)
-    if (hammer.heatLevel > 0 && this.isHammerOverMoldViewport() && downwardSpeed > impactThreshold) {
+    // Check for heated mold collision (hammer must be hot and mold must be heated)
+    const heatedMold = this.getHeatedMoldUnderHammer();
+    if (hammer.heatLevel > 0 && heatedMold && downwardSpeed > impactThreshold) {
       if (hammer.strikeCooldown <= 0) {
         hammer.strikeCooldown = 0.25;
         const impactX = headX;
         const impactY = headY;
-        const multiplier = 1 + (4 * hammer.heatLevel);
 
         // Cool down the hammer
         hammer.heatLevel = 0;
@@ -1609,8 +1653,8 @@ updateFreeHammer(dt) {
 
         // Trigger forge functionality (no letter spawning on forge strikes)
         if (this.onForgeTriggered) {
-          this.onForgeTriggered();
-          console.log('Red-hot hammer struck mold viewport! Forging words...');
+          this.onForgeTriggered(heatedMold.id);
+          console.log('Red-hot hammer struck a heated mold! Forging word...');
         }
 
         // Bounce the hammer back
