@@ -377,9 +377,21 @@ export class HammerSystem {
     };
   }
 
+  isPointNearCanvas(point, margin = 80) {
+    if (!point) return false;
+    return (
+      point.x >= -margin &&
+      point.x <= this.width + margin &&
+      point.y >= -margin &&
+      point.y <= this.height + margin
+    );
+  }
+
   placeHammerAtHearthHangSpot() {
     const hangPoint = this.getHearthHangPoint();
-    if (!hangPoint) return false;
+    // On some mobile layouts the hearth can shift out of canvas coordinates.
+    // If that happens, fall back to the anvil placement so the hammer remains visible.
+    if (!this.isPointNearCanvas(hangPoint)) return false;
 
     this.hammer.headX = hangPoint.x;
     this.hammer.headY = hangPoint.y;
