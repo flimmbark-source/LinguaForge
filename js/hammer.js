@@ -1318,6 +1318,9 @@ updateFreeHammer(dt) {
   const restitution = 1;   // 1.0 = perfectly bouncy, <1 loses energy
   const tangentialDamp = 0.85; // reduce sideways motion on impacts
   const stopThreshold = 40;    // below this speed we just stop bouncing
+  const fullHandleLength = Math.max(hammer.baseLength || hammer.length || 0, hammer.length || 0);
+  const gripToHeadLength = Math.max(1, Math.hypot(hammer.headX - hammer.pivotX, hammer.headY - hammer.pivotY));
+  const handleTailLength = Math.max(0, fullHandleLength - gripToHeadLength);
 
   // ----- FLOOR -----
   if (hammer.headY + radius > floorY) {
@@ -1356,6 +1359,54 @@ updateFreeHammer(dt) {
       } else {
         // Below threshold, stop spinning
         hammer.angularVelocity = 0;
+      }
+    }
+  }
+
+  // ----- HANDLE TAIL VS FLOOR -----
+  // In spinning throws, the handle extends beyond the grip/pivot point.
+  // Without this check the tail can tunnel through the floor while only the
+  // hammer head participates in collision response.
+  if (handleTailLength > 0.5) {
+    const toHeadX = hammer.headX - hammer.pivotX;
+    const toHeadY = hammer.headY - hammer.pivotY;
+    const axisLen = Math.hypot(toHeadX, toHeadY) || 1;
+    const axisX = toHeadX / axisLen;
+    const axisY = toHeadY / axisLen;
+
+    const tailY = hammer.pivotY - axisY * handleTailLength;
+    const tailRadius = Math.max(8, hammer.handleThickness * 0.55);
+
+    if (tailY + tailRadius > floorY) {
+      const penetration = tailY + tailRadius - floorY;
+
+      // Shift the whole hammer up out of the floor.
+      hammer.pivotY -= penetration;
+      if (hammer.throwingAxeMode) {
+        const angle = hammer.visualRotation;
+        const orbitRadius = hammer.throwOrbitRadius || Math.max(58, (hammer.length || 180) * 0.5);
+        hammer.headX = hammer.pivotX + Math.sin(angle) * orbitRadius;
+        hammer.headY = hammer.pivotY - Math.cos(angle) * orbitRadius;
+      } else {
+        hammer.headY -= penetration;
+      }
+
+      // Apply impact response when the handle was moving downward into the floor.
+      if (hammer.headVy > 0) {
+        const massFactor = hammer.headMass || 1;
+        const handleRestitution = 0.68;
+        hammer.headVy = -hammer.headVy * handleRestitution / massFactor;
+        hammer.headVx *= 0.82;
+
+        // Handle-first contact should scrub spin significantly and can reverse it.
+        hammer.angularVelocity *= -0.42;
+
+        if (Math.abs(hammer.headVy) < stopThreshold) {
+          hammer.headVy = 0;
+        }
+        if (Math.abs(hammer.angularVelocity) < 0.2) {
+          hammer.angularVelocity = 0;
+        }
       }
     }
   }
