@@ -397,7 +397,7 @@ export class HammerSystem {
     const canvasRect = this.canvas.getBoundingClientRect();
     const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
     const isLandscape = window.innerWidth > window.innerHeight;
-    const mobileYOffset = isLandscape ? 62 : 94;
+    const mobileYOffset = isLandscape ? -62 : -94;
     const desktopYOffset = 40;
 
     return {
