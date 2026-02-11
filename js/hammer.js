@@ -68,7 +68,7 @@ export class HammerSystem {
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
     // World physics constants
-    this.gravity = 6600; // px/s^2
+    this.gravity = 4600; // px/s^2
     this.airFriction = 0.9;
     this.throwPhysicsPresets = {
       realistic: {
@@ -1223,8 +1223,8 @@ updateFreeHammer(dt) {
   const hammer = this.hammer;
   const g = this.gravity;
   const frictionAir = this.airFriction * 1.033;
-  const rotationSettleSpeed = 8.15; // 1/s - lower value for a heavier, slower return to resting orientation
-  const maxSettleRate = 2.2; // rad/s - cap settle velocity so the final shift never looks snappy
+  const rotationSettleSpeed = 180.15; // 1/s - lower value for a heavier, slower return to resting orientation
+  const maxSettleRate = 2.7; // rad/s - cap settle velocity so the final shift never looks snappy
   const profile = this.throwPhysics;
 
   // --- Update spinning rotation ---
@@ -1628,7 +1628,7 @@ updateFreeHammer(dt) {
         // with anvil/floor spin logic elsewhere in the file.
         const spinPower = Math.min(1, downwardSpeed / ripThreshold);
         const ripSpinDirection = incomingVx >= 0 ? 1 : -1;
-        const ripSpinCap = Math.max(1.8, spinRetentionThreshold * 0.85);
+        const ripSpinCap = Math.max(1.8, spinRetentionThreshold * 4.35);
         const ripSpin = Math.min(ripSpinCap, 1.6 + spinPower * 2.4); // ~1.6 to ~4.0 rad/s max
         hammer.angularVelocity = ripSpinDirection * ripSpin;
 
