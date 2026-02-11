@@ -261,10 +261,11 @@ export class LetterPhysicsSystem {
     if (!this._hearthRectCache || now - this._hearthCacheTime > this._hearthCacheInterval) {
       if (!this._hearthCollisionRef) return;
       const rect = this._hearthCollisionRef.getBoundingClientRect();
-      // Tighten bounds so letters must actually enter the opening before being consumed.
-      const insetX = Math.max(8, rect.width * 0.15);
-      const insetTop = Math.max(4, rect.height * 0.05);
-      const insetBottom = Math.max(6, rect.height * 0.2);
+      // Adjust bounds so letters entering the hearth are easier to consume.
+      // Reduce the inset to enlarge the effective consumption area.
+      const insetX = Math.max(4, rect.width * 0.08);
+      const insetTop = Math.max(2, rect.height * 0.02);
+      const insetBottom = Math.max(4, rect.height * 0.12);
       this._hearthRectCache = {
         left: rect.left + insetX,
         right: rect.right - insetX,
