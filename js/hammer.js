@@ -1223,6 +1223,10 @@ updateFreeHammer(dt) {
   const hammer = this.hammer;
   const g = this.gravity;
   const frictionAir = this.airFriction * 1.033;
+  const prevPivotX = hammer.pivotX;
+  const prevPivotY = hammer.pivotY;
+  const prevHeadX = hammer.headX;
+  const prevHeadY = hammer.headY;
   const rotationSettleSpeed = 180.15; // 1/s - lower value for a heavier, slower return to resting orientation
   const maxSettleRate = 2.7; // rad/s - cap settle velocity so the final shift never looks snappy
   const profile = this.throwPhysics;
@@ -1374,7 +1378,14 @@ updateFreeHammer(dt) {
     const axisX = toHeadX / axisLen;
     const axisY = toHeadY / axisLen;
 
+    const prevToHeadX = prevHeadX - prevPivotX;
+    const prevToHeadY = prevHeadY - prevPivotY;
+    const prevAxisLen = Math.hypot(prevToHeadX, prevToHeadY) || 1;
+    const prevAxisY = prevToHeadY / prevAxisLen;
+
     const tailY = hammer.pivotY - axisY * handleTailLength;
+    const prevTailY = prevPivotY - prevAxisY * handleTailLength;
+    const tailVy = (tailY - prevTailY) / Math.max(dt, 1e-6);
     const tailRadius = Math.max(8, hammer.handleThickness * 0.55);
 
     if (tailY + tailRadius > floorY) {
@@ -1391,15 +1402,15 @@ updateFreeHammer(dt) {
         hammer.headY -= penetration;
       }
 
-      // Apply impact response when the handle was moving downward into the floor.
-      if (hammer.headVy > 0) {
+      // Apply impact response when the handle-tail point was moving into the floor.
+      if (tailVy > 0) {
         const massFactor = hammer.headMass || 1;
-        const handleRestitution = 0.68;
-        hammer.headVy = -hammer.headVy * handleRestitution / massFactor;
-        hammer.headVx *= 0.82;
+        const handleRestitution = 0.7;
+        hammer.headVy = -tailVy * handleRestitution / massFactor;
+        hammer.headVx *= 0.8;
 
         // Handle-first contact should scrub spin significantly and can reverse it.
-        hammer.angularVelocity *= -0.42;
+        hammer.angularVelocity *= -0.55;
 
         if (Math.abs(hammer.headVy) < stopThreshold) {
           hammer.headVy = 0;
