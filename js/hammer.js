@@ -286,14 +286,19 @@ export class HammerSystem {
     this.hammer.pivotY = pivotY;
     this.hammer.length = baseHammerLength;
 
-    // Start with hammer hanging down
-    this.hammer.headX = pivotX;
-    this.hammer.headY = pivotY + this.hammer.length;
-    this.hammer.prevHeadX = this.hammer.headX;
-    this.hammer.prevHeadY = this.hammer.headY;
-    this.hammer.angle = Math.PI / 2;
-    this.hammer.headVx = 0;
-    this.hammer.headVy = 0;
+    // Start in the hearth hanging spot when available.
+    const didPlaceInHearth = this.placeHammerAtHearthHangSpot();
+    if (!didPlaceInHearth) {
+      // Fallback: hang down from pivot above anvil.
+      this.hammer.headX = pivotX;
+      this.hammer.headY = pivotY + this.hammer.length;
+      this.hammer.prevHeadX = this.hammer.headX;
+      this.hammer.prevHeadY = this.hammer.headY;
+      this.hammer.angle = Math.PI / 2;
+      this.hammer.headVx = 0;
+      this.hammer.headVy = 0;
+      this.hammer.isHanging = false;
+    }
 
     // Invalidate cached canvas rect on resize
     this._cachedCanvasRect = null;
@@ -350,11 +355,47 @@ export class HammerSystem {
       this._anvilAnchorInitialized = true;
       this.hammer.pivotX = this.anvil.x + this.anvil.width / 2;
       this.hammer.pivotY = this.anvil.y - pivotClearance;
-      this.hammer.headX = this.hammer.pivotX;
-      this.hammer.headY = this.hammer.pivotY + this.hammer.length;
-      this.hammer.prevHeadX = this.hammer.headX;
-      this.hammer.prevHeadY = this.hammer.headY;
+      if (!this.placeHammerAtHearthHangSpot()) {
+        this.hammer.headX = this.hammer.pivotX;
+        this.hammer.headY = this.hammer.pivotY + this.hammer.length;
+        this.hammer.prevHeadX = this.hammer.headX;
+        this.hammer.prevHeadY = this.hammer.headY;
+        this.hammer.isHanging = false;
+      }
     }
+  }
+
+  getHearthHangPoint() {
+    const hearth = document.getElementById('hearth');
+    if (!hearth) return null;
+
+    const hearthRect = hearth.getBoundingClientRect();
+    const canvasRect = this.canvas.getBoundingClientRect();
+    return {
+      x: hearthRect.left + hearthRect.width / 2 - canvasRect.left,
+      y: hearthRect.top + 40 - canvasRect.top
+    };
+  }
+
+  placeHammerAtHearthHangSpot() {
+    const hangPoint = this.getHearthHangPoint();
+    if (!hangPoint) return false;
+
+    this.hammer.headX = hangPoint.x;
+    this.hammer.headY = hangPoint.y;
+    this.hammer.prevHeadX = hangPoint.x;
+    this.hammer.prevHeadY = hangPoint.y;
+    this.hammer.pivotX = hangPoint.x;
+    this.hammer.pivotY = hangPoint.y - this.hammer.length;
+    this.hammer.headVx = 0;
+    this.hammer.headVy = 0;
+    this.hammer.angle = Math.PI / 2;
+    this.hammer.isHeld = false;
+    this.hammer.isFree = false;
+    this.hammer.isHanging = true;
+    this.hammer.hangX = hangPoint.x;
+    this.hammer.hangY = hangPoint.y;
+    return true;
   }
 
   /** Pre-build anvil gradients so we don't recreate them every frame */
@@ -599,29 +640,14 @@ onPointerDown(e) {
       }
       cleanupToolDragSidebar();
 
-      const hearth = document.getElementById('hearth');
-      if (hearth) {
-        const hearthRect = hearth.getBoundingClientRect();
+      const hangPoint = this.getHearthHangPoint();
+      if (hangPoint) {
         const canvasRect = this.canvas.getBoundingClientRect();
-        const hangClientX = hearthRect.left + hearthRect.width / 2;
-        const hangClientY = hearthRect.top + 40;
-        const dist = Math.hypot(client.clientX - hangClientX, client.clientY - hangClientY + 120);
+        const hangClientX = canvasRect.left + hangPoint.x;
+        const hangClientY = canvasRect.top + hangPoint.y;
+        const dist = Math.hypot(client.clientX - hangClientX, client.clientY - hangClientY);
         if (dist < 70) {
-          const hx = hangClientX - canvasRect.left;
-          const hy = hangClientY - canvasRect.top;
-          this.hammer.headX = hx;
-          this.hammer.headY = hy;
-          this.hammer.prevHeadX = hx;
-          this.hammer.prevHeadY = hy;
-          this.hammer.pivotX = hx;
-          this.hammer.pivotY = hy - this.hammer.length;
-          this.hammer.headVx = 0;
-          this.hammer.headVy = 0;
-          this.hammer.isFree = false;
-          this.hammer.isHeld = false;
-          this.hammer.isHanging = true;
-          this.hammer.hangX = hx;
-          this.hammer.hangY = hy;
+          this.placeHammerAtHearthHangSpot();
           this.input.isDown = false;
           setScreenLocked(false);
           setBackgroundDragLocked(false);
