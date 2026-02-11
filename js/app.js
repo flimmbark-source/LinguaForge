@@ -544,8 +544,9 @@ function initializeGame() {
 
   initBackgroundDrag();
 
-  // Spawn starting letters
-  for (let i = 0; i < STARTING_LETTERS; i++) {
+  // Spawn starting letters (slightly reduced on mobile for faster initial load)
+  const startingLetters = isMobileDevice ? Math.max(3, STARTING_LETTERS - 2) : STARTING_LETTERS;
+  for (let i = 0; i < startingLetters; i++) {
     spawnLetter(handleMoldSlotFilled);
   }
 
@@ -594,7 +595,7 @@ function initializeCraftingSystems() {
       const letterChar = randomAllowedLetter();
 
       // Slight delay between multiple letters for visual effect (shorter on mobile)
-      const delay = isMobileDevice ? i * 30 : i * 50;
+      const delay = isMobileDevice ? i * 16 : i * 50;
       setTimeout(() => {
         hammerSystem.spawnFlyingLetter(impactX, impactY, power, strikeVx, letterChar);
       }, delay);

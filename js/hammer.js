@@ -68,7 +68,7 @@ export class HammerSystem {
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
     // World physics constants
-    this.gravity = 6600; // px/s^2
+    this.gravity = 4600; // px/s^2
     this.airFriction = 0.9;
     this.throwPhysicsPresets = {
       realistic: {
@@ -155,6 +155,7 @@ export class HammerSystem {
       throwingAxeMode: false, // True for player throws (pivot rotation), false for rips
       throwOrbitRadius: 0, // Distance from throw pivot to head during spinning throw
       spinTimer: 0,
+      floorSpinContactTime: 0,
       isHanging: false,
       hangX: 0,
       hangY: 0
@@ -218,7 +219,8 @@ export class HammerSystem {
    */
   resize() {
     const rect = this.canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    const rawDpr = window.devicePixelRatio || 1;
+    const dpr = this._isMobile ? Math.min(rawDpr, 1.5) : rawDpr;
     this.canvas.width = rect.width * dpr;
     this.canvas.height = rect.height * dpr;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1222,8 +1224,8 @@ updateFreeHammer(dt) {
   const hammer = this.hammer;
   const g = this.gravity;
   const frictionAir = this.airFriction * 1.033;
-  const rotationSettleSpeed = 8.15; // 1/s - lower value for a heavier, slower return to resting orientation
-  const maxSettleRate = 2.2; // rad/s - cap settle velocity so the final shift never looks snappy
+  const rotationSettleSpeed = 180.15; // 1/s - lower value for a heavier, slower return to resting orientation
+  const maxSettleRate = 2.7; // rad/s - cap settle velocity so the final shift never looks snappy
   const profile = this.throwPhysics;
 
   // --- Update spinning rotation ---
@@ -1317,9 +1319,12 @@ updateFreeHammer(dt) {
   const restitution = 1;   // 1.0 = perfectly bouncy, <1 loses energy
   const tangentialDamp = 0.85; // reduce sideways motion on impacts
   const stopThreshold = 40;    // below this speed we just stop bouncing
+  const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
+  let touchingFloor = false;
 
   // ----- FLOOR -----
   if (hammer.headY + radius > floorY) {
+    touchingFloor = true;
     const penetration = hammer.headY + radius - floorY;
 
     if (hammer.throwingAxeMode) {
@@ -1347,16 +1352,45 @@ updateFreeHammer(dt) {
         hammer.headVy = 0;
       }
 
-      // If spinning above threshold when hitting floor, keep spinning
-      const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
-      if (Math.abs(hammer.angularVelocity) >= spinThreshold) {
-        // Retain spin, just dampen it slightly
-        hammer.angularVelocity *= 0.9;
+      // Landing spin response: kick into a quick rotational shift, then let floor friction slow it.
+      // Use either existing spin or horizontal skid at impact so the effect is always noticeable.
+      const spinDirection = Math.sign(hammer.angularVelocity) || Math.sign(hammer.headVx) || 1;
+      const skidSpinKick = Math.abs(hammer.headVx) * 0.03;
+      const dropSpinKick = Math.abs(hammer.headVy) * 0.0025;
+      const impactSpinKick = Math.min(22, Math.max(8, skidSpinKick + dropSpinKick));
+
+      if (Math.abs(hammer.angularVelocity) >= spinThreshold || Math.abs(hammer.headVx) > 120) {
+        const maxLandingSpin = Math.max(spinThreshold * 3.2, 24);
+        const boosted = Math.max(Math.abs(hammer.angularVelocity) * 1.35, impactSpinKick);
+        hammer.angularVelocity = spinDirection * Math.min(maxLandingSpin, boosted);
+        hammer.floorSpinContactTime = 0;
       } else {
-        // Below threshold, stop spinning
+        // No meaningful rotational energy on impact.
         hammer.angularVelocity = 0;
       }
     }
+  }
+
+  if (touchingFloor && Math.abs(hammer.angularVelocity) > 0) {
+    // Progressive floor friction: starts loose, then tightens aggressively.
+    // Result: quick initial rotation, then a heavy drag into final stop.
+    hammer.floorSpinContactTime += dt;
+    const contactT = hammer.floorSpinContactTime;
+    const progress = Math.min(1, contactT / 0.9);
+    const rampedFrictionPerSec = 0.9 + 14 * progress * progress;
+    hammer.angularVelocity *= Math.exp(-rampedFrictionPerSec * dt);
+
+    // Add dry-friction style braking so the final phase reliably settles.
+    const dryFriction = (0.8 + 6 * progress) * dt;
+    const spinAbs = Math.abs(hammer.angularVelocity);
+    const nextSpinAbs = Math.max(0, spinAbs - dryFriction);
+    hammer.angularVelocity = nextSpinAbs * (Math.sign(hammer.angularVelocity) || 1);
+
+    if (nextSpinAbs < 0.22) {
+      hammer.angularVelocity = 0;
+    }
+  } else {
+    hammer.floorSpinContactTime = 0;
   }
 
   // ----- CEILING -----
@@ -1622,9 +1656,14 @@ updateFreeHammer(dt) {
         hammer.headVx = dirX * backSpeed;
         hammer.headVy = dirY * backSpeed;
 
-        // Add angular velocity based on the impact power (spinning hammer throw)
+        // Add only a modest amount of spin on rip hits so the hammer stays recoverable.
+        // Reuse the existing spin-retention threshold as a soft cap to keep this behavior consistent
+        // with anvil/floor spin logic elsewhere in the file.
         const spinPower = Math.min(1, downwardSpeed / ripThreshold);
-        hammer.angularVelocity = (incomingVx >= 0 ? 1 : -1) * (8 + spinPower * 12); // rad/s
+        const ripSpinDirection = incomingVx >= 0 ? 1 : -1;
+        const ripSpinCap = Math.max(1.8, spinRetentionThreshold * 4.35);
+        const ripSpin = Math.min(ripSpinCap, 1.6 + spinPower * 2.4); // ~1.6 to ~4.0 rad/s max
+        hammer.angularVelocity = ripSpinDirection * ripSpin;
 
         // Encode that into prevHead* for the verlet integrator
         hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
@@ -1880,6 +1919,28 @@ drawHammer(ctx, hammer) {
     // Head (top of image) anchored to physics head position;
     // handle extends past the grip point when grabbing mid-haft
     ctx.drawImage(this._hammerImg, -imgWidth / 2, -(handleLength + headHeight), imgWidth, imgHeight);
+  } else {
+    // Fast fallback so the hammer is visible immediately while image is still loading.
+    const handleWidth = Math.max(8, hammer.handleThickness * 0.6);
+    const headY = -(handleLength + headHeight);
+
+    ctx.fillStyle = '#6b4f2a';
+    ctx.fillRect(-handleWidth / 2, -handleLength, handleWidth, handleLength + 4);
+
+    const fallbackHeadGradient = ctx.createLinearGradient(
+      -headWidth * 0.5,
+      headY,
+      headWidth * 0.5,
+      headY + headHeight
+    );
+    fallbackHeadGradient.addColorStop(0, '#f3f4f6');
+    fallbackHeadGradient.addColorStop(0.5, '#9ca3af');
+    fallbackHeadGradient.addColorStop(1, '#4b5563');
+    ctx.fillStyle = fallbackHeadGradient;
+    ctx.fillRect(-headWidth / 2, headY, headWidth, headHeight);
+
+    ctx.fillStyle = 'rgba(17, 24, 39, 0.32)';
+    ctx.fillRect(-headWidth / 2, headY + headHeight - 8, headWidth, 8);
   }
 
   // Show progress indicator for heating to next level
