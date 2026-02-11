@@ -1266,7 +1266,6 @@ updateFreeHammer(dt) {
 
   // THROWING AXE PHYSICS: Use flag set during player throw
   // Disable if spin drops below threshold
-  const spinThreshold = 2.0; // rad/s
   if (hammer.throwingAxeMode && Math.abs(hammer.angularVelocity) < spinThreshold) {
     this.endThrowingAxeModeSmoothly(); // Exit throwing axe mode when spin decays
   }
