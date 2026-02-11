@@ -655,15 +655,16 @@ onPointerDown(e) {
         }
       }
 
-      // SPINNING THROW: When player releases, enter free-flight mode
+      // Releasing the hammer should always move it into free-flight mode unless
+      // we snapped it to the hearth hang point above.
       const hammer = this.hammer;
       const spinningThrowLevel = getUpgradeLevel('spinningThrow');
+      hammer.isFree = true;
+      hammer.regrabCooldown = 0.05; // Short cooldown before re-grab
+      hammer.isHanging = false;
 
-      // SPINNING THROW: Activate if upgrade is purchased
+      // SPINNING THROW: Apply throw-axis spin behavior only if upgrade is purchased
       if (spinningThrowLevel > 0) {
-        // Enter free-flight mode
-        hammer.isFree = true;
-        hammer.regrabCooldown = 0.05; // Short cooldown before re-grab
 
         // Shift pivot down the handle so the hammer spins like a thrown hand axe.
         // This keeps the head path continuous while moving the rotation center closer
@@ -714,6 +715,8 @@ onPointerDown(e) {
 
         // Hammer retains its current velocity (from headVx, headVy)
         // Physics and gravity will be applied in updateFreeHammer()
+      } else {
+        hammer.throwingAxeMode = false;
       }
     }
     this.input.isDown = false;
