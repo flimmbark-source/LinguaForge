@@ -69,15 +69,6 @@ function createMoldCard(mold, { world = false } = {}) {
   card.className = world ? 'mold-card mold-instance world-mold' : 'mold-card mold-instance viewport-mold';
   card.dataset.moldId = String(mold.id);
 
-  const header = document.createElement('div');
-  header.className = 'mold-header';
-  const left = document.createElement('div');
-  left.textContent = mold.english;
-  const right = document.createElement('div');
-  right.className = 'mold-progress';
-  header.appendChild(left);
-  header.appendChild(right);
-
   const slotsRow = document.createElement('div');
   slotsRow.className = 'mold-slots';
   mold.pattern.split('').forEach((ch, idx) => {
@@ -89,23 +80,34 @@ function createMoldCard(mold, { world = false } = {}) {
     slotsRow.appendChild(slot);
   });
 
-  card.appendChild(header);
   card.appendChild(slotsRow);
   return card;
 }
 
+
+
+function attachWorldMoldPointerDrag(card) {
+  if (!card || card.dataset.dragBound === 'true') return;
+  card.dataset.dragBound = 'true';
+  card.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    beginDragFromCard(card, e, false);
+  });
+}
 function hydrateMoldCard(card, mold, { world = false } = {}) {
   const runtime = ensureMoldRuntime(mold);
-  const filledCount = mold.slots.filter(Boolean).length;
-  const progressEl = card.querySelector('.mold-progress');
-  if (progressEl) {
-    progressEl.textContent = `${filledCount}/${mold.slots.length}`;
-  }
-
   card.classList.toggle('is-heated', Boolean(runtime.heated));
   card.classList.toggle('is-docked', Boolean(runtime.docked));
   card.classList.toggle('is-consumed', Boolean(runtime.consumed));
   card.dataset.heated = runtime.heated ? 'true' : 'false';
+
+  const slotCount = Math.max(1, mold.pattern.length);
+  const slotSize = 32;
+  const slotGap = 6;
+  const sideBuffer = 20;
+  const moldWidth = slotCount * slotSize + (slotCount - 1) * slotGap + sideBuffer * 2;
+  card.style.width = `${moldWidth}px`;
 
   const slots = card.querySelectorAll('.slot');
   slots.forEach((slotEl) => {
@@ -139,6 +141,7 @@ function beginDragFromCard(card, e, fromViewport = false) {
     worldCard = createMoldCard(mold, { world: true });
     worldLayer.appendChild(worldCard);
   }
+  attachWorldMoldPointerDrag(worldCard);
 
   if (fromViewport) {
     runtime.inViewport = false;
@@ -246,12 +249,8 @@ function tickMoldPhysics(now) {
     if (!card) {
       card = createMoldCard(mold, { world: true });
       worldLayer.appendChild(card);
-      card.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        beginDragFromCard(card, e, false);
-      });
     }
+    attachWorldMoldPointerDrag(card);
 
     if (!runtime.dragging) {
       runtime.vy += GRAVITY * dt;

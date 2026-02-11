@@ -582,10 +582,15 @@ button.secondary {
 
 /* Mold Card */
 .mold-card {
-  border-radius: 8px;
-  padding: 10px 10px;
+  border-radius: 10px;
+  padding: 10px 20px;
   box-shadow: inset 0 0 0 1px rgba(55, 65, 81, 0.7);
   font-size: 13px;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 
@@ -599,8 +604,6 @@ button.secondary {
 
 .world-mold {
   position: fixed;
-  min-width: 220px;
-  max-width: 320px;
   pointer-events: auto;
   background: linear-gradient(160deg, rgba(72, 66, 60, 0.95) 0%, rgba(42, 39, 36, 0.95) 100%);
   border: 1px solid rgba(155, 145, 127, 0.45);
@@ -619,23 +622,16 @@ button.secondary {
   filter: grayscale(0.7);
 }
 
-.mold-progress {
-  font-size: 11px;
-  opacity: 0.85;
-}
-.mold-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
 
 /* Mold Slots */
 .mold-slots {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   flex-direction: row-reverse;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
   padding: 2px 0;
 }
 
