@@ -645,8 +645,16 @@ onPointerDown(e) {
         const canvasRect = this.canvas.getBoundingClientRect();
         const hangClientX = canvasRect.left + hangPoint.x;
         const hangClientY = canvasRect.top + hangPoint.y;
-        const dist = Math.hypot(client.clientX - hangClientX, client.clientY - hangClientY);
-        if (dist < 70) {
+
+        // Use both pointer-release distance and hammer-head distance.
+        // The player may grab the handle far away from the head, so relying on
+        // pointer position alone can make hearth pinning feel broken.
+        const pointerDist = Math.hypot(client.clientX - hangClientX, client.clientY - hangClientY);
+        const headClientX = canvasRect.left + this.hammer.headX;
+        const headClientY = canvasRect.top + this.hammer.headY;
+        const headDist = Math.hypot(headClientX - hangClientX, headClientY - hangClientY);
+
+        if (Math.min(pointerDist, headDist) < 70) {
           this.placeHammerAtHearthHangSpot();
           this.input.isDown = false;
           setScreenLocked(false);
