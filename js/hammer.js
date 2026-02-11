@@ -1905,7 +1905,8 @@ drawHammer(ctx, hammer) {
   drawFlyingLetters(ctx, letters) {
     ctx.save();
     const isMobile = this.width <= MOBILE_BREAKPOINT;
-    const size = 28;
+    const tileWidth = 22;
+    const tileHeight = 34;
 
     // On mobile, skip per-letter gradients and use flat fill for perf
     if (isMobile) {
@@ -1923,19 +1924,19 @@ drawHammer(ctx, hammer) {
         // Flat fill — no gradient, no stroke
         ctx.fillStyle = '#0b0b0c';
         ctx.beginPath();
-        ctx.roundRect(-size / 2, -size / 2, size, size, 6);
+        ctx.roundRect(-tileWidth / 2, -tileHeight / 2, tileWidth, tileHeight, 6);
         ctx.fill();
         ctx.strokeStyle = '#d1a640';
         ctx.lineWidth = 2;
         ctx.stroke();
       } else {
         // Letter tile background
-        const grad = ctx.createLinearGradient(-size / 2, -size / 2, size / 2, size / 2);
+        const grad = ctx.createLinearGradient(-tileWidth / 2, -tileHeight / 2, tileWidth / 2, tileHeight / 2);
         grad.addColorStop(0, '#0f0f10');
         grad.addColorStop(1, '#1b1b1d');
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.roundRect(-size / 2, -size / 2, size, size, 6);
+        ctx.roundRect(-tileWidth / 2, -tileHeight / 2, tileWidth, tileHeight, 6);
         ctx.fill();
 
         // Border
