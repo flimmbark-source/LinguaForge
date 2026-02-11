@@ -113,8 +113,8 @@ gripStrength: {
     nodeShape: NODE_SHAPES.SQUARE,
     nodeColor: NODE_COLORS.TEAL,
     onPurchase: (level) => {
-      const baseThreshold = 3400;
-      gameState.ripSpeedThreshold = baseThreshold * Math.pow(1.1, level);
+      const baseThreshold = 4000;
+      gameState.ripSpeedThreshold = baseThreshold * Math.pow(1.2, level);
     }
   },
 
