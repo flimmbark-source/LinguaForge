@@ -1516,6 +1516,10 @@ updateFreeHammer(dt) {
         hammer.anvilExitReady = false;
         hammer.angularVelocity = 0;
         // Keep current visualRotation and let the settle logic ease it down smoothly.
+        // Prevent immediate re-collision spam by applying a short strike cooldown.
+        if (hammer.strikeCooldown <= 0) {
+          hammer.strikeCooldown = 0.07;
+        }
       }
     }
 
