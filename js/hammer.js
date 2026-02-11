@@ -68,7 +68,7 @@ export class HammerSystem {
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
     // World physics constants
-    this.gravity = 4600; // px/s^2
+    this.gravity = 3600; // px/s^2
     this.airFriction = 0.95;
     this.throwPhysicsPresets = {
       realistic: {
