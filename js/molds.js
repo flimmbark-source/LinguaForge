@@ -65,6 +65,17 @@ function ensureWorldLayer() {
   return layer;
 }
 
+function spawnMoldClink(x, y) {
+  const el = document.createElement('div');
+  el.className = 'mold-clink-popup';
+  el.textContent = 'Clink!';
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 650);
+}
+
+
 function createMoldCard(mold, { world = false } = {}) {
   const card = document.createElement('div');
   card.className = world ? 'mold-card mold-instance world-mold' : 'mold-card mold-instance viewport-mold';
@@ -287,6 +298,7 @@ function tickMoldPhysics(now) {
 
       if (willDock && !runtime.docked) {
         runtime.rotationDeg = (Math.random() * 10) - 5;
+        spawnMoldClink(runtime.x + cardWidth * 0.5, runtime.y + 12);
       } else if (!willDock) {
         runtime.rotationDeg *= 0.85;
       }

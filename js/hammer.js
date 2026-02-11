@@ -604,9 +604,9 @@ onPointerDown(e) {
         const hearthRect = hearth.getBoundingClientRect();
         const canvasRect = this.canvas.getBoundingClientRect();
         const hangClientX = hearthRect.left + hearthRect.width / 2;
-        const hangClientY = hearthRect.top - 70;
+        const hangClientY = hearthRect.top + hearthRect.height * 0.52;
         const dist = Math.hypot(client.clientX - hangClientX, client.clientY - hangClientY);
-        if (dist < 95) {
+        if (dist < 78) {
           const hx = hangClientX - canvasRect.left;
           const hy = hangClientY - canvasRect.top;
           this.hammer.headX = hx;

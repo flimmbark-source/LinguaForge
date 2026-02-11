@@ -326,7 +326,7 @@ button.secondary {
   flex-wrap: wrap;
   align-content: flex-end;
   justify-content: flex-start;
-  padding: 10px 20px;
+  padding: 6px 20px;
   box-sizing: border-box;
 }
 
@@ -493,7 +493,9 @@ button.secondary {
 }
 
 .mold-viewport .mold-list {
-  flex: 1;
+  flex: 0 1 auto;
+  width: fit-content;
+  margin: 0 auto;
   overflow: hidden;
   background:
     radial-gradient(circle at 20% 25%, rgba(87, 83, 78, 0.25) 0%, transparent 8px),
@@ -578,7 +580,7 @@ button.secondary {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-height: 70px;
+  min-height: 56px;
   align-items: center;
   justify-content: center;
 }
@@ -586,10 +588,18 @@ button.secondary {
 /* Mold Card */
 .mold-card {
   border-radius: 10px;
-  padding: 10px 20px;
-  box-shadow: inset 0 0 0 1px rgba(55, 65, 81, 0.7);
+  padding: 6px 20px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(151, 141, 125, 0.75),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+  background:
+    linear-gradient(155deg, rgba(112, 118, 128, 0.92) 0%, rgba(61, 67, 75, 0.95) 52%, rgba(34, 38, 43, 0.98) 100%),
+    repeating-linear-gradient(120deg, rgba(255,255,255,0.05) 0 2px, rgba(255,255,255,0.0) 2px 7px);
+  border: 1px solid rgba(185, 175, 160, 0.55);
   font-size: 13px;
-  min-height: 70px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -651,20 +661,24 @@ button.secondary {
   flex: 0 0 32px;
   height: 36px;
   border-radius: 6px;
-  border: 2px dashed #86b5f2;
+  border: 2px solid #d1a640;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
+  color: #f3d27a;
+  background: linear-gradient(135deg, #0f0f10 0%, #1b1b1d 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   opacity: 0.7;
   box-sizing: border-box;
 }
 
 .slot.filled {
   border-style: solid;
-  background: #1f2937;
+  background: linear-gradient(135deg, #16181b 0%, #272d34 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   opacity: 1;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ===============================================
@@ -1611,7 +1625,7 @@ button.secondary {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 6px 20px;
   border: 2px solid #7c3aed;
   border-radius: 12px;
   background: linear-gradient(145deg, #4c1d95, #6d28d9);
@@ -3216,7 +3230,7 @@ button.secondary {
 
   /* ─ Mold card adjustments ─ */
   .mold-card {
-    padding: 8px;
+    padding: 4px 14px;
     font-size: 12px;
   }
 
@@ -3461,7 +3475,7 @@ button.secondary {
 
   /* Mold cards */
   .mold-card {
-    padding: 6px;
+    padding: 4px 12px;
     font-size: 11px;
   }
 
@@ -4393,4 +4407,23 @@ body.book-overlay-active .magic-book {
 
 .word-selector-erase-btn:hover {
   background: #a04a4a;
+}
+
+
+.mold-clink-popup {
+  position: fixed;
+  z-index: 260;
+  pointer-events: none;
+  font-weight: 800;
+  font-size: 20px;
+  color: #f3d27a;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 8px rgba(248, 197, 95, 0.35);
+  transform: translate(-50%, -50%);
+  animation: moldClinkPop 0.62s ease-out forwards;
+}
+
+@keyframes moldClinkPop {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(0.75) rotate(-6deg); }
+  20% { opacity: 1; transform: translate(-50%, -70%) scale(1.05) rotate(4deg); }
+  100% { opacity: 0; transform: translate(-50%, -120%) scale(1.15) rotate(0deg); }
 }
