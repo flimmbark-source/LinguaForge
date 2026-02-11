@@ -155,7 +155,6 @@ export class HammerSystem {
       throwingAxeMode: false, // True for player throws (pivot rotation), false for rips
       throwOrbitRadius: 0, // Distance from throw pivot to head during spinning throw
       spinTimer: 0,
-      floorSpinContactTime: 0,
       isHanging: false,
       hangX: 0,
       hangY: 0
@@ -1329,7 +1328,6 @@ updateFreeHammer(dt) {
 
   // ----- FLOOR -----
   if (hammer.headY + radius > floorY) {
-    touchingFloor = true;
     const penetration = hammer.headY + radius - floorY;
 
     if (hammer.throwingAxeMode) {
@@ -1357,20 +1355,13 @@ updateFreeHammer(dt) {
         hammer.headVy = 0;
       }
 
-      // Landing spin response: kick into a quick rotational shift, then let floor friction slow it.
-      // Use either existing spin or horizontal skid at impact so the effect is always noticeable.
-      const spinDirection = Math.sign(hammer.angularVelocity) || Math.sign(hammer.headVx) || 1;
-      const skidSpinKick = Math.abs(hammer.headVx) * 0.03;
-      const dropSpinKick = Math.abs(hammer.headVy) * 0.0025;
-      const impactSpinKick = Math.min(22, Math.max(8, skidSpinKick + dropSpinKick));
-
-      if (Math.abs(hammer.angularVelocity) >= spinThreshold || Math.abs(hammer.headVx) > 120) {
-        const maxLandingSpin = Math.max(spinThreshold * 3.2, 24);
-        const boosted = Math.max(Math.abs(hammer.angularVelocity) * 1.35, impactSpinKick);
-        hammer.angularVelocity = spinDirection * Math.min(maxLandingSpin, boosted);
-        hammer.floorSpinContactTime = 0;
+      // If spinning above threshold when hitting floor, keep spinning
+      const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
+      if (Math.abs(hammer.angularVelocity) >= spinThreshold) {
+        // Retain spin, just dampen it slightly
+        hammer.angularVelocity *= 0.9;
       } else {
-        // No meaningful rotational energy on impact.
+        // Below threshold, stop spinning
         hammer.angularVelocity = 0;
       }
     }
