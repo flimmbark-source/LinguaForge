@@ -182,11 +182,6 @@ export class LetterPhysicsSystem {
    * If the letter's character matches an open slot it overlaps, fill it.
    */
   checkMoldSlots() {
-    if (!this._moldListRef || !this._moldListRef.isConnected) {
-      this._moldListRef = document.getElementById('moldList');
-    }
-    const moldListDiv = this._moldListRef;
-    if (!moldListDiv) return;
     if (!gameState.currentLine || !gameState.currentLine.molds) return;
 
     const now = performance.now();
@@ -195,7 +190,7 @@ export class LetterPhysicsSystem {
       this._slotCacheLineRef !== gameState.currentLine;
 
     if (shouldRefresh) {
-      const slots = moldListDiv.querySelectorAll('.slot');
+      const slots = document.querySelectorAll('.slot');
       if (!slots.length) {
         this._slotCache = null;
         return;
@@ -208,6 +203,7 @@ export class LetterPhysicsSystem {
         const slotIdx = Number(slotEl.dataset.slotIndex);
         const mold = gameState.currentLine.molds.find(m => m.id === moldId);
         if (!mold) continue;
+        if (mold.runtime?.consumed) continue;
         if (mold.slots[slotIdx]) continue; // already filled
         const neededChar = mold.pattern[slotIdx];
         if (!neededChar) continue;

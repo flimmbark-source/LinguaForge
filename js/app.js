@@ -6,7 +6,7 @@
 
 import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower } from './config.js?v=9';
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
-import { setMoldViewportWidth, navigatePreviousMold, navigateNextMold } from './molds.js?v=9';
+import { setMoldViewportWidth, initializeMoldSystem, getWorldMoldElement, forgeSingleMold } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
 import { setupVerseAreaDrop, completeVerse } from './grammar.js?v=9';
 import { initializeElements, updateUI, initWordSelector } from './ui.js?v=9';
@@ -551,6 +551,7 @@ function initializeGame() {
 
   // Set mold viewport width
   setMoldViewportWidth();
+  initializeMoldSystem();
 
   // Initial UI update
   updateUI();
@@ -667,35 +668,24 @@ function initializeCraftingSystems() {
     updateUI();
   };
 
-  // Callback when red-hot hammer strikes mold viewport - forge words as magical text
-  hammerSystem.onForgeTriggered = () => {
-    // Forge completed molds but DON'T add words to inventory — they go
-    // straight to the verse via the magical text animation instead.
-    const forgedWords = [];
-    gameState.currentLine.molds.forEach(mold => {
-      if (mold.slots.every(slot => slot)) {
-        forgedWords.push({ text: mold.pattern, english: mold.english, length: mold.pattern.length });
-        mold.slots = new Array(mold.pattern.length).fill(false);
-      }
-    });
+  // Callback when red-hot hammer strikes a heated mold.
+  hammerSystem.onForgeTriggered = (moldId) => {
+    const mold = gameState.currentLine.molds.find(m => m.id === moldId);
+    if (!mold) return;
 
-    // Spawn magical text animations that fly into the verse book
-    if (forgedWords.length > 0) {
-      const moldViewport = document.querySelector('.mold-viewport');
-      if (moldViewport) {
-        const moldBounds = moldViewport.getBoundingClientRect();
-        forgedWords.forEach((word, index) => {
-          // Grant renown (same as chip system did)
-          const renownGained = word.length * 2;
-          addLetters(renownGained);
-          const screenX = moldBounds.left + moldBounds.width / 2;
-          const screenY = moldBounds.top + moldBounds.height / 2;
-          spawnResourceGain(screenX, screenY, renownGained, 'renown');
+    const forgedWord = forgeSingleMold(mold);
+    if (!forgedWord) return;
 
-          // Spawn magical text with stagger
-          spawnMagicalText(word, moldBounds, index * 300);
-        });
-      }
+    const moldEl = getWorldMoldElement(moldId);
+    const fallback = document.querySelector('.mold-viewport');
+    const bounds = moldEl ? moldEl.getBoundingClientRect() : (fallback ? fallback.getBoundingClientRect() : null);
+    if (bounds) {
+      const renownGained = forgedWord.length * 2;
+      addLetters(renownGained);
+      const screenX = bounds.left + bounds.width / 2;
+      const screenY = bounds.top + bounds.height / 2;
+      spawnResourceGain(screenX, screenY, renownGained, 'renown');
+      spawnMagicalText(forgedWord, bounds, 0);
     }
 
     updateUI();
@@ -879,18 +869,6 @@ function setupEventHandlers() {
   }
 
   // Mold navigation buttons
-  const prevMoldBtn = document.getElementById('prevMoldBtn');
-  const nextMoldBtn = document.getElementById('nextMoldBtn');
-  if (prevMoldBtn && nextMoldBtn) {
-    prevMoldBtn.addEventListener('click', () => {
-      navigatePreviousMold();
-      updateUI();
-    });
-    nextMoldBtn.addEventListener('click', () => {
-      navigateNextMold();
-      updateUI();
-    });
-  }
 
   // Audio controls
   const audioToggleBtn = document.getElementById('audioToggleBtn');
