@@ -286,14 +286,19 @@ export class HammerSystem {
     this.hammer.pivotY = pivotY;
     this.hammer.length = baseHammerLength;
 
-    // Start with hammer hanging down
-    this.hammer.headX = pivotX;
-    this.hammer.headY = pivotY + this.hammer.length;
-    this.hammer.prevHeadX = this.hammer.headX;
-    this.hammer.prevHeadY = this.hammer.headY;
-    this.hammer.angle = Math.PI / 2;
-    this.hammer.headVx = 0;
-    this.hammer.headVy = 0;
+    // Start in the hearth hanging spot when available.
+    const didPlaceInHearth = this.placeHammerAtHearthHangSpot();
+    if (!didPlaceInHearth) {
+      // Fallback: hang down from pivot above anvil.
+      this.hammer.headX = pivotX;
+      this.hammer.headY = pivotY + this.hammer.length;
+      this.hammer.prevHeadX = this.hammer.headX;
+      this.hammer.prevHeadY = this.hammer.headY;
+      this.hammer.angle = Math.PI / 2;
+      this.hammer.headVx = 0;
+      this.hammer.headVy = 0;
+      this.hammer.isHanging = false;
+    }
 
     // Invalidate cached canvas rect on resize
     this._cachedCanvasRect = null;
@@ -350,11 +355,47 @@ export class HammerSystem {
       this._anvilAnchorInitialized = true;
       this.hammer.pivotX = this.anvil.x + this.anvil.width / 2;
       this.hammer.pivotY = this.anvil.y - pivotClearance;
-      this.hammer.headX = this.hammer.pivotX;
-      this.hammer.headY = this.hammer.pivotY + this.hammer.length;
-      this.hammer.prevHeadX = this.hammer.headX;
-      this.hammer.prevHeadY = this.hammer.headY;
+      if (!this.placeHammerAtHearthHangSpot()) {
+        this.hammer.headX = this.hammer.pivotX;
+        this.hammer.headY = this.hammer.pivotY + this.hammer.length;
+        this.hammer.prevHeadX = this.hammer.headX;
+        this.hammer.prevHeadY = this.hammer.headY;
+        this.hammer.isHanging = false;
+      }
     }
+  }
+
+  getHearthHangPoint() {
+    const hearth = document.getElementById('hearth');
+    if (!hearth) return null;
+
+    const hearthRect = hearth.getBoundingClientRect();
+    const canvasRect = this.canvas.getBoundingClientRect();
+    return {
+      x: hearthRect.left + hearthRect.width / 2 - canvasRect.left,
+      y: hearthRect.top + 40 - canvasRect.top
+    };
+  }
+
+  placeHammerAtHearthHangSpot() {
+    const hangPoint = this.getHearthHangPoint();
+    if (!hangPoint) return false;
+
+    this.hammer.headX = hangPoint.x;
+    this.hammer.headY = hangPoint.y;
+    this.hammer.prevHeadX = hangPoint.x;
+    this.hammer.prevHeadY = hangPoint.y;
+    this.hammer.pivotX = hangPoint.x;
+    this.hammer.pivotY = hangPoint.y - this.hammer.length;
+    this.hammer.headVx = 0;
+    this.hammer.headVy = 0;
+    this.hammer.angle = Math.PI / 2;
+    this.hammer.isHeld = false;
+    this.hammer.isFree = false;
+    this.hammer.isHanging = true;
+    this.hammer.hangX = hangPoint.x;
+    this.hammer.hangY = hangPoint.y;
+    return true;
   }
 
   /** Pre-build anvil gradients so we don't recreate them every frame */
@@ -599,29 +640,22 @@ onPointerDown(e) {
       }
       cleanupToolDragSidebar();
 
-      const hearth = document.getElementById('hearth');
-      if (hearth) {
-        const hearthRect = hearth.getBoundingClientRect();
+      const hangPoint = this.getHearthHangPoint();
+      if (hangPoint) {
         const canvasRect = this.canvas.getBoundingClientRect();
-        const hangClientX = hearthRect.left + hearthRect.width / 2;
-        const hangClientY = hearthRect.top + 40;
-        const dist = Math.hypot(client.clientX - hangClientX, client.clientY - hangClientY + 120);
-        if (dist < 70) {
-          const hx = hangClientX - canvasRect.left;
-          const hy = hangClientY - canvasRect.top;
-          this.hammer.headX = hx;
-          this.hammer.headY = hy;
-          this.hammer.prevHeadX = hx;
-          this.hammer.prevHeadY = hy;
-          this.hammer.pivotX = hx;
-          this.hammer.pivotY = hy - this.hammer.length;
-          this.hammer.headVx = 0;
-          this.hammer.headVy = 0;
-          this.hammer.isFree = false;
-          this.hammer.isHeld = false;
-          this.hammer.isHanging = true;
-          this.hammer.hangX = hx;
-          this.hammer.hangY = hy;
+        const hangClientX = canvasRect.left + hangPoint.x;
+        const hangClientY = canvasRect.top + hangPoint.y;
+
+        // Use both pointer-release distance and hammer-head distance.
+        // The player may grab the handle far away from the head, so relying on
+        // pointer position alone can make hearth pinning feel broken.
+        const pointerDist = Math.hypot(client.clientX - hangClientX, client.clientY - hangClientY + 400);
+        const headClientX = canvasRect.left + this.hammer.headX;
+        const headClientY = canvasRect.top + this.hammer.headY;
+        const headDist = Math.hypot(headClientX - hangClientX, headClientY - hangClientY);
+
+        if (Math.min(pointerDist, headDist) < 70) {
+          this.placeHammerAtHearthHangSpot();
           this.input.isDown = false;
           setScreenLocked(false);
           setBackgroundDragLocked(false);
@@ -629,15 +663,16 @@ onPointerDown(e) {
         }
       }
 
-      // SPINNING THROW: When player releases, enter free-flight mode
+      // Releasing the hammer should always move it into free-flight mode unless
+      // we snapped it to the hearth hang point above.
       const hammer = this.hammer;
       const spinningThrowLevel = getUpgradeLevel('spinningThrow');
+      hammer.isFree = true;
+      hammer.regrabCooldown = 0.05; // Short cooldown before re-grab
+      hammer.isHanging = false;
 
-      // SPINNING THROW: Activate if upgrade is purchased
+      // SPINNING THROW: Apply throw-axis spin behavior only if upgrade is purchased
       if (spinningThrowLevel > 0) {
-        // Enter free-flight mode
-        hammer.isFree = true;
-        hammer.regrabCooldown = 0.05; // Short cooldown before re-grab
 
         // Shift pivot down the handle so the hammer spins like a thrown hand axe.
         // This keeps the head path continuous while moving the rotation center closer
@@ -688,6 +723,8 @@ onPointerDown(e) {
 
         // Hammer retains its current velocity (from headVx, headVy)
         // Physics and gravity will be applied in updateFreeHammer()
+      } else {
+        hammer.throwingAxeMode = false;
       }
     }
     this.input.isDown = false;
@@ -1516,6 +1553,10 @@ updateFreeHammer(dt) {
         hammer.anvilExitReady = false;
         hammer.angularVelocity = 0;
         // Keep current visualRotation and let the settle logic ease it down smoothly.
+        // Prevent immediate re-collision spam by applying a short strike cooldown.
+        if (hammer.strikeCooldown <= 0) {
+          hammer.strikeCooldown = 0.07;
+        }
       }
     }
 
