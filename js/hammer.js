@@ -155,6 +155,7 @@ export class HammerSystem {
       throwingAxeMode: false, // True for player throws (pivot rotation), false for rips
       throwOrbitRadius: 0, // Distance from throw pivot to head during spinning throw
       spinTimer: 0,
+      floorSpinContactTime: 0,
       isHanging: false,
       hangX: 0,
       hangY: 0
@@ -1318,9 +1319,12 @@ updateFreeHammer(dt) {
   const restitution = 1;   // 1.0 = perfectly bouncy, <1 loses energy
   const tangentialDamp = 0.85; // reduce sideways motion on impacts
   const stopThreshold = 40;    // below this speed we just stop bouncing
+  const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
+  let touchingFloor = false;
 
   // ----- FLOOR -----
   if (hammer.headY + radius > floorY) {
+    touchingFloor = true;
     const penetration = hammer.headY + radius - floorY;
 
     if (hammer.throwingAxeMode) {
@@ -1348,16 +1352,45 @@ updateFreeHammer(dt) {
         hammer.headVy = 0;
       }
 
-      // If spinning above threshold when hitting floor, keep spinning
-      const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
-      if (Math.abs(hammer.angularVelocity) >= spinThreshold) {
-        // Retain spin, just dampen it slightly
-        hammer.angularVelocity *= 0.9;
+      // Landing spin response: kick into a quick rotational shift, then let floor friction slow it.
+      // Use either existing spin or horizontal skid at impact so the effect is always noticeable.
+      const spinDirection = Math.sign(hammer.angularVelocity) || Math.sign(hammer.headVx) || 1;
+      const skidSpinKick = Math.abs(hammer.headVx) * 0.03;
+      const dropSpinKick = Math.abs(hammer.headVy) * 0.0025;
+      const impactSpinKick = Math.min(22, Math.max(8, skidSpinKick + dropSpinKick));
+
+      if (Math.abs(hammer.angularVelocity) >= spinThreshold || Math.abs(hammer.headVx) > 120) {
+        const maxLandingSpin = Math.max(spinThreshold * 3.2, 24);
+        const boosted = Math.max(Math.abs(hammer.angularVelocity) * 1.35, impactSpinKick);
+        hammer.angularVelocity = spinDirection * Math.min(maxLandingSpin, boosted);
+        hammer.floorSpinContactTime = 0;
       } else {
-        // Below threshold, stop spinning
+        // No meaningful rotational energy on impact.
         hammer.angularVelocity = 0;
       }
     }
+  }
+
+  if (touchingFloor && Math.abs(hammer.angularVelocity) > 0) {
+    // Progressive floor friction: starts loose, then tightens aggressively.
+    // Result: quick initial rotation, then a heavy drag into final stop.
+    hammer.floorSpinContactTime += dt;
+    const contactT = hammer.floorSpinContactTime;
+    const progress = Math.min(1, contactT / 0.9);
+    const rampedFrictionPerSec = 0.9 + 14 * progress * progress;
+    hammer.angularVelocity *= Math.exp(-rampedFrictionPerSec * dt);
+
+    // Add dry-friction style braking so the final phase reliably settles.
+    const dryFriction = (0.8 + 6 * progress) * dt;
+    const spinAbs = Math.abs(hammer.angularVelocity);
+    const nextSpinAbs = Math.max(0, spinAbs - dryFriction);
+    hammer.angularVelocity = nextSpinAbs * (Math.sign(hammer.angularVelocity) || 1);
+
+    if (nextSpinAbs < 0.22) {
+      hammer.angularVelocity = 0;
+    }
+  } else {
+    hammer.floorSpinContactTime = 0;
   }
 
   // ----- CEILING -----
