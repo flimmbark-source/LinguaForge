@@ -1352,30 +1352,43 @@ updateFreeHammer(dt) {
         hammer.headVy = 0;
       }
 
-      // If spinning above threshold when hitting floor, keep spinning
-      if (Math.abs(hammer.angularVelocity) >= spinThreshold) {
-        // Start with a snappy post-impact spin response.
-        const quickStartBoost = 1.1;
-        const maxLandingSpin = Math.max(spinThreshold * 2.6, 16);
-        hammer.angularVelocity = Math.max(
-          -maxLandingSpin,
-          Math.min(maxLandingSpin, hammer.angularVelocity * quickStartBoost)
-        );
+      // Landing spin response: kick into a quick rotational shift, then let floor friction slow it.
+      // Use either existing spin or horizontal skid at impact so the effect is always noticeable.
+      const spinDirection = Math.sign(hammer.angularVelocity) || Math.sign(hammer.headVx) || 1;
+      const skidSpinKick = Math.abs(hammer.headVx) * 0.03;
+      const dropSpinKick = Math.abs(hammer.headVy) * 0.0025;
+      const impactSpinKick = Math.min(22, Math.max(8, skidSpinKick + dropSpinKick));
+
+      if (Math.abs(hammer.angularVelocity) >= spinThreshold || Math.abs(hammer.headVx) > 120) {
+        const maxLandingSpin = Math.max(spinThreshold * 3.2, 24);
+        const boosted = Math.max(Math.abs(hammer.angularVelocity) * 1.35, impactSpinKick);
+        hammer.angularVelocity = spinDirection * Math.min(maxLandingSpin, boosted);
+        hammer.floorSpinContactTime = 0;
       } else {
-        // Below threshold, stop spinning
+        // No meaningful rotational energy on impact.
         hammer.angularVelocity = 0;
       }
     }
   }
 
   if (touchingFloor && Math.abs(hammer.angularVelocity) > 0) {
-    // Progressive floor friction: starts loose, then tightens while the hammer keeps rotating.
-    // This gives a quick initial shift followed by a heavy slowdown into final rest.
+    // Progressive floor friction: starts loose, then tightens aggressively.
+    // Result: quick initial rotation, then a heavy drag into final stop.
     hammer.floorSpinContactTime += dt;
     const contactT = hammer.floorSpinContactTime;
-    const progressiveFriction = 1 + (Math.min(contactT, 0.75) / 0.75) * 5.2;
-    const floorSpinDamp = Math.exp(-progressiveFriction * dt);
-    hammer.angularVelocity *= floorSpinDamp;
+    const progress = Math.min(1, contactT / 0.9);
+    const rampedFrictionPerSec = 0.9 + 14 * progress * progress;
+    hammer.angularVelocity *= Math.exp(-rampedFrictionPerSec * dt);
+
+    // Add dry-friction style braking so the final phase reliably settles.
+    const dryFriction = (0.8 + 6 * progress) * dt;
+    const spinAbs = Math.abs(hammer.angularVelocity);
+    const nextSpinAbs = Math.max(0, spinAbs - dryFriction);
+    hammer.angularVelocity = nextSpinAbs * (Math.sign(hammer.angularVelocity) || 1);
+
+    if (nextSpinAbs < 0.22) {
+      hammer.angularVelocity = 0;
+    }
   } else {
     hammer.floorSpinContactTime = 0;
   }
