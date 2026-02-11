@@ -716,7 +716,7 @@ onPointerDown(e) {
 
     this.flyingLetters.push({
       x: impactX,
-      y: impactY - 24,
+      y: impactY - 17,
       letter: letterChar,
       targetX,
       targetY,
@@ -1906,7 +1906,7 @@ drawHammer(ctx, hammer) {
     ctx.save();
     const isMobile = this.width <= MOBILE_BREAKPOINT;
     const tileWidth = 22;
-    const tileHeight = 26;
+    const tileHeight = 34;
 
     // Match the letter basket visual style (same type treatment)
     ctx.font = 'bold 18px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';

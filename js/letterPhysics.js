@@ -13,8 +13,11 @@ const AIR_FRICTION   = 0.999;  // per-frame velocity damping
 const RESTITUTION    = 0.45;   // bounce energy kept on wall/floor hit
 const FLOOR_FRICTION = 0.82;   // tangential damping on floor bounce
 const STOP_VEL       = 25;     // below this speed → settled
-const LETTER_SIZE    = 28;     // px  (visual tile size)
-const HALF           = LETTER_SIZE / 2;
+const LETTER_WIDTH   = 22;     // px (visual tile width)
+const LETTER_HEIGHT  = 34;     // px (visual tile height)
+const HALF_W         = LETTER_WIDTH / 2;
+const HALF_H         = LETTER_HEIGHT / 2;
+const MAX_HALF       = Math.max(HALF_W, HALF_H);
 const FLOOR_MARGIN   = 10;     // px above screen bottom
 
 // ─── Mobile performance tuning ──────────────────────────────
@@ -120,8 +123,8 @@ export class LetterPhysicsSystem {
       l.angle += l.angularVel * dt;
 
       // ── Floor ──
-      if (l.y + HALF > floorY) {
-        l.y = floorY - HALF;
+      if (l.y + HALF_H > floorY) {
+        l.y = floorY - HALF_H;
         if (l.vy > 0) {
           l.vy = -l.vy * RESTITUTION;
           l.vx *= FLOOR_FRICTION;
@@ -141,14 +144,14 @@ export class LetterPhysicsSystem {
       }
 
       // ── Ceiling ──
-      if (l.y - HALF < 0) {
-        l.y = HALF;
+      if (l.y - HALF_H < 0) {
+        l.y = HALF_H;
         if (l.vy < 0) l.vy = -l.vy * RESTITUTION;
       }
 
       // ── Left wall ──
-      if (l.x - HALF < 0) {
-        l.x = HALF;
+      if (l.x - HALF_W < 0) {
+        l.x = HALF_W;
         if (l.vx < 0) {
           l.vx = -l.vx * RESTITUTION;
           l.vy *= FLOOR_FRICTION;
@@ -156,8 +159,8 @@ export class LetterPhysicsSystem {
       }
 
       // ── Right wall ──
-      if (l.x + HALF > w) {
-        l.x = w - HALF;
+      if (l.x + HALF_W > w) {
+        l.x = w - HALF_W;
         if (l.vx > 0) {
           l.vx = -l.vx * RESTITUTION;
           l.vy *= FLOOR_FRICTION;
@@ -254,16 +257,30 @@ export class LetterPhysicsSystem {
   checkHearth() {
     if (!canPlaceInHearth()) return;
     const now = performance.now();
+        if (!this._hearthCollisionRef || !this._hearthCollisionRef.isConnected) {
+      // Use the opening chamber for collisions so the hitbox matches the visible fire area,
+      // not the full decorative hearth structure.
+      this._hearthCollisionRef = document.querySelector('#hearth .hearth-opening') || document.getElementById('hearth');
+    }
     if (!this._hearthRectCache || now - this._hearthCacheTime > this._hearthCacheInterval) {
-      const hearthDiv = document.getElementById('hearth');
-      if (!hearthDiv) return;
-      this._hearthRectCache = hearthDiv.getBoundingClientRect();
+      if (!this._hearthCollisionRef) return;
+      const rect = this._hearthCollisionRef.getBoundingClientRect();
+      // Tighten bounds so letters must actually enter the opening before being consumed.
+      const insetX = Math.max(8, rect.width * 0.15);
+      const insetTop = Math.max(4, rect.height * 0.05);
+      const insetBottom = Math.max(6, rect.height * 0.2);
+      this._hearthRectCache = {
+        left: rect.left + insetX,
+        right: rect.right - insetX,
+        top: rect.top + insetTop,
+        bottom: rect.bottom - insetBottom,
+      };
       this._hearthCacheTime = now;
     }
     const hr = this._hearthRectCache;
-    if (!hr) return;
+    if (!hr || hr.left >= hr.right || hr.top >= hr.bottom) return;
     const floorBottom = window.innerHeight - FLOOR_MARGIN;
-    const hearthBottom = Math.max(hr.bottom, floorBottom);
+    const hearthBottom = Math.min(hr.bottom, floorBottom);
 
     for (const l of this.letters) {
       if (l.consumed || l.isHeld) continue;
@@ -359,8 +376,8 @@ export class LetterPhysicsSystem {
     const results = [];
     for (const l of this.letters) {
       if (l.consumed || l.isHeld) continue;
-      if (l.x + HALF >= left && l.x - HALF <= right &&
-          l.y + HALF >= top  && l.y - HALF <= bottom) {
+        if (l.x + HALF_W >= left && l.x - HALF_W <= right &&
+          l.y + HALF_H >= top  && l.y - HALF_H <= bottom) {
         results.push(l);
       }
     }
@@ -381,7 +398,7 @@ export class LetterPhysicsSystem {
       const dx = l.x - cx;
       const dy = l.y - cy;
       const dist = Math.hypot(dx, dy);
-      if (dist < radius + HALF && dist > 0) {
+      if (dist < radius + MAX_HALF && dist > 0) {
         // Normalize direction and apply push
         const nx = dx / dist;
         const ny = dy / dist;
@@ -401,7 +418,8 @@ export class LetterPhysicsSystem {
    * Assumes the context is in viewport-coordinate space.
    */
   render(ctx) {
-    const s = LETTER_SIZE;
+    const tileW = LETTER_WIDTH;
+    const tileH = LETTER_HEIGHT;
     // Set shared text properties once outside the loop
     ctx.font = 'bold 18px "Noto Sans Hebrew", Arial, sans-serif';
     ctx.textAlign = 'center';
@@ -414,19 +432,24 @@ export class LetterPhysicsSystem {
       ctx.translate(l.x, l.y);
       ctx.rotate(l.angle);
 
-      // Tile background — on mobile, skip stroke for settled letters
-      roundRect(ctx, -s / 2, -s / 2, s, s, 6);
-      ctx.fillStyle = l.isHeld ? '#1e293b' : '#111827';
+      // Tile background — match DOM basket tile visuals
+      const grad = ctx.createLinearGradient(-tileW / 2, -tileH / 2, tileW / 2, tileH / 2);
+      grad.addColorStop(0, '#0f0f10');
+      grad.addColorStop(1, '#1b1b1d');
+      roundRect(ctx, -tileW / 2, -tileH / 2, tileW, tileH, 6);
+      ctx.fillStyle = grad;
       ctx.fill();
+
+      // Border: use basket gold color; on mobile keep previous behavior of skipping stroke for settled
       if (!IS_MOBILE || !l.settled) {
-        ctx.strokeStyle = l.isHeld ? '#6366f1' : '#4b5563';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#d1a640';
+        ctx.lineWidth = 2;
         ctx.stroke();
       }
 
-      // Letter character
-      ctx.fillStyle = '#f9fafb';
-      ctx.fillText(l.char, 0, 2); // slight offset for visual centering
+      // Letter character: match basket text color
+      ctx.fillStyle = '#f3d27a';
+      ctx.fillText(l.char, 0, 0);
 
       ctx.restore();
     }
