@@ -649,7 +649,7 @@ onPointerDown(e) {
         // Use both pointer-release distance and hammer-head distance.
         // The player may grab the handle far away from the head, so relying on
         // pointer position alone can make hearth pinning feel broken.
-        const pointerDist = Math.hypot(client.clientX - hangClientX, client.clientY - hangClientY);
+        const pointerDist = Math.hypot(client.clientX - hangClientX, client.clientY - hangClientY + 400);
         const headClientX = canvasRect.left + this.hammer.headX;
         const headClientY = canvasRect.top + this.hammer.headY;
         const headDist = Math.hypot(headClientX - hangClientX, headClientY - hangClientY);
