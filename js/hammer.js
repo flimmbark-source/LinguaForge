@@ -68,7 +68,7 @@ export class HammerSystem {
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
     // World physics constants
-    this.gravity = 4600; // px/s^2
+    this.gravity = 6600; // px/s^2
     this.airFriction = 0.9;
     this.throwPhysicsPresets = {
       realistic: {
@@ -155,7 +155,6 @@ export class HammerSystem {
       throwingAxeMode: false, // True for player throws (pivot rotation), false for rips
       throwOrbitRadius: 0, // Distance from throw pivot to head during spinning throw
       spinTimer: 0,
-      floorSpinContactTime: 0,
       isHanging: false,
       hangX: 0,
       hangY: 0
@@ -219,8 +218,7 @@ export class HammerSystem {
    */
   resize() {
     const rect = this.canvas.getBoundingClientRect();
-    const rawDpr = window.devicePixelRatio || 1;
-    const dpr = this._isMobile ? Math.min(rawDpr, 1.5) : rawDpr;
+    const dpr = window.devicePixelRatio || 1;
     this.canvas.width = rect.width * dpr;
     this.canvas.height = rect.height * dpr;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1224,12 +1222,8 @@ updateFreeHammer(dt) {
   const hammer = this.hammer;
   const g = this.gravity;
   const frictionAir = this.airFriction * 1.033;
-  const prevPivotX = hammer.pivotX;
-  const prevPivotY = hammer.pivotY;
-  const prevHeadX = hammer.headX;
-  const prevHeadY = hammer.headY;
-  const rotationSettleSpeed = 180.15; // 1/s - lower value for a heavier, slower return to resting orientation
-  const maxSettleRate = 2.7; // rad/s - cap settle velocity so the final shift never looks snappy
+  const rotationSettleSpeed = 8.15; // 1/s - lower value for a heavier, slower return to resting orientation
+  const maxSettleRate = 2.2; // rad/s - cap settle velocity so the final shift never looks snappy
   const profile = this.throwPhysics;
 
   // --- Update spinning rotation ---
@@ -1323,13 +1317,9 @@ updateFreeHammer(dt) {
   const restitution = 1;   // 1.0 = perfectly bouncy, <1 loses energy
   const tangentialDamp = 0.85; // reduce sideways motion on impacts
   const stopThreshold = 40;    // below this speed we just stop bouncing
-  const fullHandleLength = Math.max(hammer.baseLength || hammer.length || 0, hammer.length || 0);
-  const gripToHeadLength = Math.max(1, Math.hypot(hammer.headX - hammer.pivotX, hammer.headY - hammer.pivotY));
-  const handleTailLength = Math.max(0, fullHandleLength - gripToHeadLength);
 
   // ----- FLOOR -----
   if (hammer.headY + radius > floorY) {
-    touchingFloor = true;
     const penetration = hammer.headY + radius - floorY;
 
     if (hammer.throwingAxeMode) {
@@ -1357,76 +1347,14 @@ updateFreeHammer(dt) {
         hammer.headVy = 0;
       }
 
-      // Landing spin response: kick into a quick rotational shift, then let floor friction slow it.
-      // Use either existing spin or horizontal skid at impact so the effect is always noticeable.
-      const spinDirection = Math.sign(hammer.angularVelocity) || Math.sign(hammer.headVx) || 1;
-      const skidSpinKick = Math.abs(hammer.headVx) * 0.03;
-      const dropSpinKick = Math.abs(hammer.headVy) * 0.0025;
-      const impactSpinKick = Math.min(22, Math.max(8, skidSpinKick + dropSpinKick));
-
-      if (Math.abs(hammer.angularVelocity) >= spinThreshold || Math.abs(hammer.headVx) > 120) {
-        const maxLandingSpin = Math.max(spinThreshold * 3.2, 24);
-        const boosted = Math.max(Math.abs(hammer.angularVelocity) * 1.35, impactSpinKick);
-        hammer.angularVelocity = spinDirection * Math.min(maxLandingSpin, boosted);
-        hammer.floorSpinContactTime = 0;
+      // If spinning above threshold when hitting floor, keep spinning
+      const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
+      if (Math.abs(hammer.angularVelocity) >= spinThreshold) {
+        // Retain spin, just dampen it slightly
+        hammer.angularVelocity *= 0.9;
       } else {
-        // No meaningful rotational energy on impact.
+        // Below threshold, stop spinning
         hammer.angularVelocity = 0;
-      }
-    }
-  }
-
-  // ----- HANDLE TAIL VS FLOOR -----
-  // In spinning throws, the handle extends beyond the grip/pivot point.
-  // Without this check the tail can tunnel through the floor while only the
-  // hammer head participates in collision response.
-  if (handleTailLength > 0.5) {
-    const toHeadX = hammer.headX - hammer.pivotX;
-    const toHeadY = hammer.headY - hammer.pivotY;
-    const axisLen = Math.hypot(toHeadX, toHeadY) || 1;
-    const axisX = toHeadX / axisLen;
-    const axisY = toHeadY / axisLen;
-
-    const prevToHeadX = prevHeadX - prevPivotX;
-    const prevToHeadY = prevHeadY - prevPivotY;
-    const prevAxisLen = Math.hypot(prevToHeadX, prevToHeadY) || 1;
-    const prevAxisY = prevToHeadY / prevAxisLen;
-
-    const tailY = hammer.pivotY - axisY * handleTailLength;
-    const prevTailY = prevPivotY - prevAxisY * handleTailLength;
-    const tailVy = (tailY - prevTailY) / Math.max(dt, 1e-6);
-    const tailRadius = Math.max(8, hammer.handleThickness * 0.55);
-
-    if (tailY + tailRadius > floorY) {
-      const penetration = tailY + tailRadius - floorY;
-
-      // Shift the whole hammer up out of the floor.
-      hammer.pivotY -= penetration;
-      if (hammer.throwingAxeMode) {
-        const angle = hammer.visualRotation;
-        const orbitRadius = hammer.throwOrbitRadius || Math.max(58, (hammer.length || 180) * 0.5);
-        hammer.headX = hammer.pivotX + Math.sin(angle) * orbitRadius;
-        hammer.headY = hammer.pivotY - Math.cos(angle) * orbitRadius;
-      } else {
-        hammer.headY -= penetration;
-      }
-
-      // Apply impact response when the handle-tail point was moving into the floor.
-      if (tailVy > 0) {
-        const massFactor = hammer.headMass || 1;
-        const handleRestitution = 0.7;
-        hammer.headVy = -tailVy * handleRestitution / massFactor;
-        hammer.headVx *= 0.8;
-
-        // Handle-first contact should scrub spin significantly and can reverse it.
-        hammer.angularVelocity *= -0.55;
-
-        if (Math.abs(hammer.headVy) < stopThreshold) {
-          hammer.headVy = 0;
-        }
-        if (Math.abs(hammer.angularVelocity) < 0.2) {
-          hammer.angularVelocity = 0;
-        }
       }
     }
   }
@@ -1693,28 +1621,9 @@ updateFreeHammer(dt) {
         hammer.headVx = dirX * backSpeed;
         hammer.headVy = dirY * backSpeed;
 
-        // Add only a modest amount of spin on rip hits so the hammer stays recoverable.
-        // Reuse the existing spin-retention threshold as a soft cap to keep this behavior consistent
-        // with anvil/floor spin logic elsewhere in the file.
+        // Add angular velocity based on the impact power (spinning hammer throw)
         const spinPower = Math.min(1, downwardSpeed / ripThreshold);
-        const ripSpinDirection = incomingVx >= 0 ? 1 : -1;
-        const ripSpinCap = Math.max(1.8, spinRetentionThreshold * 4.35);
-        const ripSpin = Math.min(ripSpinCap, 1.6 + spinPower * 2.4); // ~1.6 to ~4.0 rad/s max
-        hammer.angularVelocity = ripSpinDirection * ripSpin;
-
-        // Ripped releases now use throwing-axe mode so haft/tail contacts are part of
-        // the physical collision body instead of being only a visual spin effect.
-        const dx = hammer.headX - hammer.pivotX;
-        const dy = hammer.headY - hammer.pivotY;
-        const currentLength = Math.hypot(dx, dy) || hammer.length || 180;
-        const axisX = dx / currentLength;
-        const axisY = dy / currentLength;
-        hammer.throwOrbitRadius = Math.max(58, currentLength * 0.5);
-        const pivotShift = currentLength - hammer.throwOrbitRadius;
-        hammer.pivotX += axisX * pivotShift;
-        hammer.pivotY += axisY * pivotShift;
-        hammer.throwingAxeMode = true;
-        hammer.visualRotation = Math.atan2(hammer.headX - hammer.pivotX, -(hammer.headY - hammer.pivotY));
+        hammer.angularVelocity = (incomingVx >= 0 ? 1 : -1) * (8 + spinPower * 12); // rad/s
 
         // Encode that into prevHead* for the verlet integrator
         hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
@@ -1970,28 +1879,6 @@ drawHammer(ctx, hammer) {
     // Head (top of image) anchored to physics head position;
     // handle extends past the grip point when grabbing mid-haft
     ctx.drawImage(this._hammerImg, -imgWidth / 2, -(handleLength + headHeight), imgWidth, imgHeight);
-  } else {
-    // Fast fallback so the hammer is visible immediately while image is still loading.
-    const handleWidth = Math.max(8, hammer.handleThickness * 0.6);
-    const headY = -(handleLength + headHeight);
-
-    ctx.fillStyle = '#6b4f2a';
-    ctx.fillRect(-handleWidth / 2, -handleLength, handleWidth, handleLength + 4);
-
-    const fallbackHeadGradient = ctx.createLinearGradient(
-      -headWidth * 0.5,
-      headY,
-      headWidth * 0.5,
-      headY + headHeight
-    );
-    fallbackHeadGradient.addColorStop(0, '#f3f4f6');
-    fallbackHeadGradient.addColorStop(0.5, '#9ca3af');
-    fallbackHeadGradient.addColorStop(1, '#4b5563');
-    ctx.fillStyle = fallbackHeadGradient;
-    ctx.fillRect(-headWidth / 2, headY, headWidth, headHeight);
-
-    ctx.fillStyle = 'rgba(17, 24, 39, 0.32)';
-    ctx.fillRect(-headWidth / 2, headY + headHeight - 8, headWidth, 8);
   }
 
   // Show progress indicator for heating to next level
