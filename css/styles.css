@@ -489,6 +489,7 @@ button.secondary {
 .mold-viewport {
   max-width: 100%;
   margin: 0 auto;
+  justify-content: center;
 }
 
 .mold-viewport .mold-list {
@@ -578,6 +579,8 @@ button.secondary {
   flex-direction: column;
   gap: 6px;
   min-height: 70px;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Mold Card */
@@ -595,6 +598,15 @@ button.secondary {
 
 
 
+
+
+.mold-instance {
+  cursor: grab;
+}
+
+.mold-instance:active {
+  cursor: grabbing;
+}
 .mold-world-layer {
   position: fixed;
   inset: 0;

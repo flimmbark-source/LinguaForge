@@ -37,6 +37,7 @@ function ensureMoldRuntime(mold) {
       docked: false,
       heated: false,
       consumed: false,
+      rotationDeg: 0,
     };
   }
   return mold.runtime;
@@ -105,7 +106,7 @@ function hydrateMoldCard(card, mold, { world = false } = {}) {
   const slotCount = Math.max(1, mold.pattern.length);
   const slotSize = 32;
   const slotGap = 6;
-  const sideBuffer = 20;
+  const sideBuffer = 10;
   const moldWidth = slotCount * slotSize + (slotCount - 1) * slotGap + sideBuffer * 2;
   card.style.width = `${moldWidth}px`;
 
@@ -118,7 +119,7 @@ function hydrateMoldCard(card, mold, { world = false } = {}) {
   });
 
   if (world) {
-    card.style.transform = `translate(${runtime.x}px, ${runtime.y}px)`;
+    card.style.transform = `translate(${runtime.x}px, ${runtime.y}px) rotate(${runtime.rotationDeg || 0}deg)`;
   }
 }
 
@@ -270,8 +271,7 @@ function tickMoldPhysics(now) {
         runtime.vx *= FLOOR_FRICTION;
       }
 
-      runtime.docked = false;
-      runtime.heated = false;
+      let willDock = false;
       if (hearthRects) {
         const { hearthRect, baseRect } = hearthRects;
         const centerX = runtime.x + cardWidth / 2;
@@ -281,10 +281,18 @@ function tickMoldPhysics(now) {
           runtime.y = baseTop;
           runtime.vy = 0;
           runtime.vx *= 0.45;
-          runtime.docked = true;
-          runtime.heated = true;
+          willDock = true;
         }
       }
+
+      if (willDock && !runtime.docked) {
+        runtime.rotationDeg = (Math.random() * 10) - 5;
+      } else if (!willDock) {
+        runtime.rotationDeg *= 0.85;
+      }
+
+      runtime.docked = willDock;
+      runtime.heated = willDock;
     }
 
     hydrateMoldCard(card, mold, { world: true });
