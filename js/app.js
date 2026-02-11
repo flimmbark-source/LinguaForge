@@ -54,6 +54,21 @@ const ANVIL_ANCHOR = {
   height: 70
 };
 
+const MOBILE_ANVIL_ANCHORS = {
+  portrait: {
+    x: 500,
+    y: 610,
+    width: 300,
+    height: 62
+  },
+  landscape: {
+    x: 470,
+    y: 590,
+    width: 270,
+    height: 56
+  }
+};
+
 let bgOffsetX = 0;
 let bgOffsetY = 0;
 let bgDragging = false;
@@ -254,13 +269,19 @@ function updateAnchoredUI() {
   root.style.setProperty('--hearth-size', `${hearthSize}px`);
 
   if (hammerSystem && typeof hammerSystem.setAnvilAnchor === 'function') {
-    const anvilX = updatedMetrics.originX + ANVIL_ANCHOR.x * updatedMetrics.scale;
-    const anvilY = updatedMetrics.originY + ANVIL_ANCHOR.y * updatedMetrics.scale;
+    const isMobile = isMobileBackground();
+    const isPortrait = isPortraitBackground();
+    const anvilAnchorConfig = isMobile
+      ? (isPortrait ? MOBILE_ANVIL_ANCHORS.portrait : MOBILE_ANVIL_ANCHORS.landscape)
+      : ANVIL_ANCHOR;
+
+    const anvilX = updatedMetrics.originX + anvilAnchorConfig.x * updatedMetrics.scale;
+    const anvilY = updatedMetrics.originY + anvilAnchorConfig.y * updatedMetrics.scale;
     hammerSystem.setAnvilAnchor({
       x: anvilX,
       y: anvilY,
-      width: ANVIL_ANCHOR.width * updatedMetrics.scale,
-      height: ANVIL_ANCHOR.height * updatedMetrics.scale
+      width: anvilAnchorConfig.width * updatedMetrics.scale,
+      height: anvilAnchorConfig.height * updatedMetrics.scale
     });
     hammerSystem.setUseBackgroundAnvil(true);
   }
