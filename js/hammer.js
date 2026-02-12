@@ -15,7 +15,7 @@ const MOBILE_ANVIL_PORTRAIT_OFFSET_X = -30;
 const MOBILE_ANVIL_PORTRAIT_OFFSET_Y = 44;
 const MOBILE_ANVIL_LANDSCAPE_OFFSET_X = -5;
 const MOBILE_ANVIL_LANDSCAPE_OFFSET_Y = 38;
-const DESKTOP_GRAB_ZONE_OFFSET_Y = 350;
+const DESKTOP_GRAB_ZONE_OFFSET_Y = 0;
 
 function getMobileAnvilVisualOffset() {
   const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
