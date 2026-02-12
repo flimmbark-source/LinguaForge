@@ -312,7 +312,7 @@ export class HammerSystem {
     // Nudge anvil right to align with the background anvil art.
     this.anvil.x += mobileAnvilOffset.x;
     if (!this._isMobile) {
-      this.anvil.x -= 300;
+      this.anvil.x -= 250;
     }
 
     // On mobile portrait (<=768px), sit the anvil directly on top of the hearth
