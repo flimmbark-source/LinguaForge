@@ -4086,6 +4086,11 @@ body.book-overlay-active .magic-book {
   transform: translateY(-50%) !important;
 }
 
+/* Mold viewport uses horizontal centering; preserve it after vertical repositioning. */
+.mold-viewport-wrapper.sidebar-repositioned {
+  transform: translate(-50%, -50%) !important;
+}
+
 /* Tools sidebar: preserve hide/show translateX when repositioned */
 .tools-sidebar.sidebar-repositioned {
   transform: translateY(-50%) translateX(calc(100% - 18px)) !important;
