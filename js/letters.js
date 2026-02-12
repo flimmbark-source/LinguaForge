@@ -107,30 +107,11 @@ document.addEventListener('pointerup', e => {
       if (sp > 2500) { vx *= 2500 / sp; vy *= 2500 / sp; }
     }
   }
-  const anvilRect = typeof window.getAnvilViewportRect === 'function'
-    ? window.getAnvilViewportRect()
-    : null;
-  const releasedOnAnvil = Boolean(
-    anvilRect &&
-    e.clientX >= anvilRect.left &&
-    e.clientX <= anvilRect.right &&
-    e.clientY >= anvilRect.top &&
-    e.clientY <= anvilRect.bottom
-  );
-
-  if (releasedOnAnvil) {
-    createAnvilPlacedTile(_heldLetter.char, e.clientX, e.clientY);
-    const idx = window.letterPhysics.letters.indexOf(_heldLetter);
-    if (idx >= 0) {
-      window.letterPhysics.letters.splice(idx, 1);
-    }
-  } else {
-    _heldLetter.isHeld = false;
-    _heldLetter.settled = false;
-    _heldLetter.vx = vx;
-    _heldLetter.vy = vy;
-    _heldLetter.angularVel = vx * 0.005;
-  }
+  _heldLetter.isHeld = false;
+  _heldLetter.settled = false;
+  _heldLetter.vx = vx;
+  _heldLetter.vy = vy;
+  _heldLetter.angularVel = vx * 0.005;
 
   _heldLetter = null;
   _mouseHist = [];

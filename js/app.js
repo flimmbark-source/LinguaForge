@@ -558,53 +558,66 @@ function getUndiscoveredWords() {
 function findAnvilWordMatch() {
   const physicsTiles = (letterPhysics?.getAnvilLetters?.() || []).map((t) => ({ ...t, source: 'physics' }));
   const placedTiles = getAnvilPlacedLetters().map((t) => ({ ...t, source: 'placed' }));
-  const tiles = [...physicsTiles, ...placedTiles]
-    .slice()
-    .sort((a, b) => b.x - a.x); // RTL order
-  if (!tiles.length) return null;
+  const allTiles = [...physicsTiles, ...placedTiles];
+  const rtlTiles = allTiles.slice().sort((a, b) => b.x - a.x);
+  const ltrTiles = allTiles.slice().sort((a, b) => a.x - b.x);
+  const directionSets = [rtlTiles, ltrTiles];
+  const wordDirections = [
+    (word) => word.pattern,
+    (word) => word.pattern.split('').reverse().join(''),
+  ];
+
+  const hasAnyTiles = directionSets.some((set) => set.length > 0);
+  if (!hasAnyTiles) return null;
 
   const words = getUndiscoveredWords();
   for (const word of words) {
     const length = word.pattern.length;
-    if (tiles.length < length) continue;
+    for (const tiles of directionSets) {
+      if (tiles.length < length) continue;
 
-    for (let i = 0; i <= tiles.length - length; i += 1) {
-      const slice = tiles.slice(i, i + length);
-      const chars = slice.map((t) => t.char).join('');
-      const yValues = slice.map((t) => t.y);
-      const ySpan = Math.max(...yValues) - Math.min(...yValues);
-      if (ySpan > 70) continue;
+      for (const buildTarget of wordDirections) {
+        const targetChars = buildTarget(word);
 
-      let gapsValid = true;
-      for (let g = 0; g < slice.length - 1; g += 1) {
-        if (Math.abs(slice[g].x - slice[g + 1].x) > 120) {
-          gapsValid = false;
-          break;
+        for (let i = 0; i <= tiles.length - length; i += 1) {
+          const slice = tiles.slice(i, i + length);
+          const chars = slice.map((t) => t.char).join('');
+          const yValues = slice.map((t) => t.y);
+          const ySpan = Math.max(...yValues) - Math.min(...yValues);
+          if (ySpan > 96) continue;
+
+          let gapsValid = true;
+          for (let g = 0; g < slice.length - 1; g += 1) {
+            if (Math.abs(slice[g].x - slice[g + 1].x) > 150) {
+              gapsValid = false;
+              break;
+            }
+          }
+          if (!gapsValid) continue;
+          if (chars !== targetChars) continue;
+
+          const xValues = slice.map((t) => t.x);
+          const minX = Math.min(...xValues);
+          const maxX = Math.max(...xValues);
+          const minY = Math.min(...yValues);
+          const maxY = Math.max(...yValues);
+          const midX = (minX + maxX) / 2;
+          const midY = (minY + maxY) / 2;
+
+          return {
+            word,
+            tileRefs: slice.map((t) => ({ id: t.id, source: t.source })),
+            origin: {
+              left: midX - 60,
+              top: midY - 28,
+              width: 120,
+              height: 56,
+              right: midX + 60,
+              bottom: midY + 28,
+            }
+          };
         }
       }
-      if (!gapsValid) continue;
-      if (chars !== word.pattern) continue;
-
-      const xValues = slice.map((t) => t.x);
-      const minX = Math.min(...xValues);
-      const maxX = Math.max(...xValues);
-      const minY = Math.min(...yValues);
-      const maxY = Math.max(...yValues);
-      const midX = (minX + maxX) / 2;
-      const midY = (minY + maxY) / 2;
-
-      return {
-        word,
-        tileRefs: slice.map((t) => ({ id: t.id, source: t.source })),
-        origin: {
-          left: midX - 60,
-          top: midY - 28,
-          width: 120,
-          height: 56,
-          right: midX + 60,
-          bottom: midY + 28,
-        }
-      };
     }
   }
   return null;
