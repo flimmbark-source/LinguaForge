@@ -107,11 +107,31 @@ document.addEventListener('pointerup', e => {
       if (sp > 2500) { vx *= 2500 / sp; vy *= 2500 / sp; }
     }
   }
-  _heldLetter.isHeld = false;
-  _heldLetter.settled = false;
-  _heldLetter.vx = vx;
-  _heldLetter.vy = vy;
-  _heldLetter.angularVel = vx * 0.005;
+  const anvilRect = typeof window.getAnvilViewportRect === 'function'
+    ? window.getAnvilViewportRect()
+    : null;
+  const releasedOnAnvil = Boolean(
+    anvilRect &&
+    e.clientX >= anvilRect.left &&
+    e.clientX <= anvilRect.right &&
+    e.clientY >= anvilRect.top &&
+    e.clientY <= anvilRect.bottom
+  );
+
+  if (releasedOnAnvil) {
+    createAnvilPlacedTile(_heldLetter.char, e.clientX, e.clientY);
+    const idx = window.letterPhysics.letters.indexOf(_heldLetter);
+    if (idx >= 0) {
+      window.letterPhysics.letters.splice(idx, 1);
+    }
+  } else {
+    _heldLetter.isHeld = false;
+    _heldLetter.settled = false;
+    _heldLetter.vx = vx;
+    _heldLetter.vy = vy;
+    _heldLetter.angularVel = vx * 0.005;
+  }
+
   _heldLetter = null;
   _mouseHist = [];
   gameState.activeLetterDrag = null;
@@ -385,7 +405,20 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
   tile.addEventListener('pointerdown', e => {
     e.preventDefault();
 
-    // DOM-based drag for basket tiles so they can be dropped on the anvil/hearth.
+    // Physics-based throw from basket tiles.
+    if (window.letterPhysics && !_heldLetter) {
+      const char = tile.dataset.letterChar || '';
+      consumeLetterTile(tile);
+      _heldLetter = window.letterPhysics.spawn(char, e.clientX, e.clientY);
+      _heldLetter.isHeld = true;
+      _mouseHist = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
+      gameState.activeLetterDrag = { isPhysics: true };
+      setMoldViewportHold(true);
+      setBackgroundDragLocked(true);
+      return;
+    }
+
+    // Fallback DOM drag
     const rect = tile.getBoundingClientRect();
     const overlay = getLetterDragOverlay();
     gameState.activeLetterDrag = {
