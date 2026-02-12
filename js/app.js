@@ -583,10 +583,39 @@ function findAnvilWordMatch() {
       if (!gapsValid) continue;
       if (chars !== word.pattern) continue;
 
-      return { word, tileIds: slice.map((t) => t.id) };
+      const xValues = slice.map((t) => t.x);
+      const minX = Math.min(...xValues);
+      const maxX = Math.max(...xValues);
+      const minY = Math.min(...yValues);
+      const maxY = Math.max(...yValues);
+      const midX = (minX + maxX) / 2;
+      const midY = (minY + maxY) / 2;
+
+      return {
+        word,
+        tileIds: slice.map((t) => t.id),
+        origin: {
+          left: midX - 60,
+          top: midY - 28,
+          width: 120,
+          height: 56,
+          right: midX + 60,
+          bottom: midY + 28,
+        }
+      };
     }
   }
   return null;
+}
+
+function spawnAnvilClickPopup(x, y) {
+  const el = document.createElement('div');
+  el.className = 'mold-clink-popup';
+  el.textContent = 'Click!';
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 600);
 }
 
 function attemptWordDiscoveryFromAnvil() {
@@ -602,8 +631,7 @@ function attemptWordDiscoveryFromAnvil() {
     power: computeWordPower(match.word.pattern.length),
   };
 
-  const anvilRect = hammerSystem?.getAnvilViewportRect?.();
-  const bounds = anvilRect || {
+  const bounds = match.origin || {
     left: window.innerWidth * 0.5 - 80,
     right: window.innerWidth * 0.5 + 80,
     top: window.innerHeight * 0.6 - 40,
@@ -883,6 +911,9 @@ function initializeCraftingSystems() {
   letterPhysics = new LetterPhysicsSystem();
   window.letterPhysics = letterPhysics;
   letterPhysics.onSlotFilled = handleMoldSlotFilled;
+  letterPhysics.onAnvilClick = (x, y) => {
+    spawnAnvilClickPopup(x, y);
+  };
 
   // Overlay renderer: draw physics letters on the letter blocks canvas
   const renderPhysicsLetters = () => {
