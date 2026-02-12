@@ -948,6 +948,7 @@ function initializeCraftingSystems() {
 
   // Wire up put-away callbacks: when a tool is released near the sidebar, stow it
   hammerSystem.onPutAway = makePutAwayHandler('hammer');
+  spyglassSystem.onPutAway = makePutAwayHandler('spyglass');
   window.getAnvilViewportRect = () => hammerSystem.getAnvilViewportRect();
 
   console.log('Crafting systems initialized');

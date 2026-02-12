@@ -1,4 +1,5 @@
 import { gameState } from './state.js?v=9';
+import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 
 export class SpyglassSystem {
   constructor() {
@@ -13,6 +14,7 @@ export class SpyglassSystem {
 
     this.el = null;
     this.labelEl = null;
+    this.onPutAway = null;
 
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
@@ -64,6 +66,7 @@ export class SpyglassSystem {
     }
     document.removeEventListener('pointermove', this.onPointerMove);
     document.removeEventListener('pointerup', this.onPointerUp);
+    cleanupToolDragSidebar();
   }
 
   onPointerDown(e) {
@@ -82,9 +85,28 @@ export class SpyglassSystem {
     this.position.y = e.clientY - this.offsetY;
     this.updateLensPosition();
     this.revealWordAtCurrentPosition();
+    handleToolDragNearSidebar(e.clientX);
   }
 
-  onPointerUp() {
+  onPointerUp(e) {
+    const sidebar = document.getElementById('toolsSidebar');
+    const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
+    const droppedInSidebarRect = Boolean(
+      e && sidebarRect &&
+      e.clientX >= sidebarRect.left && e.clientX <= sidebarRect.right &&
+      e.clientY >= sidebarRect.top && e.clientY <= sidebarRect.bottom
+    );
+    const droppedNearRightEdge = Boolean(e && e.clientX >= window.innerWidth - 110);
+
+    if (e && (shouldPutToolAway(e.clientX, e.clientY) || droppedInSidebarRect || droppedNearRightEdge)) {
+      if (this.onPutAway) {
+        this.onPutAway();
+      } else {
+        this.stop();
+      }
+      return;
+    }
+    cleanupToolDragSidebar();
     this.dragging = false;
   }
 
