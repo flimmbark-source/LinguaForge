@@ -596,16 +596,11 @@ function attemptWordDiscoveryFromAnvil() {
   consumeAnvilPlacedLetters(match.tileIds);
 
   const forgedWord = {
-    id: getNextWordId(),
     text: match.word.pattern,
     english: match.word.english,
     length: match.word.pattern.length,
     power: computeWordPower(match.word.pattern.length),
-    heated: true,
   };
-
-  addWord(forgedWord);
-  recordForgedWord(forgedWord);
 
   const anvilRect = hammerSystem?.getAnvilViewportRect?.();
   const bounds = anvilRect || {
@@ -621,7 +616,6 @@ function attemptWordDiscoveryFromAnvil() {
   addLetters(renownGained);
   spawnResourceGain(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2, renownGained, 'renown');
   spawnMagicalText(forgedWord, bounds, 0);
-  updateUI();
 }
 
 /**

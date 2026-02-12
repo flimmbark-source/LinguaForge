@@ -385,20 +385,7 @@ export function setupLetterTilePointerDrag(tile, onDrop) {
   tile.addEventListener('pointerdown', e => {
     e.preventDefault();
 
-    // Physics-based throw (if system available)
-    if (window.letterPhysics && !_heldLetter) {
-      const char = tile.dataset.letterChar || '';
-      consumeLetterTile(tile);
-      _heldLetter = window.letterPhysics.spawn(char, e.clientX, e.clientY);
-      _heldLetter.isHeld = true;
-      _mouseHist = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
-      gameState.activeLetterDrag = { isPhysics: true };
-      setMoldViewportHold(true);
-      setBackgroundDragLocked(true);
-      return;
-    }
-
-    // Fallback: DOM-based drag
+    // DOM-based drag for basket tiles so they can be dropped on the anvil/hearth.
     const rect = tile.getBoundingClientRect();
     const overlay = getLetterDragOverlay();
     gameState.activeLetterDrag = {
