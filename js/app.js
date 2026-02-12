@@ -6,7 +6,7 @@
 
 import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower } from './config.js?v=9';
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
-import { setMoldViewportWidth, initializeMoldSystem, getWorldMoldElement, forgeSingleMold, navigatePreviousMold, navigateNextMold } from './molds.js?v=9';
+import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
 import { setupVerseAreaDrop, completeVerse } from './grammar.js?v=9';
 import { initializeElements, updateUI, initWordSelector } from './ui.js?v=9';
@@ -22,6 +22,8 @@ import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from '
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
 import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 import { LetterPhysicsSystem } from './letterPhysics.js?v=9';
+import { spyglassSystem } from './spyglass.js?v=9';
+import { getAnvilPlacedLetters, consumeAnvilPlacedLetters } from './letters.js?v=9';
 
 // Global crafting system references
 let hammerSystem = null;
@@ -32,7 +34,7 @@ let craftingCanvasRef = null;
 let letterBlocksCanvasRef = null;
 let letterBlocksCtx = null;
 let toolOverlayRenderer = null;
-let activeTool = 'hammer'; // 'hammer' or 'pestle'
+let activeTool = 'hammer'; // hammer / pestle / shovel / spyglass
 let screenLockCount = 0;
 let backgroundDragLockCount = 0;
 
@@ -142,15 +144,18 @@ function makePutAwayHandler(toolName) {
     if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
     if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
     if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
+    if (toolName === 'spyglass') spyglassSystem.stop();
     if (activeTool === toolName) activeTool = null;
     // Update sidebar slot
     const slotId = toolName === 'hammer' ? 'toolSlotHammer' :
+                   toolName === 'spyglass' ? 'toolSlotSpyglass' :
                    toolName === 'pestle' ? 'toolSlotPestle' :
                    toolName === 'shovel' ? 'toolSlotShovel' : '';
     const slot = document.getElementById(slotId);
     if (slot) slot.classList.remove('active');
     // Update hidden button
     const btnId = toolName === 'hammer' ? 'selectHammer' :
+                  toolName === 'spyglass' ? 'selectSpyglass' :
                   toolName === 'pestle' ? 'selectPestle' :
                   toolName === 'shovel' ? 'selectShovel' : '';
     const btn = document.getElementById(btnId);
@@ -545,6 +550,120 @@ function spawnMagicalText(word, moldBounds, delay) {
   }, delay);
 }
 
+function getUndiscoveredWords() {
+  const discovered = new Set(gameState.forgedWordsHistory.map((w) => w.text));
+  return gameState.currentLine.molds.filter((mold) => !discovered.has(mold.pattern));
+}
+
+function findAnvilWordMatch() {
+  const physicsTiles = (letterPhysics?.getAnvilLetters?.() || []).map((t) => ({ ...t, source: 'physics' }));
+  const placedTiles = getAnvilPlacedLetters().map((t) => ({ ...t, source: 'placed' }));
+  const allTiles = [...physicsTiles, ...placedTiles];
+  const rtlTiles = allTiles.slice().sort((a, b) => b.x - a.x);
+  const ltrTiles = allTiles.slice().sort((a, b) => a.x - b.x);
+  const directionSets = [rtlTiles, ltrTiles];
+  const wordDirections = [
+    (word) => word.pattern,
+    (word) => word.pattern.split('').reverse().join(''),
+  ];
+
+  const hasAnyTiles = directionSets.some((set) => set.length > 0);
+  if (!hasAnyTiles) return null;
+
+  const words = getUndiscoveredWords();
+  for (const word of words) {
+    const length = word.pattern.length;
+    for (const tiles of directionSets) {
+      if (tiles.length < length) continue;
+
+      for (const buildTarget of wordDirections) {
+        const targetChars = buildTarget(word);
+
+        for (let i = 0; i <= tiles.length - length; i += 1) {
+          const slice = tiles.slice(i, i + length);
+          const chars = slice.map((t) => t.char).join('');
+          const yValues = slice.map((t) => t.y);
+          const ySpan = Math.max(...yValues) - Math.min(...yValues);
+          if (ySpan > 96) continue;
+
+          let gapsValid = true;
+          for (let g = 0; g < slice.length - 1; g += 1) {
+            if (Math.abs(slice[g].x - slice[g + 1].x) > 150) {
+              gapsValid = false;
+              break;
+            }
+          }
+          if (!gapsValid) continue;
+          if (chars !== targetChars) continue;
+
+          const xValues = slice.map((t) => t.x);
+          const minX = Math.min(...xValues);
+          const maxX = Math.max(...xValues);
+          const minY = Math.min(...yValues);
+          const maxY = Math.max(...yValues);
+          const midX = (minX + maxX) / 2;
+          const midY = (minY + maxY) / 2;
+
+          return {
+            word,
+            tileRefs: slice.map((t) => ({ id: t.id, source: t.source })),
+            origin: {
+              left: midX - 60,
+              top: midY - 28,
+              width: 120,
+              height: 56,
+              right: midX + 60,
+              bottom: midY + 28,
+            }
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function spawnAnvilClickPopup(x, y) {
+  const el = document.createElement('div');
+  el.className = 'mold-clink-popup';
+  el.textContent = 'Click!';
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 600);
+}
+
+function attemptWordDiscoveryFromAnvil() {
+  const match = findAnvilWordMatch();
+  if (!match) return;
+
+  const placedIds = match.tileRefs.filter((t) => t.source === 'placed').map((t) => t.id);
+  const physicsIds = match.tileRefs.filter((t) => t.source === 'physics').map((t) => t.id);
+  consumeAnvilPlacedLetters(placedIds);
+  letterPhysics?.consumeLettersByIds?.(physicsIds);
+
+  const forgedWord = {
+    text: match.word.pattern,
+    english: match.word.english,
+    length: match.word.pattern.length,
+    power: computeWordPower(match.word.pattern.length),
+  };
+
+  const bounds = match.origin || {
+    left: window.innerWidth * 0.5 - 80,
+    right: window.innerWidth * 0.5 + 80,
+    top: window.innerHeight * 0.6 - 40,
+    bottom: window.innerHeight * 0.6 + 40,
+    width: 160,
+    height: 80,
+  };
+
+  const renownGained = forgedWord.length * 2;
+  addLetters(renownGained);
+  spawnResourceGain(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2, renownGained, 'renown');
+  spawnMagicalText(forgedWord, bounds, 0);
+}
+
 /**
  * Initialize the game
  */
@@ -574,6 +693,8 @@ function initializeGame() {
 
   // Initialize hearth system
   initializeHearth();
+  spyglassSystem.registerWorldTargets();
+  seedStartingStructuralWords();
 
   // Initialize audio on first user gesture (Web Audio API requirement)
   const startAudio = async () => {
@@ -600,8 +721,16 @@ function initializeGame() {
   initToolsSidebar(
     // onToolSelected: pull a tool out to use it
     (toolName, dropX, dropY) => {
+      const craftingCanvas = document.getElementById('craftingCanvas');
+
+      // Ensure lazy tools exist before activation/positioning so drag-out
+      // always feels like "tool in hand" on first pull.
+      if (toolName === 'pestle') ensurePestleSystem(craftingCanvas, null);
+      if (toolName === 'shovel') ensureShovelSystem(craftingCanvas, null);
+
       const btnMap = {
         hammer: document.getElementById('selectHammer'),
+        spyglass: document.getElementById('selectSpyglass'),
         pestle: document.getElementById('selectPestle'),
         shovel: document.getElementById('selectShovel')
       };
@@ -609,7 +738,6 @@ function initializeGame() {
       if (btn) btn.click();
 
       // Position the tool at the drop location (convert screen coords to canvas coords)
-      const craftingCanvas = document.getElementById('craftingCanvas');
       if (craftingCanvas && dropX != null && dropY != null) {
         const rect = craftingCanvas.getBoundingClientRect();
         const canvasX = dropX - rect.left;
@@ -637,17 +765,17 @@ function initializeGame() {
           shovelSystem.shovel.headX = canvasX;
           shovelSystem.shovel.headY = canvasY + (shovelSystem.shovel.length || 120);
         }
+        if (toolName === 'spyglass') {
+          spyglassSystem.startAt(dropX, dropY);
+        }
       }
-
-      // Lazy tool initialization for better startup performance.
-      if (toolName === 'pestle') ensurePestleSystem(craftingCanvas, null);
-      if (toolName === 'shovel') ensureShovelSystem(craftingCanvas, null);
     },
     // onToolPutAway: drop a tool back in the sidebar to stow it
     (toolName) => {
       if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
       if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
       if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
+      if (toolName === 'spyglass') spyglassSystem.stop();
 
       // Clear the active tool if we just put away the one that was active
       if (activeTool === toolName) {
@@ -657,6 +785,7 @@ function initializeGame() {
       // Also clear active state on hidden tool buttons
       const btn = document.getElementById(
         toolName === 'hammer' ? 'selectHammer' :
+        toolName === 'spyglass' ? 'selectSpyglass' :
         toolName === 'pestle' ? 'selectPestle' :
         toolName === 'shovel' ? 'selectShovel' : ''
       );
@@ -709,6 +838,10 @@ function initializeCraftingSystems() {
 
   // Callback when hammer strikes anvil - spawn flying physics letters
   hammerSystem.onLetterForged = (impactX, impactY, power, strikeVx, multiplier = 1) => {
+    if (multiplier > 1) {
+      attemptWordDiscoveryFromAnvil();
+    }
+
     // Spawn letters based on lettersPerClick and multiplier
     // On mobile, cap total spawned per strike to keep framerate smooth
     const rawTotal = gameState.lettersPerClick * multiplier;
@@ -792,33 +925,15 @@ function initializeCraftingSystems() {
     updateUI();
   };
 
-  // Callback when hammer strikes a mold.
-  hammerSystem.onForgeTriggered = (moldId) => {
-    const mold = gameState.currentLine.molds.find(m => m.id === moldId);
-    if (!mold) return;
-
-    const forgedWord = forgeSingleMold(mold);
-    if (!forgedWord) return;
-
-    const moldEl = getWorldMoldElement(moldId);
-    const fallback = document.querySelector('.mold-viewport');
-    const bounds = moldEl ? moldEl.getBoundingClientRect() : (fallback ? fallback.getBoundingClientRect() : null);
-    if (bounds) {
-      const renownGained = forgedWord.length * 2;
-      addLetters(renownGained);
-      const screenX = bounds.left + bounds.width / 2;
-      const screenY = bounds.top + bounds.height / 2;
-      spawnResourceGain(screenX, screenY, renownGained, 'renown');
-      spawnMagicalText(forgedWord, bounds, 0);
-    }
-
-    updateUI();
-  };
+  hammerSystem.onForgeTriggered = null;
 
   // Initialize letter physics system (thrown letter blocks)
   letterPhysics = new LetterPhysicsSystem();
   window.letterPhysics = letterPhysics;
   letterPhysics.onSlotFilled = handleMoldSlotFilled;
+  letterPhysics.onAnvilClick = (x, y) => {
+    spawnAnvilClickPopup(x, y);
+  };
 
   // Overlay renderer: draw physics letters on the letter blocks canvas
   const renderPhysicsLetters = () => {
@@ -848,6 +963,8 @@ function initializeCraftingSystems() {
 
   // Wire up put-away callbacks: when a tool is released near the sidebar, stow it
   hammerSystem.onPutAway = makePutAwayHandler('hammer');
+  spyglassSystem.onPutAway = makePutAwayHandler('spyglass');
+  window.getAnvilViewportRect = () => hammerSystem.getAnvilViewportRect();
 
   console.log('Crafting systems initialized');
 }
@@ -857,22 +974,25 @@ function initializeCraftingSystems() {
  */
 function setupToolSelection() {
   const hammerBtn = document.getElementById('selectHammer');
+  const spyglassBtn = document.getElementById('selectSpyglass');
   const pestleBtn = document.getElementById('selectPestle');
   const shovelBtn = document.getElementById('selectShovel');
   const craftingHint = document.getElementById('craftingHint');
-  if (!hammerBtn || !pestleBtn || !shovelBtn) return;
+  if (!hammerBtn || !spyglassBtn || !pestleBtn || !shovelBtn) return;
 
   hammerBtn.addEventListener('click', () => {
     if (activeTool === 'hammer') return;
 
     activeTool = 'hammer';
     hammerBtn.classList.add('active');
+    spyglassBtn.classList.remove('active');
     pestleBtn.classList.remove('active');
     shovelBtn.classList.remove('active');
 
     // Switch systems
     if (shovelSystem) shovelSystem.stop();
     if (pestleSystem) pestleSystem.stop();
+    spyglassSystem.stop();
     if (hammerSystem) hammerSystem.start();
 
     // Update hint text
@@ -884,6 +1004,21 @@ function setupToolSelection() {
     console.log('Switched to Hammer');
   });
 
+  spyglassBtn.addEventListener('click', () => {
+    if (activeTool === 'spyglass') return;
+
+    activeTool = 'spyglass';
+    spyglassBtn.classList.add('active');
+    hammerBtn.classList.remove('active');
+    pestleBtn.classList.remove('active');
+    shovelBtn.classList.remove('active');
+
+    if (hammerSystem) hammerSystem.stop();
+    if (pestleSystem) pestleSystem.stop();
+    if (shovelSystem) shovelSystem.stop();
+    spyglassSystem.startAt(window.innerWidth * 0.7, window.innerHeight * 0.35);
+  });
+
   pestleBtn.addEventListener('click', () => {
     if (activeTool === 'pestle') return;
 
@@ -891,12 +1026,14 @@ function setupToolSelection() {
 
     activeTool = 'pestle';
     shovelBtn.classList.remove('active');
+    spyglassBtn.classList.remove('active');
     pestleBtn.classList.add('active');
     hammerBtn.classList.remove('active');
 
     // Switch systems
     if (hammerSystem) hammerSystem.stop();
     if (shovelSystem) shovelSystem.stop();
+    spyglassSystem.stop();
     if (pestleSystem) pestleSystem.start();
 
     // Update hint text
@@ -917,10 +1054,12 @@ function setupToolSelection() {
     shovelBtn.classList.add('active');
     hammerBtn.classList.remove('active');
     pestleBtn.classList.remove('active');
+    spyglassBtn.classList.remove('active');
 
     // Switch systems
     if (hammerSystem) hammerSystem.stop();
     if (pestleSystem) pestleSystem.stop();
+    spyglassSystem.stop();
     if (shovelSystem) shovelSystem.start();
 
     // Update hint text
@@ -930,6 +1069,24 @@ function setupToolSelection() {
     }
 
     console.log('Switched to Shovel');
+  });
+}
+
+function seedStartingStructuralWords() {
+  const structuralWords = gameState.currentLine.molds.filter((mold) => (
+    mold.english === 'is' || mold.english === 'the' || mold.english === 'of'
+  ));
+
+  structuralWords.forEach((mold) => {
+    addWord({
+      id: getNextWordId(),
+      text: mold.pattern,
+      english: mold.english,
+      length: mold.pattern.length,
+      power: computeWordPower(mold.pattern.length),
+      heated: true,
+    });
+    recordForgedWord({ text: mold.pattern, english: mold.english });
   });
 }
 
@@ -948,20 +1105,6 @@ function setupEventHandlers() {
       if (hireScribe()) {
         updateUI();
       }
-    });
-  }
-
-  // Mold navigation buttons
-  const prevMoldBtn = document.getElementById('prevMoldBtn');
-  const nextMoldBtn = document.getElementById('nextMoldBtn');
-  if (prevMoldBtn && nextMoldBtn) {
-    prevMoldBtn.addEventListener('click', () => {
-      navigatePreviousMold();
-      updateUI();
-    });
-    nextMoldBtn.addEventListener('click', () => {
-      navigateNextMold();
-      updateUI();
     });
   }
 
@@ -1209,12 +1352,7 @@ function gameLoop(timestamp) {
         canvasRectAge = 0;
       }
 
-      // Hammer pushes nearby physics letters
-      if (hammerSystem && hammerSystem.isRunning && cachedCanvasRect) {
-        const hx = cachedCanvasRect.left + hammerSystem.hammer.headX;
-        const hy = cachedCanvasRect.top + hammerSystem.hammer.headY;
-        letterPhysics.pushFrom(hx, hy, 45, hammerSystem.hammer.headVx || 0, hammerSystem.hammer.headVy || 0);
-      }
+      // Hammer should pass through physics letters (no push interaction).
 
       // Render physics letters when no tool is active
       if (letterBlocksCanvasRef) {

@@ -198,7 +198,7 @@ function updateDrag(e) {
   moldWorldState.lastTime = now;
 }
 
-function finishDrag(e) {
+function finishDrag() {
   if (!moldWorldState.activeMoldId) return;
   const mold = gameState.currentLine.molds.find(m => m.id === moldWorldState.activeMoldId);
   moldWorldState.activeMoldId = null;
@@ -208,17 +208,7 @@ function finishDrag(e) {
   const runtime = ensureMoldRuntime(mold);
   runtime.dragging = false;
 
-  const viewport = document.querySelector('.mold-viewport');
-  if (viewport) {
-    const vr = viewport.getBoundingClientRect();
-    if (e.clientX >= vr.left && e.clientX <= vr.right && e.clientY >= vr.top && e.clientY <= vr.bottom) {
-      runtime.inViewport = true;
-      runtime.vx = 0;
-      runtime.vy = 0;
-      runtime.docked = false;
-      runtime.heated = false;
-    }
-  }
+  runtime.inViewport = false;
 }
 
 function setupPointerHandlers() {
@@ -325,55 +315,20 @@ function getStoredMolds() {
  * Set mold viewport width based on longest mold pattern
  */
 export function setMoldViewportWidth() {
-  const moldViewportDiv = document.querySelector('.mold-viewport');
-  if (!moldViewportDiv || !gameState.currentLine.molds.length) return;
-
-  const longest = gameState.currentLine.molds.reduce((max, m) => Math.max(max, m.pattern.length + 1), 0);
-  const slotWidth = 32;
-  const gap = 6;
-  const extra = 96;
-  const innerWidth = longest > 0 ? (longest * slotWidth + (longest - 1) * gap) : 0;
-  const viewportWidth = innerWidth + extra;
-  moldViewportDiv.style.width = viewportWidth + 'px';
+  // Mold viewport removed.
 }
 
 export function navigatePreviousMold() {
-  const stored = getStoredMolds();
-  if (!stored.length) {
-    gameState.currentMoldIndex = 0;
-    return;
-  }
-  const total = stored.length;
-  const current = ((gameState.currentMoldIndex % total) + total) % total;
-  gameState.currentMoldIndex = (current - 1 + total) % total;
+  gameState.currentMoldIndex = 0;
 }
 
 export function navigateNextMold() {
-  const stored = getStoredMolds();
-  if (!stored.length) {
-    gameState.currentMoldIndex = 0;
-    return;
-  }
-  const total = stored.length;
-  const current = ((gameState.currentMoldIndex % total) + total) % total;
-  gameState.currentMoldIndex = (current + 1) % total;
+  gameState.currentMoldIndex = 0;
 }
 
 export function initializeMoldSystem() {
-  setupPointerHandlers();
-  ensureWorldLayer();
-
-  gameState.currentLine.molds.forEach((mold) => {
-    const runtime = ensureMoldRuntime(mold);
-    runtime.inViewport = true;
-    runtime.dragging = false;
-    runtime.docked = false;
-    runtime.heated = false;
-  });
-
-  if (!moldWorldState.rafId) {
-    moldWorldState.rafId = requestAnimationFrame(tickMoldPhysics);
-  }
+  const worldLayer = document.getElementById('moldWorldLayer');
+  if (worldLayer) worldLayer.remove();
 }
 
 export function getMoldById(moldId) {
@@ -385,19 +340,8 @@ export function getWorldMoldElement(moldId) {
 }
 
 export function getForgeableMoldAtPoint(clientX, clientY) {
-  const cards = Array.from(document.querySelectorAll('.viewport-mold'));
-  for (const card of cards) {
-    const moldId = Number(card.dataset.moldId);
-    const mold = getMoldById(moldId);
-    if (!mold) continue;
-    const runtime = ensureMoldRuntime(mold);
-    if (runtime.consumed) continue;
-    const rect = card.getBoundingClientRect();
-    const inside = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
-    if (inside) {
-      return mold;
-    }
-  }
+  void clientX;
+  void clientY;
   return null;
 }
 
@@ -468,25 +412,7 @@ export function setupWordChipDrag(chip, wordId) {
 }
 
 export function renderMoldsInViewport(container) {
-  if (!container) return;
-  container.innerHTML = '';
-
-  const worldLayer = ensureWorldLayer();
-  const stored = getStoredMolds();
-
-  if (!stored.length) {
-    gameState.currentMoldIndex = 0;
-    return;
+  if (container) {
+    container.innerHTML = '';
   }
-
-  if (gameState.currentMoldIndex < 0) gameState.currentMoldIndex = 0;
-  if (gameState.currentMoldIndex >= stored.length) gameState.currentMoldIndex = stored.length - 1;
-
-  const mold = stored[gameState.currentMoldIndex];
-  const card = createMoldCard(mold, { world: false });
-  hydrateMoldCard(card, mold, { world: false });
-  container.appendChild(card);
-
-  const worldCard = worldLayer.querySelector(`.world-mold[data-mold-id="${mold.id}"]`);
-  if (worldCard) worldCard.remove();
 }

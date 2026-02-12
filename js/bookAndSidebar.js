@@ -217,6 +217,8 @@ let toolDragGhost = null;
 let toolDragSource = null;
 let toolDragStartX = 0;
 let toolDragStartY = 0;
+let toolDragActivated = false;
+let toolSelectedCallback = null;
 const MIN_DRAG_DISTANCE = 15; // px before treating as a real drag
 let sidebarRecenterListenerAdded = false;
 
@@ -248,6 +250,7 @@ function ensureSidebarRecenterListener() {
  * @param {Function} onToolPutAway - callback(toolName) when a tool is dropped back
  */
 export function initToolsSidebar(onToolSelected, onToolPutAway) {
+  toolSelectedCallback = onToolSelected || null;
   const sidebar = document.getElementById('toolsSidebar');
   if (!sidebar) return;
 
@@ -277,7 +280,7 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
 
   const slots = sidebar.querySelectorAll('.tool-slot');
   slots.forEach(slot => {
-    slot.addEventListener('mousedown', (e) => onToolSlotMouseDown(e, slot, onToolSelected));
+    slot.addEventListener('mousedown', (e) => onToolSlotMouseDown(e, slot));
     // Touch: drag-out support (mirrors mouse drag behavior)
     slot.addEventListener('touchstart', (e) => {
       if (slot.classList.contains('locked-hidden')) return;
@@ -287,7 +290,7 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
         clientY: touch.clientY,
         preventDefault: () => { if (e.cancelable) e.preventDefault(); },
         stopPropagation: () => e.stopPropagation()
-      }, slot, onToolSelected);
+      }, slot);
     }, { passive: false });
   });
 
@@ -309,7 +312,7 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
   });
 }
 
-function onToolSlotMouseDown(e, slot, onToolSelected) {
+function onToolSlotMouseDown(e, slot) {
   if (slot.classList.contains('locked-hidden')) return;
   e.preventDefault();
 
@@ -317,6 +320,7 @@ function onToolSlotMouseDown(e, slot, onToolSelected) {
   toolDragSource = slot;
   toolDragStartX = e.clientX;
   toolDragStartY = e.clientY;
+  toolDragActivated = false;
 
   // Don't show ghost or dragging-out state yet — wait until mouse moves enough
   // (handled in onToolSlotMouseMove)
@@ -329,26 +333,20 @@ function onToolSlotMouseMove(e) {
   const dy = e.clientY - toolDragStartY;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  // Create ghost once we've moved past the threshold
-  if (!toolDragGhost && dist >= MIN_DRAG_DISTANCE) {
+  // Once drag threshold is crossed, immediately spawn/pull out the real tool.
+  if (!toolDragActivated && dist >= MIN_DRAG_DISTANCE) {
+    toolDragActivated = true;
     toolDragSource.classList.add('dragging-out');
 
     // Pin the sidebar open so the user can drop back into it
     const sidebar = document.getElementById('toolsSidebar');
     if (sidebar) sidebar.classList.add('pinned');
 
-    toolDragGhost = document.createElement('div');
-    toolDragGhost.className = 'tool-drag-ghost';
-    const icon = toolDragSource.querySelector('.tool-slot-icon');
-    if (icon) {
-      toolDragGhost.appendChild(icon.cloneNode(true));
-    }
-    document.body.appendChild(toolDragGhost);
+    activateTool(toolDragSource.dataset.tool, e, toolSelectedCallback);
   }
 
-  if (toolDragGhost) {
-    toolDragGhost.style.left = e.clientX + 'px';
-    toolDragGhost.style.top = e.clientY + 'px';
+  if (toolDragActivated && toolSelectedCallback) {
+    toolSelectedCallback(toolDragSource.dataset.tool, e.clientX, e.clientY);
   }
 }
 
@@ -373,7 +371,7 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
   if (!toolDragging) return;
   toolDragging = false;
 
-  const wasDragged = toolDragGhost !== null; // ghost only exists after threshold
+  const wasDragged = toolDragActivated;
 
   // Check drop zone BEFORE unpinning (so bounding rect is still fully visible)
   const sidebar = document.getElementById('toolsSidebar');
@@ -391,12 +389,6 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
   // Unpin the sidebar
   if (sidebar) sidebar.classList.remove('pinned');
 
-  // Remove ghost
-  if (toolDragGhost) {
-    toolDragGhost.remove();
-    toolDragGhost = null;
-  }
-
   if (!toolDragSource) return;
 
   const tool = toolDragSource.dataset.tool;
@@ -413,9 +405,8 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
       activateTool(tool, e, onToolSelected);
     }
   } else if (!droppedInSidebar) {
-    // Dragged out of sidebar — activate at drop location
+    // Dragged out of sidebar — tool already active and being moved.
     console.log('Sidebar drag-out for', tool);
-    activateTool(tool, e, onToolSelected);
   } else {
     // Dragged back into sidebar — put it away
     console.log('Sidebar drag-back for', tool);
@@ -423,6 +414,7 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
   }
 
   toolDragSource = null;
+  toolDragActivated = false;
 }
 
 /**

@@ -34,6 +34,7 @@ export class LetterPhysicsSystem {
 
     // callback set by app.js when a mold slot is filled
     this.onSlotFilled = null;
+    this.onAnvilClick = null;
 
     // Cached DOM refs/rects to avoid per-frame layout reads
     this._slotCache = null;
@@ -50,6 +51,9 @@ export class LetterPhysicsSystem {
     this._basketCacheInterval = IS_MOBILE ? 220 : 140;
     this._basketRef = null;
     this._letterPoolRef = null;
+    this._anvilRectCache = null;
+    this._anvilCacheTime = 0;
+    this._anvilCacheInterval = IS_MOBILE ? 120 : 80;
   }
 
   // ─── Spawning ────────────────────────────────────────────
@@ -72,7 +76,7 @@ export class LetterPhysicsSystem {
       else return null; // hard cap
     }
 
-    const letter = {
+      const letter = {
       id: ++this._idCounter,
       char,
       x, y,
@@ -82,6 +86,7 @@ export class LetterPhysicsSystem {
       isHeld: false,
       settled: false,
       consumed: false,
+      hasAnvilLanded: false,
     };
     this.letters.push(letter);
     return letter;
@@ -97,6 +102,14 @@ export class LetterPhysicsSystem {
    */
   update(dt, w, h) {
     const floorY = h - FLOOR_MARGIN;
+    const now = performance.now();
+    if (!this._anvilRectCache || now - this._anvilCacheTime > this._anvilCacheInterval) {
+      this._anvilRectCache = typeof window.getAnvilViewportRect === 'function'
+        ? window.getAnvilViewportRect()
+        : null;
+      this._anvilCacheTime = now;
+    }
+    const anvilRect = this._anvilRectCache;
     let hasActive = false;
     let hasMoving = false;
 
@@ -139,6 +152,36 @@ export class LetterPhysicsSystem {
               // Snap angle to nearest upright
               l.angle = Math.round(l.angle / (Math.PI / 2)) * (Math.PI / 2);
             }
+          }
+        }
+      }
+
+      // ── Anvil platform ──
+      if (anvilRect && l.vy >= 0) {
+        const withinX = l.x >= (anvilRect.left + HALF_W) && l.x <= (anvilRect.right - HALF_W);
+        const footY = l.y + HALF_H;
+        const nearTop = footY >= anvilRect.top && footY <= anvilRect.top + 18;
+        if (withinX && nearTop) {
+          l.y = anvilRect.top - HALF_H;
+          l.vx *= 0.82;
+
+          if (Math.abs(l.vy) <= 90) {
+            l.vy = 0;
+            l.vx *= 0.6;
+            if (Math.abs(l.vx) < MOBILE_STOP_VEL) {
+              l.vx = 0;
+              l.angularVel = 0;
+              l.settled = true;
+              l.angle = Math.round(l.angle / (Math.PI / 2)) * (Math.PI / 2);
+            }
+          } else {
+            l.vy = -l.vy * 0.18;
+            l.angularVel *= 0.75;
+          }
+
+          if (!l.hasAnvilLanded) {
+            l.hasAnvilLanded = true;
+            if (this.onAnvilClick) this.onAnvilClick(l.x, l.y);
           }
         }
       }
@@ -406,6 +449,39 @@ export class LetterPhysicsSystem {
         l.angularVel = (Math.random() - 0.5) * 10;
       }
     }
+  }
+
+  /**
+   * Return settled physics letters that are currently sitting on the anvil.
+   * Useful for word discovery checks during red-hot hits.
+   * @returns {Array<{id:number,char:string,x:number,y:number}>}
+   */
+  getAnvilLetters() {
+    const anvilRect = typeof window.getAnvilViewportRect === 'function'
+      ? window.getAnvilViewportRect()
+      : null;
+    if (!anvilRect) return [];
+
+    return this.letters
+      .filter((l) => {
+        if (l.consumed || l.isHeld) return false;
+        const onTopBand = (l.y + HALF_H) >= (anvilRect.top - 2) && (l.y + HALF_H) <= (anvilRect.top + 20);
+        const withinX = l.x >= anvilRect.left && l.x <= anvilRect.right;
+        return onTopBand && withinX;
+      })
+      .map((l) => ({ id: l.id, char: l.char, x: l.x, y: l.y }));
+  }
+
+  /**
+   * Consume physics letters by id.
+   * @param {number[]} ids
+   */
+  consumeLettersByIds(ids) {
+    if (!ids || !ids.length) return;
+    const idSet = new Set(ids);
+    this.letters.forEach((l) => {
+      if (idSet.has(l.id)) l.consumed = true;
+    });
   }
 
   // ─── Render ──────────────────────────────────────────────

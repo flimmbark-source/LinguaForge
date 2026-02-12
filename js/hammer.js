@@ -1024,6 +1024,18 @@ spawnSparks(x, y, power, options = {}) {
     return getForgeableMoldAtPoint(viewportX, viewportY);
   }
 
+  getAnvilViewportRect() {
+    const canvasRect = this.canvas.getBoundingClientRect();
+    return {
+      left: canvasRect.left + this.anvil.x,
+      right: canvasRect.left + this.anvil.x + this.anvil.width,
+      top: canvasRect.top + this.anvil.y,
+      bottom: canvasRect.top + this.anvil.y + this.anvil.height,
+      width: this.anvil.width,
+      height: this.anvil.height,
+    };
+  }
+
   /**
    * Heating / cooling logic for the hammer. Extracted so it can run
    * while the hammer is hanging in the hearth as well as during normal updates.
@@ -1782,9 +1794,9 @@ updateFreeHammer(dt) {
       }
     }
 
-    // Check for mold collision (no heating requirement for forging)
+    // Check for mold collision (requires a red-hot strike)
     const forgeableMold = this.getForgeableMoldUnderHammer();
-    if (forgeableMold && downwardSpeed > impactThreshold) {
+    if (forgeableMold && downwardSpeed > impactThreshold && hammer.heatLevel > 0) {
       if (hammer.strikeCooldown <= 0) {
         hammer.strikeCooldown = 0.25;
         const impactX = headX;
@@ -1798,6 +1810,9 @@ updateFreeHammer(dt) {
           this.onForgeTriggered(forgeableMold.id);
           console.log('Hammer struck a mold! Forging word...');
         }
+
+        hammer.heatLevel = 0;
+        hammer.heatingTimer = 0;
 
         // Bounce the hammer back
         const bounceFactor = 0.6;
