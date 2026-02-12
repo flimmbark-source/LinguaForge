@@ -1090,6 +1090,16 @@ updateHammer(dt) {
   }
 
   if (hammer.isHanging && !hammer.isHeld) {
+    // Keep the hanging hammer pinned to the *current* hearth position.
+    // The hearth can move when the player pans the background; if we only use
+    // the cached hangX/hangY from the original drop, the hammer can appear to
+    // disappear off-screen and not recover after panning back.
+    const liveHangPoint = this.getHearthHangPoint();
+    if (this.isPointNearCanvas(liveHangPoint)) {
+      hammer.hangX = liveHangPoint.x;
+      hammer.hangY = liveHangPoint.y;
+    }
+
     hammer.headX = hammer.hangX;
     hammer.headY = hammer.hangY;
     hammer.prevHeadX = hammer.hangX;
