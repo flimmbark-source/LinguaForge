@@ -38,7 +38,7 @@ export class PestleSystem {
     this._mortarImg.src = 'Public/Mortar.png';
 
     // World physics constants
-    this.gravity = 3400;
+    this.gravity = 5400;
     this.mortarGravity = 12000; // Dramatically increased gravity inside mortar
     this.airFriction = 0.9;
 
