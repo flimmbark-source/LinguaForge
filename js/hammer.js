@@ -960,7 +960,8 @@ spawnSparks(x, y, power, options = {}) {
     // Increase velocity a bit for snappier pop; rip hits may be stronger
     const speedBias = options.isRip ? 1.2 : 1.0;
     const vx = side * (100 + Math.random() * 180) * (0.9 + (power || 0)) * speedBias;
-    const vy = 120 + Math.random() * 140 + (power || 0) * 130 * speedBias;
+    // Negative Y velocity so the text pops upward first, then falls with gravity.
+    const vy = -(160 + Math.random() * 140 + (power || 0) * 130 * speedBias);
 
     // Visual sizes: start small, grow to target. Make 'Clonk!' larger than the others.
     const startSize = 4;
