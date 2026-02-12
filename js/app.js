@@ -69,6 +69,21 @@ const MOBILE_ANVIL_ANCHORS = {
   }
 };
 
+const MOBILE_MORTAR_ANCHORS = {
+  portrait: {
+    x: 980,
+    y: 640,
+    width: 220,
+    height: 82
+  },
+  landscape: {
+    x: 990,
+    y: 615,
+    width: 190,
+    height: 72
+  }
+};
+
 let bgOffsetX = 0;
 let bgOffsetY = 0;
 let bgDragging = false;
@@ -80,6 +95,7 @@ function ensurePestleSystem(craftingCanvas, overlayRenderer) {
   if (!craftingCanvas) return null;
 
   pestleSystem = new PestleSystem(craftingCanvas);
+  updateAnchoredUI();
   const renderer = overlayRenderer || toolOverlayRenderer;
   if (renderer) {
     if (typeof pestleSystem.setOverlayRenderer === 'function') {
@@ -284,6 +300,21 @@ function updateAnchoredUI() {
       height: anvilAnchorConfig.height * updatedMetrics.scale
     });
     hammerSystem.setUseBackgroundAnvil(true);
+  }
+
+  if (pestleSystem && typeof pestleSystem.setMortarAnchor === 'function') {
+    const mortarAnchorConfig = isPortraitBackground()
+      ? MOBILE_MORTAR_ANCHORS.portrait
+      : MOBILE_MORTAR_ANCHORS.landscape;
+
+    const mortarX = updatedMetrics.originX + mortarAnchorConfig.x * updatedMetrics.scale;
+    const mortarY = updatedMetrics.originY + mortarAnchorConfig.y * updatedMetrics.scale;
+    pestleSystem.setMortarAnchor({
+      x: mortarX,
+      y: mortarY,
+      width: mortarAnchorConfig.width * updatedMetrics.scale,
+      height: mortarAnchorConfig.height * updatedMetrics.scale
+    });
   }
 }
 

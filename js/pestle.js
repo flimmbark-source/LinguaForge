@@ -98,6 +98,9 @@ export class PestleSystem {
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
     this.onPointerUp = this.onPointerUp.bind(this);
+    this.onViewportChange = this.onViewportChange.bind(this);
+
+    this.mortarAnchor = null;
 
     // Initialize
     this.resize();
@@ -160,6 +163,58 @@ export class PestleSystem {
     this.insideMortar = false;
   }
 
+  onViewportChange() {
+    this.resize();
+  }
+
+  setMortarAnchor(anchor) {
+    this.mortarAnchor = anchor;
+    this.applyMortarAnchor();
+  }
+
+  applyMortarAnchor() {
+    if (!this.mortarAnchor || window.innerWidth > MOBILE_BREAKPOINT) return;
+
+    const canvasRect = this.canvas.getBoundingClientRect();
+    const oldCenterX = this.mortar.x + this.mortar.width / 2;
+    const oldCenterY = this.mortar.y + this.mortar.height / 2;
+
+    this.mortar.width = this.mortarAnchor.width;
+    this.mortar.height = this.mortarAnchor.height;
+    this.mortar.x = this.mortarAnchor.x - canvasRect.left - this.mortar.width / 2;
+    this.mortar.y = this.mortarAnchor.y - canvasRect.top - this.mortar.height / 2;
+
+    const newCenterX = this.mortar.x + this.mortar.width / 2;
+    const newCenterY = this.mortar.y + this.mortar.height / 2;
+
+    const isMobileLandscape = window.innerWidth <= MOBILE_BREAKPOINT && window.innerWidth > window.innerHeight;
+    this.pestle.constantLength = isMobileLandscape ? 120 : 140;
+
+    if (this._mortarAnchorInitialized) {
+      // Keep current interaction state by translating existing pestle positions.
+      const dx = newCenterX - oldCenterX;
+      const dy = newCenterY - oldCenterY;
+      this.pestle.pivotX += dx;
+      this.pestle.pivotY += dy;
+      this.pestle.headX += dx;
+      this.pestle.headY += dy;
+      this.pestle.prevHeadX += dx;
+      this.pestle.prevHeadY += dy;
+      return;
+    }
+
+    this._mortarAnchorInitialized = true;
+    const pivotX = this.mortar.x + this.mortar.width / 2;
+    const pivotY = this.mortar.y - (isMobileLandscape ? 64 : 76);
+    this.pestle.pivotX = pivotX;
+    this.pestle.pivotY = pivotY;
+    this.pestle.headX = pivotX;
+    this.pestle.headY = pivotY + this.pestle.constantLength;
+    this.pestle.prevHeadX = this.pestle.headX;
+    this.pestle.prevHeadY = this.pestle.headY;
+    this.pestle.angle = -Math.PI / 2;
+  }
+
   /**
    * Setup event listeners
    */
@@ -171,6 +226,11 @@ export class PestleSystem {
     document.addEventListener('touchmove', this.onPointerMove, { passive: false });
     document.addEventListener('touchend', this.onPointerUp);
     window.addEventListener('resize', this.resize);
+    window.addEventListener('orientationchange', this.onViewportChange);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', this.onViewportChange);
+      window.visualViewport.addEventListener('scroll', this.onViewportChange);
+    }
   }
 
   /**
@@ -933,5 +993,10 @@ export class PestleSystem {
     document.removeEventListener('touchmove', this.onPointerMove);
     document.removeEventListener('touchend', this.onPointerUp);
     window.removeEventListener('resize', this.resize);
+    window.removeEventListener('orientationchange', this.onViewportChange);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this.onViewportChange);
+      window.visualViewport.removeEventListener('scroll', this.onViewportChange);
+    }
   }
 }
