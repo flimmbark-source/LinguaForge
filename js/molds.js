@@ -315,65 +315,20 @@ function getStoredMolds() {
  * Set mold viewport width based on longest mold pattern
  */
 export function setMoldViewportWidth() {
-  const moldViewportDiv = document.querySelector('.mold-viewport');
-  if (!moldViewportDiv || !gameState.currentLine.molds.length) return;
-
-  const longest = gameState.currentLine.molds.reduce((max, m) => Math.max(max, m.pattern.length + 1), 0);
-  const slotWidth = 32;
-  const gap = 6;
-  const extra = 96;
-  const innerWidth = longest > 0 ? (longest * slotWidth + (longest - 1) * gap) : 0;
-  const viewportWidth = innerWidth + extra;
-  moldViewportDiv.style.width = viewportWidth + 'px';
+  // Mold viewport removed.
 }
 
 export function navigatePreviousMold() {
-  const stored = getStoredMolds();
-  if (!stored.length) {
-    gameState.currentMoldIndex = 0;
-    return;
-  }
-  const total = stored.length;
-  const current = ((gameState.currentMoldIndex % total) + total) % total;
-  gameState.currentMoldIndex = (current - 1 + total) % total;
+  gameState.currentMoldIndex = 0;
 }
 
 export function navigateNextMold() {
-  const stored = getStoredMolds();
-  if (!stored.length) {
-    gameState.currentMoldIndex = 0;
-    return;
-  }
-  const total = stored.length;
-  const current = ((gameState.currentMoldIndex % total) + total) % total;
-  gameState.currentMoldIndex = (current + 1) % total;
+  gameState.currentMoldIndex = 0;
 }
 
 export function initializeMoldSystem() {
-  setupPointerHandlers();
-  ensureWorldLayer();
-
-  const hearthRects = getHearthRects();
-  const baseRect = hearthRects?.baseRect;
-  const anchorX = baseRect ? baseRect.left + 24 : (window.innerWidth * 0.6);
-  const anchorY = baseRect ? baseRect.top - 84 : (window.innerHeight * 0.62);
-
-  gameState.currentLine.molds.forEach((mold, idx) => {
-    const runtime = ensureMoldRuntime(mold);
-    runtime.inViewport = false;
-    runtime.dragging = false;
-    runtime.docked = true;
-    runtime.heated = true;
-    runtime.x = anchorX + ((idx % 4) * 92);
-    runtime.y = anchorY + (Math.floor(idx / 4) * 58);
-    runtime.vx = 0;
-    runtime.vy = 0;
-    runtime.rotationDeg = 0;
-  });
-
-  if (!moldWorldState.rafId) {
-    moldWorldState.rafId = requestAnimationFrame(tickMoldPhysics);
-  }
+  const worldLayer = document.getElementById('moldWorldLayer');
+  if (worldLayer) worldLayer.remove();
 }
 
 export function getMoldById(moldId) {
@@ -385,19 +340,8 @@ export function getWorldMoldElement(moldId) {
 }
 
 export function getForgeableMoldAtPoint(clientX, clientY) {
-  const cards = Array.from(document.querySelectorAll('.world-mold'));
-  for (const card of cards) {
-    const moldId = Number(card.dataset.moldId);
-    const mold = getMoldById(moldId);
-    if (!mold) continue;
-    const runtime = ensureMoldRuntime(mold);
-    if (runtime.consumed) continue;
-    const rect = card.getBoundingClientRect();
-    const inside = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
-    if (inside) {
-      return mold;
-    }
-  }
+  void clientX;
+  void clientY;
   return null;
 }
 

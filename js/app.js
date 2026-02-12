@@ -6,7 +6,7 @@
 
 import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower } from './config.js?v=9';
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
-import { setMoldViewportWidth, initializeMoldSystem, getWorldMoldElement, forgeSingleMold, navigatePreviousMold, navigateNextMold } from './molds.js?v=9';
+import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
 import { setupVerseAreaDrop, completeVerse } from './grammar.js?v=9';
 import { initializeElements, updateUI, initWordSelector } from './ui.js?v=9';
@@ -23,6 +23,7 @@ import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } 
 import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 import { LetterPhysicsSystem } from './letterPhysics.js?v=9';
 import { spyglassSystem } from './spyglass.js?v=9';
+import { getAnvilPlacedLetters, consumeAnvilPlacedLetters } from './letters.js?v=9';
 
 // Global crafting system references
 let hammerSystem = null;
@@ -549,6 +550,80 @@ function spawnMagicalText(word, moldBounds, delay) {
   }, delay);
 }
 
+function getUndiscoveredWords() {
+  const discovered = new Set(gameState.forgedWordsHistory.map((w) => w.text));
+  return gameState.currentLine.molds.filter((mold) => !discovered.has(mold.pattern));
+}
+
+function findAnvilWordMatch() {
+  const tiles = getAnvilPlacedLetters()
+    .slice()
+    .sort((a, b) => b.x - a.x); // RTL order
+  if (!tiles.length) return null;
+
+  const words = getUndiscoveredWords();
+  for (const word of words) {
+    const length = word.pattern.length;
+    if (tiles.length < length) continue;
+
+    for (let i = 0; i <= tiles.length - length; i += 1) {
+      const slice = tiles.slice(i, i + length);
+      const chars = slice.map((t) => t.char).join('');
+      const yValues = slice.map((t) => t.y);
+      const ySpan = Math.max(...yValues) - Math.min(...yValues);
+      if (ySpan > 70) continue;
+
+      let gapsValid = true;
+      for (let g = 0; g < slice.length - 1; g += 1) {
+        if (Math.abs(slice[g].x - slice[g + 1].x) > 120) {
+          gapsValid = false;
+          break;
+        }
+      }
+      if (!gapsValid) continue;
+      if (chars !== word.pattern) continue;
+
+      return { word, tileIds: slice.map((t) => t.id) };
+    }
+  }
+  return null;
+}
+
+function attemptWordDiscoveryFromAnvil() {
+  const match = findAnvilWordMatch();
+  if (!match) return;
+
+  consumeAnvilPlacedLetters(match.tileIds);
+
+  const forgedWord = {
+    id: getNextWordId(),
+    text: match.word.pattern,
+    english: match.word.english,
+    length: match.word.pattern.length,
+    power: computeWordPower(match.word.pattern.length),
+    heated: true,
+  };
+
+  addWord(forgedWord);
+  recordForgedWord(forgedWord);
+
+  const anvilRect = hammerSystem?.getAnvilViewportRect?.();
+  const bounds = anvilRect || {
+    left: window.innerWidth * 0.5 - 80,
+    right: window.innerWidth * 0.5 + 80,
+    top: window.innerHeight * 0.6 - 40,
+    bottom: window.innerHeight * 0.6 + 40,
+    width: 160,
+    height: 80,
+  };
+
+  const renownGained = forgedWord.length * 2;
+  addLetters(renownGained);
+  spawnResourceGain(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2, renownGained, 'renown');
+  spawnMagicalText(forgedWord, bounds, 0);
+  updateUI();
+}
+
 /**
  * Initialize the game
  */
@@ -721,6 +796,10 @@ function initializeCraftingSystems() {
 
   // Callback when hammer strikes anvil - spawn flying physics letters
   hammerSystem.onLetterForged = (impactX, impactY, power, strikeVx, multiplier = 1) => {
+    if (multiplier > 1) {
+      attemptWordDiscoveryFromAnvil();
+    }
+
     // Spawn letters based on lettersPerClick and multiplier
     // On mobile, cap total spawned per strike to keep framerate smooth
     const rawTotal = gameState.lettersPerClick * multiplier;
@@ -804,28 +883,7 @@ function initializeCraftingSystems() {
     updateUI();
   };
 
-  // Callback when hammer strikes a mold.
-  hammerSystem.onForgeTriggered = (moldId) => {
-    const mold = gameState.currentLine.molds.find(m => m.id === moldId);
-    if (!mold) return;
-
-    const forgedWord = forgeSingleMold(mold);
-    if (!forgedWord) return;
-
-    const moldEl = getWorldMoldElement(moldId);
-    const fallback = document.querySelector('.mold-viewport');
-    const bounds = moldEl ? moldEl.getBoundingClientRect() : (fallback ? fallback.getBoundingClientRect() : null);
-    if (bounds) {
-      const renownGained = forgedWord.length * 2;
-      addLetters(renownGained);
-      const screenX = bounds.left + bounds.width / 2;
-      const screenY = bounds.top + bounds.height / 2;
-      spawnResourceGain(screenX, screenY, renownGained, 'renown');
-      spawnMagicalText(forgedWord, bounds, 0);
-    }
-
-    updateUI();
-  };
+  hammerSystem.onForgeTriggered = null;
 
   // Initialize letter physics system (thrown letter blocks)
   letterPhysics = new LetterPhysicsSystem();
@@ -860,6 +918,7 @@ function initializeCraftingSystems() {
 
   // Wire up put-away callbacks: when a tool is released near the sidebar, stow it
   hammerSystem.onPutAway = makePutAwayHandler('hammer');
+  window.getAnvilViewportRect = () => hammerSystem.getAnvilViewportRect();
 
   console.log('Crafting systems initialized');
 }
@@ -1000,20 +1059,6 @@ function setupEventHandlers() {
       if (hireScribe()) {
         updateUI();
       }
-    });
-  }
-
-  // Mold navigation buttons
-  const prevMoldBtn = document.getElementById('prevMoldBtn');
-  const nextMoldBtn = document.getElementById('nextMoldBtn');
-  if (prevMoldBtn && nextMoldBtn) {
-    prevMoldBtn.addEventListener('click', () => {
-      navigatePreviousMold();
-      updateUI();
-    });
-    nextMoldBtn.addEventListener('click', () => {
-      navigateNextMold();
-      updateUI();
     });
   }
 

@@ -11,6 +11,8 @@ import { canPlaceInHearth, heatHearth, spawnHearthSpark } from './RuneHearth.js?
 let _heldLetter = null;
 let _mouseHist = [];
 let _moldHoldState = null;
+const _anvilPlacedLetters = [];
+let _nextAnvilPlacedId = 1;
 
 function setScreenLocked(locked) {
   if (window.setScreenLocked) {
@@ -140,6 +142,74 @@ function getLetterDragOverlay() {
   return overlay;
 }
 
+function createAnvilPlacedTile(char, clientX, clientY) {
+  const tile = document.createElement('div');
+  tile.className = 'letter-tile anvil-letter-tile';
+  tile.dataset.letterChar = char;
+  tile.dataset.anvilPlacedId = String(_nextAnvilPlacedId++);
+  tile.innerHTML = `<span>${char}</span>`;
+  tile.style.left = `${clientX}px`;
+  tile.style.top = `${clientY}px`;
+  document.body.appendChild(tile);
+
+  const record = {
+    id: Number(tile.dataset.anvilPlacedId),
+    char,
+    x: clientX,
+    y: clientY,
+    el: tile,
+  };
+  _anvilPlacedLetters.push(record);
+
+  let dragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  tile.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    dragging = true;
+    const rect = tile.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+    tile.setPointerCapture?.(e.pointerId);
+  });
+
+  tile.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const left = e.clientX - offsetX;
+    const top = e.clientY - offsetY;
+    tile.style.left = `${left}px`;
+    tile.style.top = `${top}px`;
+    record.x = left + tile.offsetWidth / 2;
+    record.y = top + tile.offsetHeight / 2;
+  });
+
+  const endDrag = () => { dragging = false; };
+  tile.addEventListener('pointerup', endDrag);
+  tile.addEventListener('pointercancel', endDrag);
+
+  return record;
+}
+
+export function getAnvilPlacedLetters() {
+  return _anvilPlacedLetters.map((tile) => ({
+    id: tile.id,
+    char: tile.char,
+    x: tile.x,
+    y: tile.y,
+  }));
+}
+
+export function consumeAnvilPlacedLetters(tileIds) {
+  const toRemove = new Set(tileIds);
+  for (let i = _anvilPlacedLetters.length - 1; i >= 0; i -= 1) {
+    const tile = _anvilPlacedLetters[i];
+    if (!toRemove.has(tile.id)) continue;
+    if (tile.el?.isConnected) tile.el.remove();
+    _anvilPlacedLetters.splice(i, 1);
+  }
+}
+
 /**
  * Get a random allowed letter
  * @returns {string} Random Hebrew letter
@@ -259,38 +329,6 @@ export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled
   if (hearthDiv) {
     const hearthRect = hearthDiv.getBoundingClientRect();
     const overHearth = rectsIntersect(tileRect, hearthRect);
-    if (overHearth) {
-      // Try filling any overlapping mold slot before feeding the hearth
-      const char = tile.dataset.letterChar || '';
-      const visibleSlots = document.querySelectorAll('.slot');
-      let matched = false;
-      visibleSlots.forEach(slotEl => {
-        if (matched) return;
-        const slotRect = slotEl.getBoundingClientRect();
-        if (!rectsIntersect(tileRect, slotRect)) return;
-        const moldId = Number(slotEl.dataset.moldId);
-        const slotIndex = Number(slotEl.dataset.slotIndex);
-        const mold = gameState.currentLine.molds.find(m => m.id === moldId);
-        if (!mold) return;
-        if (mold.runtime?.consumed) return;
-        if (mold.slots[slotIndex]) return; // Already filled
-        if (mold.pattern[slotIndex] !== char) return; // Wrong letter
-
-        // Valid drop into mold slot
-        mold.slots[slotIndex] = true;
-        consumeLetterTile(tile);
-        matched = true;
-        if (onSlotFilled) onSlotFilled(slotEl);
-      });
-
-      if (matched) {
-        if (tile.isConnected) returnTileToBasket();
-        resetLetterTilePosition(tile);
-        return;
-      }
-
-      // No matching mold slot under the hearth drop — fall through to hearth handling
-    }
 
     // Hearth handling: if still over hearth, consume and heat
     if (overHearth) {
@@ -308,34 +346,19 @@ export function handleLetterDrop(clientX, clientY, tile, dragState, onSlotFilled
     }
   }
 
-  // Priority 2: Mold slots (fill slots with matching letters)
-  let matched = false;
-  const char = tile.dataset.letterChar || '';
-  const visibleSlots = document.querySelectorAll('.slot');
-  visibleSlots.forEach(slotEl => {
-    if (matched) return;
-    const moldId = Number(slotEl.dataset.moldId);
-    const slotIndex = Number(slotEl.dataset.slotIndex);
-    const mold = gameState.currentLine.molds.find(m => m.id === moldId);
-    if (!mold) return;
-    if (mold.runtime?.consumed) return;
-    if (mold.slots[slotIndex]) return; // Already filled
-    if (mold.pattern[slotIndex] !== char) return; // Wrong letter
-
-    const slotRect = slotEl.getBoundingClientRect();
-    if (!rectsIntersect(tileRect, slotRect)) return;
-
-    // Valid drop! Fill the slot
-    mold.slots[slotIndex] = true;
-    consumeLetterTile(tile);
-    matched = true;
-    if (onSlotFilled) onSlotFilled(slotEl);
-  });
-
-  if (matched) {
-    returnTileToBasket(tile);
-    resetLetterTilePosition(tile);
-    return;
+  // Priority 2: Anvil placement (free-form assembly)
+  if (typeof window.getAnvilViewportRect === 'function') {
+    const anvilRect = window.getAnvilViewportRect();
+    if (anvilRect && rectsIntersect(tileRect, anvilRect)) {
+      const char = tile.dataset.letterChar || '';
+      consumeLetterTile(tile);
+      createAnvilPlacedTile(char, clientX, clientY);
+      if (tile.isConnected) {
+        returnTileToBasket();
+        resetLetterTilePosition(tile);
+      }
+      return;
+    }
   }
 
   // Priority 3: Letter pool (return to pool)

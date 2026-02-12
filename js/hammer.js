@@ -1024,6 +1024,18 @@ spawnSparks(x, y, power, options = {}) {
     return getForgeableMoldAtPoint(viewportX, viewportY);
   }
 
+  getAnvilViewportRect() {
+    const canvasRect = this.canvas.getBoundingClientRect();
+    return {
+      left: canvasRect.left + this.anvil.x,
+      right: canvasRect.left + this.anvil.x + this.anvil.width,
+      top: canvasRect.top + this.anvil.y,
+      bottom: canvasRect.top + this.anvil.y + this.anvil.height,
+      width: this.anvil.width,
+      height: this.anvil.height,
+    };
+  }
+
   /**
    * Heating / cooling logic for the hammer. Extracted so it can run
    * while the hammer is hanging in the hearth as well as during normal updates.

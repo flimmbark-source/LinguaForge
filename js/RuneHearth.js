@@ -205,6 +205,7 @@ export function getHearthIntensity() {
 export function updateHearthVisuals() {
   const hearthDiv = document.getElementById('hearth');
   const fireDiv = document.getElementById('hearthFire');
+  const breathDiv = document.getElementById('hearthBreath');
 
   const forgeEnabled = gameState.hearthUnlocked && gameState.hearthTurnedon;
 
@@ -216,6 +217,7 @@ export function updateHearthVisuals() {
     hearthDiv.removeAttribute('data-hearth-level');
     fireDiv.style.opacity = '0';
     fireDiv.style.transform = 'scale(0)';
+    if (breathDiv) breathDiv.style.opacity = '0';
     fireDiv.classList.add('disabled');
     lastForgeEnabledState = forgeEnabled;
     return;
@@ -243,6 +245,7 @@ export function updateHearthVisuals() {
     // Opacity increases with level
     const baseOpacity = 0.3 + (level * 0.15);
     fireDiv.style.opacity = Math.max(baseOpacity, intensity);
+    if (breathDiv) breathDiv.style.opacity = String(0.3 + (intensity * 0.5));
 
     // Add data attribute for CSS styling based on level
     hearthDiv.setAttribute('data-hearth-level', level);
@@ -254,6 +257,7 @@ export function updateHearthVisuals() {
     fireDiv.style.opacity = '0.4';
     fireDiv.style.transform = 'scale(0.5)';
     fireDiv.classList.remove('fading');
+    if (breathDiv) breathDiv.style.opacity = '0.35';
   }
 
   lastForgeEnabledState = forgeEnabled;
