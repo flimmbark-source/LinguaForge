@@ -15,7 +15,7 @@ const MOBILE_ANVIL_PORTRAIT_OFFSET_X = -30;
 const MOBILE_ANVIL_PORTRAIT_OFFSET_Y = 44;
 const MOBILE_ANVIL_LANDSCAPE_OFFSET_X = -5;
 const MOBILE_ANVIL_LANDSCAPE_OFFSET_Y = 38;
-const DESKTOP_GRAB_ZONE_OFFSET_Y = 0;
+const DESKTOP_HANG_SNAP_OFFSET_Y = 150;
 
 function getMobileAnvilVisualOffset() {
   const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
@@ -550,7 +550,7 @@ export class HammerSystem {
   isPointNearHammer(px, py) {
     const h = this.hammer;
     const isMobile = this.width <= MOBILE_BREAKPOINT;
-    const adjustedPy = isMobile ? py : py + DESKTOP_GRAB_ZONE_OFFSET_Y;
+    const adjustedPy = py;
     const x1 = h.pivotX;
     const y1 = h.pivotY;
     const x2 = h.headX;
