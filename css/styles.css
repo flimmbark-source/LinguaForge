@@ -4447,10 +4447,10 @@ body.book-overlay-active .magic-book {
 }
 
 .mold-viewport-wrapper.open {
-  top: 50% !important;
+  top: 10px !important;
   left: 50% !important;
   right: auto !important;
-  transform: translate(-50%, -50%) !important;
+  transform: translateX(-50%) !important;
 }
 
 .mold-viewport-wrapper::before,
@@ -4495,10 +4495,10 @@ body.book-overlay-active .magic-book {
   }
 
   .mold-viewport-wrapper.open {
-    top: 50% !important;
+    top: 92px !important;
     left: 50% !important;
     right: auto !important;
-    transform: translate(-50%, -50%) !important;
+    transform: translateX(-50%) !important;
   }
 
   .mold-viewport-wrapper.open .mold-panel {
