@@ -15,6 +15,7 @@ const MOBILE_ANVIL_PORTRAIT_OFFSET_X = -30;
 const MOBILE_ANVIL_PORTRAIT_OFFSET_Y = 44;
 const MOBILE_ANVIL_LANDSCAPE_OFFSET_X = -5;
 const MOBILE_ANVIL_LANDSCAPE_OFFSET_Y = 38;
+const DESKTOP_HANG_SNAP_OFFSET_Y = 150;
 
 function getMobileAnvilVisualOffset() {
   const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
@@ -548,6 +549,8 @@ export class HammerSystem {
    */
   isPointNearHammer(px, py) {
     const h = this.hammer;
+    const isMobile = this.width <= MOBILE_BREAKPOINT;
+    const adjustedPy = py;
     const x1 = h.pivotX;
     const y1 = h.pivotY;
     const x2 = h.headX;
@@ -555,14 +558,14 @@ export class HammerSystem {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const lenSq = dx * dx + dy * dy || 1;
-    let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+    let t = ((px - x1) * dx + (adjustedPy - y1) * dy) / lenSq;
     t = Math.max(0, Math.min(1, t));
     const cx = x1 + dx * t;
     const cy = y1 + dy * t;
-    const dist = Math.hypot(px - cx, py - cy);
+    const dist = Math.hypot(px - cx, adjustedPy - cy);
 
     // Base grab distance
-    let grabDist = this.width <= MOBILE_BREAKPOINT ? 70 : 140;
+    let grabDist = isMobile ? 70 : 140;
 
     // Increase grab radius for falling hammers in bottom zone
     const isInBottomZone = py > this.height * 0.8;
@@ -722,12 +725,16 @@ onPointerDown(e) {
         // Use both pointer-release distance and hammer-head distance.
         // The player may grab the handle far away from the head, so relying on
         // pointer position alone can make hearth pinning feel broken.
-        const pointerDist = Math.hypot(client.clientX - hangClientX, client.clientY - hangClientY);
+        const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+        const hangSnapOffsetY = isMobile ? 0 : DESKTOP_HANG_SNAP_OFFSET_Y;
+
+        const adjustedPointerY = client.clientY + hangSnapOffsetY;
+        const pointerDist = Math.hypot(client.clientX - hangClientX, adjustedPointerY - hangClientY);
         const headClientX = canvasRect.left + this.hammer.headX;
         const headClientY = canvasRect.top + this.hammer.headY;
-        const headDist = Math.hypot(headClientX - hangClientX, headClientY - hangClientY);
+        const adjustedHeadY = headClientY + hangSnapOffsetY;
+        const headDist = Math.hypot(headClientX - hangClientX, adjustedHeadY - hangClientY);
 
-        const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
         const isLandscape = window.innerWidth > window.innerHeight;
         const snapRadius = isMobile
           ? (isLandscape ? 40 : 50)
@@ -980,6 +987,16 @@ spawnSparks(x, y, power, options = {}) {
     const hearthBounds = getHearthBounds();
     if (!hearthBounds) return false;
 
+    const isLandscape = window.innerWidth > window.innerHeight;
+    const heatZoneTopExtension = isLandscape ? 24 : 0;
+
+    const adjustedBounds = {
+      left: hearthBounds.left,
+      right: hearthBounds.right,
+      top: hearthBounds.top - heatZoneTopExtension,
+      bottom: hearthBounds.bottom
+    };
+
     const headX = this.hammer.headX;
     const headY = this.hammer.headY;
 
@@ -989,10 +1006,10 @@ spawnSparks(x, y, power, options = {}) {
     const viewportY = canvasRect.top + headY;
 
     return (
-      viewportX > hearthBounds.left &&
-      viewportX < hearthBounds.right &&
-      viewportY > hearthBounds.top &&
-      viewportY < hearthBounds.bottom
+      viewportX > adjustedBounds.left &&
+      viewportX < adjustedBounds.right &&
+      viewportY > adjustedBounds.top &&
+      viewportY < adjustedBounds.bottom
     );
   }
 
