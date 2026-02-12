@@ -721,6 +721,13 @@ function initializeGame() {
   initToolsSidebar(
     // onToolSelected: pull a tool out to use it
     (toolName, dropX, dropY) => {
+      const craftingCanvas = document.getElementById('craftingCanvas');
+
+      // Ensure lazy tools exist before activation/positioning so drag-out
+      // always feels like "tool in hand" on first pull.
+      if (toolName === 'pestle') ensurePestleSystem(craftingCanvas, null);
+      if (toolName === 'shovel') ensureShovelSystem(craftingCanvas, null);
+
       const btnMap = {
         hammer: document.getElementById('selectHammer'),
         spyglass: document.getElementById('selectSpyglass'),
@@ -731,7 +738,6 @@ function initializeGame() {
       if (btn) btn.click();
 
       // Position the tool at the drop location (convert screen coords to canvas coords)
-      const craftingCanvas = document.getElementById('craftingCanvas');
       if (craftingCanvas && dropX != null && dropY != null) {
         const rect = craftingCanvas.getBoundingClientRect();
         const canvasX = dropX - rect.left;
@@ -763,10 +769,6 @@ function initializeGame() {
           spyglassSystem.startAt(dropX, dropY);
         }
       }
-
-      // Lazy tool initialization for better startup performance.
-      if (toolName === 'pestle') ensurePestleSystem(craftingCanvas, null);
-      if (toolName === 'shovel') ensureShovelSystem(craftingCanvas, null);
     },
     // onToolPutAway: drop a tool back in the sidebar to stow it
     (toolName) => {
