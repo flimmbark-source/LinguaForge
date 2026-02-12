@@ -466,9 +466,9 @@ function spawnMagicalText(word, moldBounds, delay) {
     // Create a wrapper to handle centering (so the animation transform doesn't fight it)
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'position:fixed;z-index:200;pointer-events:none;';
-    // Start above the mold viewport so the text pops up from it
+    // Start just below the mold viewport so the text is visible on-screen
     const startX = moldBounds.left + moldBounds.width / 2;
-    const startY = moldBounds.top - 10;
+    const startY = moldBounds.bottom + 12;
     wrapper.style.left = startX + 'px';
     wrapper.style.top = startY + 'px';
 
@@ -792,7 +792,7 @@ function initializeCraftingSystems() {
     updateUI();
   };
 
-  // Callback when red-hot hammer strikes a heated mold.
+  // Callback when hammer strikes a mold.
   hammerSystem.onForgeTriggered = (moldId) => {
     const mold = gameState.currentLine.molds.find(m => m.id === moldId);
     if (!mold) return;

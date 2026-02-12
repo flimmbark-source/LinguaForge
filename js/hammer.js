@@ -8,7 +8,7 @@ import { gameState } from './state.js?v=9';
 import { playHammerClank } from './audio.js?v=9';
 import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 import { getUpgradeLevel } from './upgrades.js?v=9';
-import { getHeatedMoldAtPoint } from './molds.js?v=9';
+import { getForgeableMoldAtPoint } from './molds.js?v=9';
 
 const MOBILE_BREAKPOINT = 900;
 const MOBILE_ANVIL_PORTRAIT_OFFSET_X = -30;
@@ -90,7 +90,7 @@ export class HammerSystem {
     // Callbacks set by app
     this.onLetterForged = null;
     this.onLetterLanded = null;
-    this.onForgeTriggered = null; // Called when red-hot hammer hits a heated mold
+    this.onForgeTriggered = null; // Called when hammer hits a forgeable mold
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
     // World physics constants
@@ -950,7 +950,7 @@ spawnSparks(x, y, power, options = {}) {
     // Increase velocity a bit for snappier pop; rip hits may be stronger
     const speedBias = options.isRip ? 1.2 : 1.0;
     const vx = side * (100 + Math.random() * 180) * (0.9 + (power || 0)) * speedBias;
-    const vy = -(100 + Math.random() * 120) - (power || 0) * 160 * speedBias;
+    const vy = 120 + Math.random() * 140 + (power || 0) * 130 * speedBias;
 
     // Visual sizes: start small, grow to target. Make 'Clonk!' larger than the others.
     const startSize = 4;
@@ -1014,14 +1014,14 @@ spawnSparks(x, y, power, options = {}) {
   }
 
   /**
-   * Check if hammer head is over a heated mold in world space
+   * Check if hammer head is over a forgeable mold in the viewport
    * @returns {Object|null}
    */
-  getHeatedMoldUnderHammer() {
+  getForgeableMoldUnderHammer() {
     const canvasRect = this.canvas.getBoundingClientRect();
     const viewportX = canvasRect.left + this.hammer.headX;
     const viewportY = canvasRect.top + this.hammer.headY;
-    return getHeatedMoldAtPoint(viewportX, viewportY);
+    return getForgeableMoldAtPoint(viewportX, viewportY);
   }
 
   /**
@@ -1782,25 +1782,21 @@ updateFreeHammer(dt) {
       }
     }
 
-    // Check for heated mold collision (hammer must be hot and mold must be heated)
-    const heatedMold = this.getHeatedMoldUnderHammer();
-    if (hammer.heatLevel > 0 && heatedMold && downwardSpeed > impactThreshold) {
+    // Check for mold collision (no heating requirement for forging)
+    const forgeableMold = this.getForgeableMoldUnderHammer();
+    if (forgeableMold && downwardSpeed > impactThreshold) {
       if (hammer.strikeCooldown <= 0) {
         hammer.strikeCooldown = 0.25;
         const impactX = headX;
         const impactY = headY;
-
-        // Cool down the hammer
-        hammer.heatLevel = 0;
-        hammer.heatingTimer = 0;
 
         // Spawn sparks at impact point
         this.spawnSparks(impactX, impactY, 1.2);
 
         // Trigger forge functionality (no letter spawning on forge strikes)
         if (this.onForgeTriggered) {
-          this.onForgeTriggered(heatedMold.id);
-          console.log('Red-hot hammer struck a heated mold! Forging word...');
+          this.onForgeTriggered(forgeableMold.id);
+          console.log('Hammer struck a mold! Forging word...');
         }
 
         // Bounce the hammer back
