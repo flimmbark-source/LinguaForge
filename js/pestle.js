@@ -76,6 +76,13 @@ export class PestleSystem {
       cooldown: 0,
     };
 
+    this.pressTracker = {
+      holdTime: 0,
+      holdThreshold: 0.65, // seconds pressing at the bottom before release can produce ink
+      liftDistance: 18,
+      armed: false,
+    };
+
     // Visual effects
     this.inkDrops = [];
 
@@ -161,6 +168,11 @@ export class PestleSystem {
     this.pestle.angle = -Math.PI / 2;
 
     this.insideMortar = false;
+    this.pressTracker.holdTime = 0;
+    this.pressTracker.armed = false;
+
+    // Keep mobile mortar anchored to the background after viewport/orientation changes.
+    this.applyMortarAnchor();
   }
 
   onViewportChange() {
@@ -622,6 +634,22 @@ export class PestleSystem {
     ) - Math.PI / 2;
   }
 
+  consumeLetterForInk(reason = 'grind') {
+    const pestle = this.pestle;
+    if (pestle.attachedLetters.length <= 0) return false;
+
+    const letter = pestle.attachedLetters.pop();
+    this.spawnInkDrop(pestle.headX, pestle.headY);
+    if (Math.random() < 0.6) playPestleGrind(); else playPestleSquelch();
+
+    if (this.onInkProduced) {
+      this.onInkProduced(letter, pestle.headX, pestle.headY);
+    }
+
+    console.log(`${reason} ink from letter:`, letter, '| remaining:', pestle.attachedLetters.length);
+    return true;
+  }
+
   /**
    * Check and produce ink when grinding the mortar bottom
    */
@@ -629,39 +657,59 @@ export class PestleSystem {
     const pestle = this.pestle;
     const m = this.mortar;
     const gt = this.grindTracker;
+    const pt = this.pressTracker;
     const headRadius = pestle.width / 2;
 
     gt.cooldown = Math.max(0, gt.cooldown - dt);
 
-    // Only grind when held, inside mortar, and near the bottom
+    // Only grind/press when held, inside mortar, and near the bottom
     const mBottom = m.y + m.height;
-    const nearBottom = pestle.headY >= mBottom - headRadius - 6;
+    const nearBottom = this.insideMortar && pestle.headY >= mBottom - headRadius - 6;
 
-    if (!this.insideMortar || !nearBottom) {
+    if (!this.insideMortar) {
       gt.lastX = pestle.headX;
       gt.distance = 0;
+      pt.holdTime = 0;
+      pt.armed = false;
       return;
     }
 
-    // Accumulate horizontal movement
-    const moved = Math.abs(pestle.headX - gt.lastX);
-    gt.distance += moved;
-    gt.lastX = pestle.headX;
-
-    // Produce ink when enough grinding has occurred
-    if (gt.distance >= gt.threshold && gt.cooldown <= 0 && pestle.attachedLetters.length > 0) {
+    if (!nearBottom) {
+      gt.lastX = pestle.headX;
       gt.distance = 0;
-      gt.cooldown = 0.2;
+    } else {
+      // Accumulate horizontal movement for existing grind behavior
+      const moved = Math.abs(pestle.headX - gt.lastX);
+      gt.distance += moved;
+      gt.lastX = pestle.headX;
 
-      const letter = pestle.attachedLetters.pop();
-      this.spawnInkDrop(pestle.headX, pestle.headY);
-      if (Math.random() < 0.6) playPestleGrind(); else playPestleSquelch();
-
-      if (this.onInkProduced) {
-        this.onInkProduced(letter, pestle.headX, pestle.headY);
+      // Build press charge while held against mortar bottom
+      pt.holdTime += dt;
+      if (pt.holdTime >= pt.holdThreshold) {
+        pt.armed = true;
       }
+    }
 
-      console.log('Ground ink from letter:', letter, '| remaining:', pestle.attachedLetters.length);
+    // Existing grinding ink behavior
+    if (nearBottom && gt.distance >= gt.threshold && gt.cooldown <= 0) {
+      if (this.consumeLetterForInk('Ground')) {
+        gt.distance = 0;
+        gt.cooldown = 0.2;
+        pt.holdTime = 0;
+        pt.armed = false;
+      }
+      return;
+    }
+
+    // New mobile-friendly "smoosh" behavior:
+    // hold against bottom briefly, then lift to release ink.
+    const liftedAfterPress = pestle.headY <= mBottom - headRadius - pt.liftDistance;
+    if (pt.armed && liftedAfterPress && gt.cooldown <= 0) {
+      if (this.consumeLetterForInk('Pressed')) {
+        gt.cooldown = 0.2;
+      }
+      pt.holdTime = 0;
+      pt.armed = false;
     }
   }
 
