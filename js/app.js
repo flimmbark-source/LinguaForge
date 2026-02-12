@@ -635,7 +635,7 @@ function spawnAnvilClickPopup(x, y) {
 
 function attemptWordDiscoveryFromAnvil() {
   const match = findAnvilWordMatch();
-  if (!match) return;
+  if (!match) return false;
 
   const placedIds = match.tileRefs.filter((t) => t.source === 'placed').map((t) => t.id);
   const physicsIds = match.tileRefs.filter((t) => t.source === 'physics').map((t) => t.id);
@@ -662,6 +662,7 @@ function attemptWordDiscoveryFromAnvil() {
   addLetters(renownGained);
   spawnResourceGain(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2, renownGained, 'renown');
   spawnMagicalText(forgedWord, bounds, 0);
+  return true;
 }
 
 /**
@@ -838,23 +839,38 @@ function initializeCraftingSystems() {
 
   // Callback when hammer strikes anvil - spawn flying physics letters
   hammerSystem.onLetterForged = (impactX, impactY, power, strikeVx, multiplier = 1) => {
+    let discoveredMagicalWord = false;
     if (multiplier > 1) {
-      attemptWordDiscoveryFromAnvil();
+      discoveredMagicalWord = !!attemptWordDiscoveryFromAnvil();
     }
 
-    // Spawn letters based on lettersPerClick and multiplier
-    // On mobile, cap total spawned per strike to keep framerate smooth
-    const rawTotal = gameState.lettersPerClick * multiplier;
-    const totalLetters = isMobileDevice ? Math.min(rawTotal, 6) : rawTotal;
-    for (let i = 0; i < totalLetters; i++) {
-      // Get random Hebrew letter
-      const letterChar = randomAllowedLetter();
+    // If a red-hot strike discovered a magical word, do not spawn letters.
+    if (!(multiplier > 1 && discoveredMagicalWord)) {
+      // Spawn letters based on lettersPerClick and multiplier
+      // On mobile, cap total spawned per strike to keep framerate smooth
+      const rawTotal = gameState.lettersPerClick * multiplier;
+      const totalLetters = isMobileDevice ? Math.min(rawTotal, 6) : rawTotal;
+      const maxSpread = Math.PI / 4;
+      const spreadDivisor = Math.max(1, totalLetters - 1);
+      for (let i = 0; i < totalLetters; i++) {
+        // Get random Hebrew letter
+        const letterChar = randomAllowedLetter();
 
-      // Slight delay between multiple letters for visual effect (shorter on mobile)
-      const delay = isMobileDevice ? i * 30 : i * 50;
-      setTimeout(() => {
-        hammerSystem.spawnFlyingLetter(impactX, impactY, power, strikeVx, letterChar);
-      }, delay);
+        let launchAngleOffset = 0;
+        if (multiplier > 1) {
+          // Red-hot hits fan letters out at varied angles.
+          const normalized = spreadDivisor === 0 ? 0 : (i / spreadDivisor) - 0.5;
+          const deterministicSpread = normalized * maxSpread;
+          const jitter = (Math.random() - 0.5) * (maxSpread * 0.35);
+          launchAngleOffset = deterministicSpread + jitter;
+        }
+
+        // Slight delay between multiple letters for visual effect (shorter on mobile)
+        const delay = isMobileDevice ? i * 30 : i * 50;
+        setTimeout(() => {
+          hammerSystem.spawnFlyingLetter(impactX, impactY, power, strikeVx, letterChar, { launchAngleOffset });
+        }, delay);
+      }
     }
 
     // Hide hint after first strike
