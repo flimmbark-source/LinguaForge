@@ -71,16 +71,16 @@ const MOBILE_ANVIL_ANCHORS = {
 
 const MOBILE_MORTAR_ANCHORS = {
   portrait: {
-    x: 1100,
-    y: 650,
-    width: 200,
-    height: 75
+    x: 972,
+    y: 628,
+    width: 210,
+    height: 78
   },
   landscape: {
-    x: 1140,
-    y: 620,
-    width: 180,
-    height: 68
+    x: 972,
+    y: 628,
+    width: 205,
+    height: 76
   }
 };
 
