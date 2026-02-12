@@ -218,6 +218,7 @@ let toolDragSource = null;
 let toolDragStartX = 0;
 let toolDragStartY = 0;
 let toolDragActivated = false;
+let toolSelectedCallback = null;
 const MIN_DRAG_DISTANCE = 15; // px before treating as a real drag
 let sidebarRecenterListenerAdded = false;
 
@@ -249,6 +250,7 @@ function ensureSidebarRecenterListener() {
  * @param {Function} onToolPutAway - callback(toolName) when a tool is dropped back
  */
 export function initToolsSidebar(onToolSelected, onToolPutAway) {
+  toolSelectedCallback = onToolSelected || null;
   const sidebar = document.getElementById('toolsSidebar');
   if (!sidebar) return;
 
@@ -278,7 +280,7 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
 
   const slots = sidebar.querySelectorAll('.tool-slot');
   slots.forEach(slot => {
-    slot.addEventListener('mousedown', (e) => onToolSlotMouseDown(e, slot, onToolSelected));
+    slot.addEventListener('mousedown', (e) => onToolSlotMouseDown(e, slot));
     // Touch: drag-out support (mirrors mouse drag behavior)
     slot.addEventListener('touchstart', (e) => {
       if (slot.classList.contains('locked-hidden')) return;
@@ -288,7 +290,7 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
         clientY: touch.clientY,
         preventDefault: () => { if (e.cancelable) e.preventDefault(); },
         stopPropagation: () => e.stopPropagation()
-      }, slot, onToolSelected);
+      }, slot);
     }, { passive: false });
   });
 
@@ -310,7 +312,7 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
   });
 }
 
-function onToolSlotMouseDown(e, slot, onToolSelected) {
+function onToolSlotMouseDown(e, slot) {
   if (slot.classList.contains('locked-hidden')) return;
   e.preventDefault();
 
@@ -340,11 +342,11 @@ function onToolSlotMouseMove(e) {
     const sidebar = document.getElementById('toolsSidebar');
     if (sidebar) sidebar.classList.add('pinned');
 
-    activateTool(toolDragSource.dataset.tool, e, onToolSelected);
+    activateTool(toolDragSource.dataset.tool, e, toolSelectedCallback);
   }
 
-  if (toolDragActivated && onToolSelected) {
-    onToolSelected(toolDragSource.dataset.tool, e.clientX, e.clientY);
+  if (toolDragActivated && toolSelectedCallback) {
+    toolSelectedCallback(toolDragSource.dataset.tool, e.clientX, e.clientY);
   }
 }
 
