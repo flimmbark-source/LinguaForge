@@ -54,6 +54,7 @@ export class PestleSystem {
       width: 30,
       handleThickness: 12,
       angle: 0,
+      isHeld: false,
       attachedLetters: [],
     };
 
@@ -77,10 +78,7 @@ export class PestleSystem {
     };
 
     this.pressTracker = {
-      holdTime: 0,
-      holdThreshold: 0.65, // seconds pressing at the bottom before release can produce ink
-      liftDistance: 18,
-      armed: false,
+      wasNearBottom: false,
     };
 
     // Visual effects
@@ -168,8 +166,7 @@ export class PestleSystem {
     this.pestle.angle = -Math.PI / 2;
 
     this.insideMortar = false;
-    this.pressTracker.holdTime = 0;
-    this.pressTracker.armed = false;
+    this.pressTracker.wasNearBottom = false;
 
     // Keep mobile mortar anchored to the background after viewport/orientation changes.
     this.applyMortarAnchor();
@@ -308,7 +305,18 @@ export class PestleSystem {
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
+
+    if (!this.isPointNearPestle(this.input.mouseX, this.input.mouseY)) {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+
     this.input.isDown = true;
+    this.pestle.isHeld = true;
+    this.pestle.pivotX = this.input.mouseX;
+    this.pestle.pivotY = this.input.mouseY;
     setScreenLocked(true);
     setBackgroundDragLocked(true);
   }
@@ -325,7 +333,8 @@ export class PestleSystem {
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
     // Open sidebar when dragging near the tab
-    if (this.input.isDown) {
+    if (this.input.isDown && this.pestle.isHeld) {
+      e.preventDefault();
       handleToolDragNearSidebar(client.clientX);
     }
   }
@@ -333,10 +342,14 @@ export class PestleSystem {
   onPointerUp(e) {
     if (!this.isRunning) return;
 
+    if (!this.pestle.isHeld) return;
+
     // Only put tool away if released over the open sidebar content
     const client = e.changedTouches ? e.changedTouches[0] : e;
     if (shouldPutToolAway(client.clientX, client.clientY) && this.onPutAway) {
       cleanupToolDragSidebar();
+      this.input.isDown = false;
+      this.pestle.isHeld = false;
       setScreenLocked(false);
       setBackgroundDragLocked(false);
       this.onPutAway();
@@ -345,6 +358,7 @@ export class PestleSystem {
     cleanupToolDragSidebar();
 
     this.input.isDown = false;
+    this.pestle.isHeld = false;
     setScreenLocked(false);
     setBackgroundDragLocked(false);
   }
@@ -487,9 +501,11 @@ export class PestleSystem {
     const safeDt = Math.max(dt, 0.0001);
     const headRadius = pestle.width / 2;
 
-    // ── Pivot (handle end) snaps directly to mouse ──
-    pestle.pivotX = this.input.mouseX;
-    pestle.pivotY = this.input.mouseY;
+    // ── Pivot (handle end) follows pointer only while held ──
+    if (pestle.isHeld && this.input.isDown) {
+      pestle.pivotX = this.input.mouseX;
+      pestle.pivotY = this.input.mouseY;
+    }
 
     // ── Head (grinding end) swings below pivot with gravity (Verlet) ──
     const g = this.insideMortar ? this.mortarGravity : this.gravity;
@@ -669,25 +685,30 @@ export class PestleSystem {
     if (!this.insideMortar) {
       gt.lastX = pestle.headX;
       gt.distance = 0;
-      pt.holdTime = 0;
-      pt.armed = false;
+      pt.wasNearBottom = false;
       return;
     }
 
     if (!nearBottom) {
       gt.lastX = pestle.headX;
       gt.distance = 0;
+      pt.wasNearBottom = false;
     } else {
       // Accumulate horizontal movement for existing grind behavior
       const moved = Math.abs(pestle.headX - gt.lastX);
       gt.distance += moved;
       gt.lastX = pestle.headX;
 
-      // Build press charge while held against mortar bottom
-      pt.holdTime += dt;
-      if (pt.holdTime >= pt.holdThreshold) {
-        pt.armed = true;
+      // Smoosh on first contact with the mortar bottom.
+      const firstBottomContact = !pt.wasNearBottom;
+      if (firstBottomContact && gt.cooldown <= 0) {
+        if (this.consumeLetterForInk('Pressed')) {
+          gt.cooldown = 0.2;
+          gt.distance = 0;
+        }
       }
+
+      pt.wasNearBottom = true;
     }
 
     // Existing grinding ink behavior
@@ -695,21 +716,9 @@ export class PestleSystem {
       if (this.consumeLetterForInk('Ground')) {
         gt.distance = 0;
         gt.cooldown = 0.2;
-        pt.holdTime = 0;
-        pt.armed = false;
+        pt.wasNearBottom = true;
       }
       return;
-    }
-
-    // New mobile-friendly "smoosh" behavior:
-    // hold against bottom briefly, then lift to release ink.
-    const liftedAfterPress = pestle.headY <= mBottom - headRadius - pt.liftDistance;
-    if (pt.armed && liftedAfterPress && gt.cooldown <= 0) {
-      if (this.consumeLetterForInk('Pressed')) {
-        gt.cooldown = 0.2;
-      }
-      pt.holdTime = 0;
-      pt.armed = false;
     }
   }
 
