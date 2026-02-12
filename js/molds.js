@@ -363,6 +363,14 @@ export function initializeMoldSystem() {
   setupPointerHandlers();
   ensureWorldLayer();
 
+  gameState.currentLine.molds.forEach((mold) => {
+    const runtime = ensureMoldRuntime(mold);
+    runtime.inViewport = true;
+    runtime.dragging = false;
+    runtime.docked = false;
+    runtime.heated = false;
+  });
+
   if (!moldWorldState.rafId) {
     moldWorldState.rafId = requestAnimationFrame(tickMoldPhysics);
   }
@@ -376,14 +384,14 @@ export function getWorldMoldElement(moldId) {
   return document.querySelector(`.world-mold[data-mold-id="${moldId}"]`);
 }
 
-export function getHeatedMoldAtPoint(clientX, clientY) {
-  const cards = Array.from(document.querySelectorAll('.world-mold'));
+export function getForgeableMoldAtPoint(clientX, clientY) {
+  const cards = Array.from(document.querySelectorAll('.viewport-mold'));
   for (const card of cards) {
     const moldId = Number(card.dataset.moldId);
     const mold = getMoldById(moldId);
     if (!mold) continue;
     const runtime = ensureMoldRuntime(mold);
-    if (!runtime.heated || runtime.consumed) continue;
+    if (runtime.consumed) continue;
     const rect = card.getBoundingClientRect();
     const inside = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
     if (inside) {
@@ -477,11 +485,6 @@ export function renderMoldsInViewport(container) {
   const mold = stored[gameState.currentMoldIndex];
   const card = createMoldCard(mold, { world: false });
   hydrateMoldCard(card, mold, { world: false });
-  card.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    beginDragFromCard(card, e, true);
-  });
   container.appendChild(card);
 
   const worldCard = worldLayer.querySelector(`.world-mold[data-mold-id="${mold.id}"]`);
