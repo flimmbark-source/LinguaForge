@@ -11,10 +11,10 @@ import { getUpgradeLevel } from './upgrades.js?v=9';
 import { getHeatedMoldAtPoint } from './molds.js?v=9';
 
 const MOBILE_BREAKPOINT = 900;
-const MOBILE_ANVIL_PORTRAIT_OFFSET_X = -40;
-const MOBILE_ANVIL_PORTRAIT_OFFSET_Y = 24;
-const MOBILE_ANVIL_LANDSCAPE_OFFSET_X = -35;
-const MOBILE_ANVIL_LANDSCAPE_OFFSET_Y = 18;
+const MOBILE_ANVIL_PORTRAIT_OFFSET_X = -30;
+const MOBILE_ANVIL_PORTRAIT_OFFSET_Y = 44;
+const MOBILE_ANVIL_LANDSCAPE_OFFSET_X = -15;
+const MOBILE_ANVIL_LANDSCAPE_OFFSET_Y = 38;
 
 function getMobileAnvilVisualOffset() {
   const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
