@@ -4530,3 +4530,34 @@ body.book-overlay-active .magic-book {
     filter: brightness(1.2);
   }
 }
+
+.spyglass-lens {
+  position: fixed;
+  left: 70vw;
+  top: 35vh;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  border: 6px solid rgba(240, 220, 140, 0.95);
+  box-shadow: 0 0 0 4px rgba(30, 20, 10, 0.7), 0 10px 26px rgba(0, 0, 0, 0.45);
+  background: radial-gradient(circle at center, rgba(255, 248, 210, 0.3) 0%, rgba(38, 24, 12, 0.7) 100%);
+  transform: translate(-50%, -50%);
+  z-index: 80;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  touch-action: none;
+}
+
+.spyglass-lens.active {
+  display: flex;
+}
+
+.spyglass-word {
+  font-size: 34px;
+  font-weight: 700;
+  color: #fff4c8;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.75);
+  direction: rtl;
+}

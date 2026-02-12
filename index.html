@@ -85,6 +85,10 @@
         <div class="tool-slot-icon">🔨</div>
         <div class="tool-slot-label">Hammer</div>
       </div>
+      <div class="tool-slot" data-tool="spyglass" id="toolSlotSpyglass">
+        <div class="tool-slot-icon">🔍</div>
+        <div class="tool-slot-label">Spyglass</div>
+      </div>
       <div class="tool-slot locked-hidden" data-tool="pestle" id="toolSlotPestle">
         <div class="tool-slot-icon">🥄</div>
         <div class="tool-slot-label">Pestle</div>
@@ -99,6 +103,7 @@
   <!-- Hidden original tool buttons for JS compatibility -->
   <div style="display:none;">
     <button id="selectHammer" class="tool-button active" data-tool="hammer"></button>
+    <button id="selectSpyglass" class="tool-button" data-tool="spyglass"></button>
     <button id="selectPestle" class="tool-button locked-hidden" data-tool="pestle"></button>
     <button id="selectShovel" class="tool-button locked-hidden" data-tool="shovel"></button>
   </div>
@@ -183,20 +188,6 @@
     </div>
 
   </div>
-
-<!-- FLOATING MOLD VIEWPORT -->
-<div class="mold-viewport-wrapper">
-  <div class="mold-sidebar-tab">Molds</div>
-  <div class="section mold-panel">
-    <h2 style="margin-bottom:6px;"></h2>
-    <div class="mold-viewport">
-      <button id="prevMoldBtn" class="secondary" aria-label="Previous mold">&lt;</button>
-      <div id="moldList" class="mold-list"></div>
-      <button id="nextMoldBtn" class="secondary" aria-label="Next mold">&gt;</button>
-    </div>
-    <div id="moldIndexLabel" class="mold-index-label">1 / 1</div>
-  </div>
-</div>
 
   <!-- LETTER BASKET (FIXED AT BOTTOM LEFT) -->
   <div class="letter-basket">

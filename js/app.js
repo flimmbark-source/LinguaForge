@@ -22,6 +22,7 @@ import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from '
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
 import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 import { LetterPhysicsSystem } from './letterPhysics.js?v=9';
+import { spyglassSystem } from './spyglass.js?v=9';
 
 // Global crafting system references
 let hammerSystem = null;
@@ -32,7 +33,7 @@ let craftingCanvasRef = null;
 let letterBlocksCanvasRef = null;
 let letterBlocksCtx = null;
 let toolOverlayRenderer = null;
-let activeTool = 'hammer'; // 'hammer' or 'pestle'
+let activeTool = 'hammer'; // hammer / pestle / shovel / spyglass
 let screenLockCount = 0;
 let backgroundDragLockCount = 0;
 
@@ -142,15 +143,18 @@ function makePutAwayHandler(toolName) {
     if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
     if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
     if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
+    if (toolName === 'spyglass') spyglassSystem.stop();
     if (activeTool === toolName) activeTool = null;
     // Update sidebar slot
     const slotId = toolName === 'hammer' ? 'toolSlotHammer' :
+                   toolName === 'spyglass' ? 'toolSlotSpyglass' :
                    toolName === 'pestle' ? 'toolSlotPestle' :
                    toolName === 'shovel' ? 'toolSlotShovel' : '';
     const slot = document.getElementById(slotId);
     if (slot) slot.classList.remove('active');
     // Update hidden button
     const btnId = toolName === 'hammer' ? 'selectHammer' :
+                  toolName === 'spyglass' ? 'selectSpyglass' :
                   toolName === 'pestle' ? 'selectPestle' :
                   toolName === 'shovel' ? 'selectShovel' : '';
     const btn = document.getElementById(btnId);
@@ -574,6 +578,8 @@ function initializeGame() {
 
   // Initialize hearth system
   initializeHearth();
+  spyglassSystem.registerWorldTargets();
+  seedStartingStructuralWords();
 
   // Initialize audio on first user gesture (Web Audio API requirement)
   const startAudio = async () => {
@@ -602,6 +608,7 @@ function initializeGame() {
     (toolName, dropX, dropY) => {
       const btnMap = {
         hammer: document.getElementById('selectHammer'),
+        spyglass: document.getElementById('selectSpyglass'),
         pestle: document.getElementById('selectPestle'),
         shovel: document.getElementById('selectShovel')
       };
@@ -637,6 +644,9 @@ function initializeGame() {
           shovelSystem.shovel.headX = canvasX;
           shovelSystem.shovel.headY = canvasY + (shovelSystem.shovel.length || 120);
         }
+        if (toolName === 'spyglass') {
+          spyglassSystem.startAt(dropX, dropY);
+        }
       }
 
       // Lazy tool initialization for better startup performance.
@@ -648,6 +658,7 @@ function initializeGame() {
       if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
       if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
       if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
+      if (toolName === 'spyglass') spyglassSystem.stop();
 
       // Clear the active tool if we just put away the one that was active
       if (activeTool === toolName) {
@@ -657,6 +668,7 @@ function initializeGame() {
       // Also clear active state on hidden tool buttons
       const btn = document.getElementById(
         toolName === 'hammer' ? 'selectHammer' :
+        toolName === 'spyglass' ? 'selectSpyglass' :
         toolName === 'pestle' ? 'selectPestle' :
         toolName === 'shovel' ? 'selectShovel' : ''
       );
@@ -857,22 +869,25 @@ function initializeCraftingSystems() {
  */
 function setupToolSelection() {
   const hammerBtn = document.getElementById('selectHammer');
+  const spyglassBtn = document.getElementById('selectSpyglass');
   const pestleBtn = document.getElementById('selectPestle');
   const shovelBtn = document.getElementById('selectShovel');
   const craftingHint = document.getElementById('craftingHint');
-  if (!hammerBtn || !pestleBtn || !shovelBtn) return;
+  if (!hammerBtn || !spyglassBtn || !pestleBtn || !shovelBtn) return;
 
   hammerBtn.addEventListener('click', () => {
     if (activeTool === 'hammer') return;
 
     activeTool = 'hammer';
     hammerBtn.classList.add('active');
+    spyglassBtn.classList.remove('active');
     pestleBtn.classList.remove('active');
     shovelBtn.classList.remove('active');
 
     // Switch systems
     if (shovelSystem) shovelSystem.stop();
     if (pestleSystem) pestleSystem.stop();
+    spyglassSystem.stop();
     if (hammerSystem) hammerSystem.start();
 
     // Update hint text
@@ -884,6 +899,21 @@ function setupToolSelection() {
     console.log('Switched to Hammer');
   });
 
+  spyglassBtn.addEventListener('click', () => {
+    if (activeTool === 'spyglass') return;
+
+    activeTool = 'spyglass';
+    spyglassBtn.classList.add('active');
+    hammerBtn.classList.remove('active');
+    pestleBtn.classList.remove('active');
+    shovelBtn.classList.remove('active');
+
+    if (hammerSystem) hammerSystem.stop();
+    if (pestleSystem) pestleSystem.stop();
+    if (shovelSystem) shovelSystem.stop();
+    spyglassSystem.startAt(window.innerWidth * 0.7, window.innerHeight * 0.35);
+  });
+
   pestleBtn.addEventListener('click', () => {
     if (activeTool === 'pestle') return;
 
@@ -891,12 +921,14 @@ function setupToolSelection() {
 
     activeTool = 'pestle';
     shovelBtn.classList.remove('active');
+    spyglassBtn.classList.remove('active');
     pestleBtn.classList.add('active');
     hammerBtn.classList.remove('active');
 
     // Switch systems
     if (hammerSystem) hammerSystem.stop();
     if (shovelSystem) shovelSystem.stop();
+    spyglassSystem.stop();
     if (pestleSystem) pestleSystem.start();
 
     // Update hint text
@@ -917,10 +949,12 @@ function setupToolSelection() {
     shovelBtn.classList.add('active');
     hammerBtn.classList.remove('active');
     pestleBtn.classList.remove('active');
+    spyglassBtn.classList.remove('active');
 
     // Switch systems
     if (hammerSystem) hammerSystem.stop();
     if (pestleSystem) pestleSystem.stop();
+    spyglassSystem.stop();
     if (shovelSystem) shovelSystem.start();
 
     // Update hint text
@@ -930,6 +964,24 @@ function setupToolSelection() {
     }
 
     console.log('Switched to Shovel');
+  });
+}
+
+function seedStartingStructuralWords() {
+  const structuralWords = gameState.currentLine.molds.filter((mold) => (
+    mold.english === 'is' || mold.english === 'the' || mold.english === 'of'
+  ));
+
+  structuralWords.forEach((mold) => {
+    addWord({
+      id: getNextWordId(),
+      text: mold.pattern,
+      english: mold.english,
+      length: mold.pattern.length,
+      power: computeWordPower(mold.pattern.length),
+      heated: true,
+    });
+    recordForgedWord({ text: mold.pattern, english: mold.english });
   });
 }
 

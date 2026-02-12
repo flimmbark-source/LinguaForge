@@ -1782,9 +1782,9 @@ updateFreeHammer(dt) {
       }
     }
 
-    // Check for mold collision (no heating requirement for forging)
+    // Check for mold collision (requires a red-hot strike)
     const forgeableMold = this.getForgeableMoldUnderHammer();
-    if (forgeableMold && downwardSpeed > impactThreshold) {
+    if (forgeableMold && downwardSpeed > impactThreshold && hammer.heatLevel > 0) {
       if (hammer.strikeCooldown <= 0) {
         hammer.strikeCooldown = 0.25;
         const impactX = headX;
@@ -1798,6 +1798,9 @@ updateFreeHammer(dt) {
           this.onForgeTriggered(forgeableMold.id);
           console.log('Hammer struck a mold! Forging word...');
         }
+
+        hammer.heatLevel = 0;
+        hammer.heatingTimer = 0;
 
         // Bounce the hammer back
         const bounceFactor = 0.6;

@@ -198,7 +198,7 @@ function updateDrag(e) {
   moldWorldState.lastTime = now;
 }
 
-function finishDrag(e) {
+function finishDrag() {
   if (!moldWorldState.activeMoldId) return;
   const mold = gameState.currentLine.molds.find(m => m.id === moldWorldState.activeMoldId);
   moldWorldState.activeMoldId = null;
@@ -208,17 +208,7 @@ function finishDrag(e) {
   const runtime = ensureMoldRuntime(mold);
   runtime.dragging = false;
 
-  const viewport = document.querySelector('.mold-viewport');
-  if (viewport) {
-    const vr = viewport.getBoundingClientRect();
-    if (e.clientX >= vr.left && e.clientX <= vr.right && e.clientY >= vr.top && e.clientY <= vr.bottom) {
-      runtime.inViewport = true;
-      runtime.vx = 0;
-      runtime.vy = 0;
-      runtime.docked = false;
-      runtime.heated = false;
-    }
-  }
+  runtime.inViewport = false;
 }
 
 function setupPointerHandlers() {
@@ -363,12 +353,22 @@ export function initializeMoldSystem() {
   setupPointerHandlers();
   ensureWorldLayer();
 
-  gameState.currentLine.molds.forEach((mold) => {
+  const hearthRects = getHearthRects();
+  const baseRect = hearthRects?.baseRect;
+  const anchorX = baseRect ? baseRect.left + 24 : (window.innerWidth * 0.6);
+  const anchorY = baseRect ? baseRect.top - 84 : (window.innerHeight * 0.62);
+
+  gameState.currentLine.molds.forEach((mold, idx) => {
     const runtime = ensureMoldRuntime(mold);
-    runtime.inViewport = true;
+    runtime.inViewport = false;
     runtime.dragging = false;
-    runtime.docked = false;
-    runtime.heated = false;
+    runtime.docked = true;
+    runtime.heated = true;
+    runtime.x = anchorX + ((idx % 4) * 92);
+    runtime.y = anchorY + (Math.floor(idx / 4) * 58);
+    runtime.vx = 0;
+    runtime.vy = 0;
+    runtime.rotationDeg = 0;
   });
 
   if (!moldWorldState.rafId) {
@@ -385,7 +385,7 @@ export function getWorldMoldElement(moldId) {
 }
 
 export function getForgeableMoldAtPoint(clientX, clientY) {
-  const cards = Array.from(document.querySelectorAll('.viewport-mold'));
+  const cards = Array.from(document.querySelectorAll('.world-mold'));
   for (const card of cards) {
     const moldId = Number(card.dataset.moldId);
     const mold = getMoldById(moldId);
@@ -468,25 +468,7 @@ export function setupWordChipDrag(chip, wordId) {
 }
 
 export function renderMoldsInViewport(container) {
-  if (!container) return;
-  container.innerHTML = '';
-
-  const worldLayer = ensureWorldLayer();
-  const stored = getStoredMolds();
-
-  if (!stored.length) {
-    gameState.currentMoldIndex = 0;
-    return;
+  if (container) {
+    container.innerHTML = '';
   }
-
-  if (gameState.currentMoldIndex < 0) gameState.currentMoldIndex = 0;
-  if (gameState.currentMoldIndex >= stored.length) gameState.currentMoldIndex = stored.length - 1;
-
-  const mold = stored[gameState.currentMoldIndex];
-  const card = createMoldCard(mold, { world: false });
-  hydrateMoldCard(card, mold, { world: false });
-  container.appendChild(card);
-
-  const worldCard = worldLayer.querySelector(`.world-mold[data-mold-id="${mold.id}"]`);
-  if (worldCard) worldCard.remove();
 }
