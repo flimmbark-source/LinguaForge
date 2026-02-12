@@ -4542,7 +4542,7 @@ body.book-overlay-active .magic-book {
   box-shadow: 0 0 0 4px rgba(30, 20, 10, 0.7), 0 10px 26px rgba(0, 0, 0, 0.45);
   background: radial-gradient(circle at center, rgba(255, 248, 210, 0.3) 0%, rgba(38, 24, 12, 0.7) 100%);
   transform: translate(-50%, -50%);
-  z-index: 80;
+  z-index: 560;
   display: none;
   align-items: center;
   justify-content: center;

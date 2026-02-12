@@ -121,6 +121,12 @@ export class SpyglassSystem {
   revealWordAtCurrentPosition() {
     if (!this.labelEl) return;
 
+    const pointInRect = (rect) => Boolean(
+      rect &&
+      this.position.x >= rect.left && this.position.x <= rect.right &&
+      this.position.y >= rect.top && this.position.y <= rect.bottom
+    );
+
     const anvilRect = typeof window.getAnvilViewportRect === 'function'
       ? window.getAnvilViewportRect()
       : null;
@@ -133,6 +139,22 @@ export class SpyglassSystem {
     if (overAnvil) {
       const usedInLine = gameState.currentLine?.molds?.some((m) => m.pattern === 'כוח');
       this.labelEl.textContent = usedInLine ? 'כוח' : '—';
+      return;
+    }
+
+    // Fire / Breath targets can use pointer-events:none, so detect by bounds
+    // first (instead of only relying on elementsFromPoint).
+    const hearthFireRect = document.getElementById('hearthFire')?.getBoundingClientRect?.() || null;
+    if (pointInRect(hearthFireRect)) {
+      const usedInLine = gameState.currentLine?.molds?.some((m) => m.pattern === 'אש');
+      this.labelEl.textContent = usedInLine ? 'אש' : '—';
+      return;
+    }
+
+    const hearthBreathRect = document.getElementById('hearthBreath')?.getBoundingClientRect?.() || null;
+    if (pointInRect(hearthBreathRect)) {
+      const usedInLine = gameState.currentLine?.molds?.some((m) => m.pattern === 'נשמת');
+      this.labelEl.textContent = usedInLine ? 'נשמת' : '—';
       return;
     }
 
