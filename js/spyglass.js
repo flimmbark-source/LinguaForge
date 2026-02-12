@@ -89,6 +89,8 @@ export class SpyglassSystem {
   }
 
   onPointerUp(e) {
+    if (!this.dragging) return;
+
     const sidebar = document.getElementById('toolsSidebar');
     const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
     const droppedInSidebarRect = Boolean(
@@ -119,6 +121,21 @@ export class SpyglassSystem {
   revealWordAtCurrentPosition() {
     if (!this.labelEl) return;
 
+    const anvilRect = typeof window.getAnvilViewportRect === 'function'
+      ? window.getAnvilViewportRect()
+      : null;
+    const overAnvil = Boolean(
+      anvilRect &&
+      this.position.x >= anvilRect.left && this.position.x <= anvilRect.right &&
+      this.position.y >= anvilRect.top && this.position.y <= anvilRect.bottom
+    );
+
+    if (overAnvil) {
+      const usedInLine = gameState.currentLine?.molds?.some((m) => m.pattern === 'כוח');
+      this.labelEl.textContent = usedInLine ? 'כוח' : '—';
+      return;
+    }
+
     const hoverElements = document.elementsFromPoint(this.position.x, this.position.y);
     const target = hoverElements.find((el) => el?.dataset?.verseWord);
     const word = target?.dataset?.verseWord;
@@ -136,11 +153,13 @@ export class SpyglassSystem {
     const hearthFire = document.getElementById('hearthFire');
     if (hearthFire) hearthFire.dataset.verseWord = 'אש';
 
-    const hearthOpening = document.querySelector('.hearth-opening');
-    if (hearthOpening) hearthOpening.dataset.verseWord = 'נשמת';
+    const hearthBreath = document.getElementById('hearthBreath');
+    if (hearthBreath) hearthBreath.dataset.verseWord = 'נשמת';
 
-    const hearthBody = document.querySelector('.hearth-body');
-    if (hearthBody) hearthBody.dataset.verseWord = 'כוח';
+    const steamPuffs = document.querySelectorAll('.hearth-steam');
+    steamPuffs.forEach((el) => {
+      el.dataset.verseWord = 'נשמת';
+    });
   }
 }
 

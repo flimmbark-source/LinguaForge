@@ -4571,7 +4571,7 @@ body.book-overlay-active .magic-book {
   height: 90px;
   transform: translateX(-50%);
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.42;
 }
 
 .hearth-steam {
@@ -4581,18 +4581,18 @@ body.book-overlay-active .magic-book {
   height: 26px;
   border-radius: 999px;
   background: radial-gradient(circle, rgba(236, 245, 255, 0.42) 0%, rgba(226, 232, 240, 0.1) 70%, rgba(148, 163, 184, 0) 100%);
-  animation: hearthSteamRise 4.8s ease-in-out infinite;
+  animation: hearthSteamRise 5.8s ease-in-out infinite;
   filter: blur(0.2px);
 }
 
 .hearth-steam.puff-1 { left: 18px; animation-delay: 0s; }
-.hearth-steam.puff-2 { left: 52px; animation-delay: 1.4s; }
-.hearth-steam.puff-3 { left: 82px; animation-delay: 2.7s; }
+.hearth-steam.puff-2 { left: 52px; animation-delay: 1.8s; }
+.hearth-steam.puff-3 { left: 82px; animation-delay: 3.4s; }
 
 @keyframes hearthSteamRise {
   0% { transform: translate(0, 0) scale(0.65); opacity: 0; }
-  20% { opacity: 0.35; }
-  60% { transform: translate(-8px, -34px) scale(1); opacity: 0.3; }
+  20% { opacity: 0.26; }
+  60% { transform: translate(-8px, -34px) scale(1); opacity: 0.22; }
   100% { transform: translate(6px, -64px) scale(1.25); opacity: 0; }
 }
 
