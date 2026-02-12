@@ -77,10 +77,10 @@ const MOBILE_MORTAR_ANCHORS = {
     height: 78
   },
   landscape: {
-    x: 972,
-    y: 628,
-    width: 205,
-    height: 76
+    x: 1000,
+    y: 648,
+    width: 210,
+    height: 78
   }
 };
 
