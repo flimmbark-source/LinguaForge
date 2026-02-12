@@ -556,7 +556,9 @@ function getUndiscoveredWords() {
 }
 
 function findAnvilWordMatch() {
-  const tiles = getAnvilPlacedLetters()
+  const physicsTiles = (letterPhysics?.getAnvilLetters?.() || []).map((t) => ({ ...t, source: 'physics' }));
+  const placedTiles = getAnvilPlacedLetters().map((t) => ({ ...t, source: 'placed' }));
+  const tiles = [...physicsTiles, ...placedTiles]
     .slice()
     .sort((a, b) => b.x - a.x); // RTL order
   if (!tiles.length) return null;
@@ -593,7 +595,7 @@ function findAnvilWordMatch() {
 
       return {
         word,
-        tileIds: slice.map((t) => t.id),
+        tileRefs: slice.map((t) => ({ id: t.id, source: t.source })),
         origin: {
           left: midX - 60,
           top: midY - 28,
@@ -622,7 +624,10 @@ function attemptWordDiscoveryFromAnvil() {
   const match = findAnvilWordMatch();
   if (!match) return;
 
-  consumeAnvilPlacedLetters(match.tileIds);
+  const placedIds = match.tileRefs.filter((t) => t.source === 'placed').map((t) => t.id);
+  const physicsIds = match.tileRefs.filter((t) => t.source === 'physics').map((t) => t.id);
+  consumeAnvilPlacedLetters(placedIds);
+  letterPhysics?.consumeLettersByIds?.(physicsIds);
 
   const forgedWord = {
     text: match.word.pattern,
@@ -1331,12 +1336,7 @@ function gameLoop(timestamp) {
         canvasRectAge = 0;
       }
 
-      // Hammer pushes nearby physics letters
-      if (hammerSystem && hammerSystem.isRunning && cachedCanvasRect) {
-        const hx = cachedCanvasRect.left + hammerSystem.hammer.headX;
-        const hy = cachedCanvasRect.top + hammerSystem.hammer.headY;
-        letterPhysics.pushFrom(hx, hy, 45, hammerSystem.hammer.headVx || 0, hammerSystem.hammer.headVy || 0);
-      }
+      // Hammer should pass through physics letters (no push interaction).
 
       // Render physics letters when no tool is active
       if (letterBlocksCanvasRef) {

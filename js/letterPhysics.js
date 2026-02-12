@@ -451,6 +451,39 @@ export class LetterPhysicsSystem {
     }
   }
 
+  /**
+   * Return settled physics letters that are currently sitting on the anvil.
+   * Useful for word discovery checks during red-hot hits.
+   * @returns {Array<{id:number,char:string,x:number,y:number}>}
+   */
+  getAnvilLetters() {
+    const anvilRect = typeof window.getAnvilViewportRect === 'function'
+      ? window.getAnvilViewportRect()
+      : null;
+    if (!anvilRect) return [];
+
+    return this.letters
+      .filter((l) => {
+        if (l.consumed || l.isHeld) return false;
+        const onTopBand = (l.y + HALF_H) >= (anvilRect.top - 2) && (l.y + HALF_H) <= (anvilRect.top + 20);
+        const withinX = l.x >= anvilRect.left && l.x <= anvilRect.right;
+        return onTopBand && withinX;
+      })
+      .map((l) => ({ id: l.id, char: l.char, x: l.x, y: l.y }));
+  }
+
+  /**
+   * Consume physics letters by id.
+   * @param {number[]} ids
+   */
+  consumeLettersByIds(ids) {
+    if (!ids || !ids.length) return;
+    const idSet = new Set(ids);
+    this.letters.forEach((l) => {
+      if (idSet.has(l.id)) l.consumed = true;
+    });
+  }
+
   // ─── Render ──────────────────────────────────────────────
 
   /**
