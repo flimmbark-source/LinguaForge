@@ -847,7 +847,7 @@ onPointerDown(e) {
   /**
    * Spawn a flying letter with physics
    */
-  spawnFlyingLetter(impactX, impactY, power, strikeVx, letterChar) {
+  spawnFlyingLetter(impactX, impactY, power, strikeVx, letterChar, options = {}) {
     const poolPos = this.getLetterPoolWorldPosition();
     const canvasRect = this.canvas.getBoundingClientRect();
 
@@ -860,8 +860,18 @@ onPointerDown(e) {
     const launchSpeed = 200 + power * 500; // px/s upward
     const baseVx = (strikeVx || 0) * 0.25;
     const biasVx = (targetX - impactX) * 0.8 / Math.max(1, this.width);
-    const vx = baseVx + biasVx * launchSpeed * 0.2;
-    const vy = -launchSpeed;
+    const launchAngleOffset = options.launchAngleOffset || 0;
+    let vx = baseVx + biasVx * launchSpeed * 0.2;
+    let vy = -launchSpeed;
+
+    if (launchAngleOffset !== 0) {
+      const cos = Math.cos(launchAngleOffset);
+      const sin = Math.sin(launchAngleOffset);
+      const rotatedVx = vx * cos - vy * sin;
+      const rotatedVy = vx * sin + vy * cos;
+      vx = rotatedVx;
+      vy = rotatedVy;
+    }
 
     // Spin based on strike power and direction
     const spinBase = 6; // rad/s
