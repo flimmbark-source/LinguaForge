@@ -4560,6 +4560,7 @@ body.book-overlay-active .magic-book {
   color: #fff4c8;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.75);
   direction: rtl;
+  pointer-events: none;
 }
 
 .hearth-breath {
