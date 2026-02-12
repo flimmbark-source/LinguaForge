@@ -4441,6 +4441,11 @@ body.book-overlay-active .magic-book {
   justify-content: flex-start;
 }
 
+.mold-viewport-wrapper.open {
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
 .mold-viewport-wrapper::before,
 .mold-viewport-wrapper::after {
   content: '';
@@ -4480,6 +4485,11 @@ body.book-overlay-active .magic-book {
     top: 92px;
     left: 50%;
     transform: translateX(-50%);
+  }
+
+  .mold-viewport-wrapper.open {
+    top: 50%;
+    transform: translate(-50%, -50%);
   }
 
   .mold-viewport-wrapper.open .mold-panel {
