@@ -455,9 +455,9 @@ button.secondary {
   position: fixed;
   left: 0;
   right: auto;
-  top: 50%;
+  top: 0;
   width: auto;
-  transform: translateY(-50%);
+  transform: none;
   z-index: 505;
   pointer-events: auto;
 
@@ -2505,8 +2505,8 @@ button.secondary {
     position: fixed;
     left: 0;
     right: auto;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 0;
+    transform: none;
     width: auto;
     min-width: unset;
     max-width: none;
@@ -3036,8 +3036,8 @@ button.secondary {
     position: fixed;
     left: 0;
     right: auto;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 0;
+    transform: none;
     width: auto;
     min-width: unset;
     max-width: none;
