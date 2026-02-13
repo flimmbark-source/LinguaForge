@@ -23,6 +23,7 @@ export const GRAMMAR_LEXICON = {
   'היא':     { translit: 'hi',       gloss: 'is' },
   'ה':       { translit: 'ha',       gloss: 'the' },
   'ראשונה':  { translit: 'rishona',  gloss: 'first' },
+  'שנייה':  { translit: 'shemniya',  gloss: 'second' },
   'נשמת':    { translit: 'nishmat',  gloss: 'breath of' },
   'של':      { translit: 'shel',     gloss: 'of' },
   'כוח':     { translit: 'koach',    gloss: 'power' },

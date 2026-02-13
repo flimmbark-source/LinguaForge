@@ -3,11 +3,11 @@
  * Handles all UI updates and rendering logic
  */
 
-import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON, computeWordPower } from './config.js?v=9';
-import { gameState, addVerseWord, findWord, removeWord, addWord, getNextWordId } from './state.js?v=9';
+import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON, SOLUTION_HEBREW_ORDER } from './config.js?v=9';
+import { gameState } from './state.js?v=9';
 import { setupWordChipDrag, sellWord, renderMoldsInViewport } from './molds.js?v=9';
 import { toggleScribePaused } from './scribes.js?v=9';
-import { evaluateVerse, setupVerseWordChipDrag, isVerseSolved } from './grammar.js?v=9';
+import { evaluateVerse, setupVerseWordChipDrag } from './grammar.js?v=9';
 import { updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 
 // DOM element cache
@@ -441,9 +441,11 @@ export function updateGrammarUI(force = false) {
  * Update enscribe button state
  */
 export function updateEnscribeButton() {
-  const solved = isVerseSolved();
   if (elements.enscribeBtn) {
-    elements.enscribeBtn.disabled = !solved;
+    elements.enscribeBtn.disabled = true;
+    elements.enscribeBtn.textContent = gameState.enscribeModeActive
+      ? `Selecting words (${gameState.enscribeSelectedWords.length}/${SOLUTION_HEBREW_ORDER.length})`
+      : 'Click the anvil glyph to enscribe';
   }
 }
 
@@ -460,16 +462,65 @@ export function updateLinesCompletedDisplay() {
  * Render glossary entries on the left page of the book
  */
 let lastRenderedGlossaryCount = -1;
+let lastRenderedSpread = -1;
+
+const GLOSSARY_PAGE_SIZE = 4;
+
+function getGlossaryPages() {
+  const history = gameState.forgedWordsHistory;
+  if (history.length === 0) return [[]];
+  const pages = [];
+  for (let i = 0; i < history.length; i += GLOSSARY_PAGE_SIZE) {
+    pages.push(history.slice(i, i + GLOSSARY_PAGE_SIZE));
+  }
+  return pages;
+}
+
+export function turnGlossarySpread(direction) {
+  const pages = getGlossaryPages();
+  const totalSpreads = Math.max(1, Math.ceil(pages.length / 2));
+  const next = Math.max(0, Math.min(totalSpreads - 1, gameState.glossarySpreadIndex + direction));
+  if (next !== gameState.glossarySpreadIndex) {
+    gameState.glossarySpreadIndex = next;
+    renderGlossary();
+  }
+}
+
+function handleGlossaryWordSelect(wordText, entryEl) {
+  if (!gameState.enscribeModeActive) return;
+
+  gameState.enscribeSelectedWords.push(wordText);
+  entryEl.classList.add('is-selected');
+
+  if (gameState.enscribeSelectedWords.length >= SOLUTION_HEBREW_ORDER.length) {
+    document.dispatchEvent(new CustomEvent('enscribe-attempt', {
+      detail: { words: [...gameState.enscribeSelectedWords] }
+    }));
+  }
+}
+
+export function clearEnscribeSelection() {
+  gameState.enscribeSelectedWords = [];
+  document.querySelectorAll('.glossary-entry.is-selected').forEach(el => el.classList.remove('is-selected'));
+}
 
 export function renderGlossary() {
   const container = document.getElementById('glossaryEntries');
+  const indicator = document.getElementById('glossaryPageIndicator');
   if (!container) return;
 
   const history = gameState.forgedWordsHistory;
+  const pages = getGlossaryPages();
+  const totalPages = pages.length;
+  const totalSpreads = Math.max(1, Math.ceil(totalPages / 2));
+  gameState.glossarySpreadIndex = Math.min(gameState.glossarySpreadIndex, totalSpreads - 1);
 
-  // Skip if unchanged
-  if (history.length === lastRenderedGlossaryCount) return;
+  if (history.length === lastRenderedGlossaryCount && gameState.glossarySpreadIndex === lastRenderedSpread) return;
   lastRenderedGlossaryCount = history.length;
+  lastRenderedSpread = gameState.glossarySpreadIndex;
+
+  const leftPageIndex = gameState.glossarySpreadIndex * 2;
+  const leftPageWords = pages[leftPageIndex] || [];
 
   container.innerHTML = '';
 
@@ -480,21 +531,19 @@ export function renderGlossary() {
     empty.style.fontSize = '12px';
     empty.textContent = 'No words forged yet.';
     container.appendChild(empty);
-    return;
   }
 
-  history.forEach(word => {
-    const entry = document.createElement('div');
+  leftPageWords.forEach(word => {
+    const entry = document.createElement('button');
+    entry.type = 'button';
     entry.className = 'glossary-entry';
 
     const lexicon = GRAMMAR_LEXICON[word.text];
 
-    // Hebrew letters - big display
     const hebrewEl = document.createElement('div');
     hebrewEl.className = 'glossary-hebrew';
     hebrewEl.textContent = word.text;
 
-    // Info section (romanization + english)
     const infoEl = document.createElement('div');
     infoEl.className = 'glossary-info';
 
@@ -511,139 +560,26 @@ export function renderGlossary() {
 
     entry.appendChild(hebrewEl);
     entry.appendChild(infoEl);
+    entry.addEventListener('click', () => handleGlossaryWordSelect(word.text, entry));
     container.appendChild(entry);
   });
-}
 
-/**
- * Update the word selector on the verse page
- */
-export function updateWordSelector() {
-  const display = document.getElementById('wordSelectorDisplay');
-  const enterBtn = document.getElementById('wordSelectorEnterBtn');
-  if (!display) return;
-
-  // Get heated words from chip system (words with heatLevel >= 1)
-  const heatedWords = getHeatedWords();
-
-  if (heatedWords.length === 0) {
-    display.innerHTML = '<span class="word-selector-empty">No words available</span>';
-    if (enterBtn) enterBtn.disabled = true;
-    return;
+  if (indicator) {
+    const leftNum = Math.min(totalPages, leftPageIndex + 1);
+    const rightNum = Math.min(totalPages, leftPageIndex + 2);
+    indicator.textContent = `Pages ${leftNum}-${rightNum}`;
   }
-
-  // Clamp selector index
-  if (gameState.wordSelectorIndex < 0) gameState.wordSelectorIndex = 0;
-  if (gameState.wordSelectorIndex >= heatedWords.length) {
-    gameState.wordSelectorIndex = heatedWords.length - 1;
-  }
-
-  const word = heatedWords[gameState.wordSelectorIndex];
-  const lexicon = GRAMMAR_LEXICON[word.text];
-
-  display.innerHTML = '';
-
-  const hebrewEl = document.createElement('div');
-  hebrewEl.className = 'word-selector-hebrew';
-  hebrewEl.textContent = word.text;
-
-  const countEl = document.createElement('div');
-  countEl.className = 'word-selector-count';
-  countEl.textContent = (gameState.wordSelectorIndex + 1) + ' / ' + heatedWords.length;
-
-  display.appendChild(hebrewEl);
-  display.appendChild(countEl);
-
-  if (enterBtn) enterBtn.disabled = false;
 }
 
 /**
- * Get all words available for the verse (from word inventory)
- * @returns {Array} Array of word objects with text and id
- */
-function getHeatedWords() {
-  return gameState.words.map(w => ({ text: w.text, english: w.english, id: w.id }));
-}
-
-/**
- * Initialize word selector event listeners
+ * Initialize versebook interactions
  */
 export function initWordSelector() {
-  const prevBtn = document.getElementById('wordSelectorPrev');
-  const nextBtn = document.getElementById('wordSelectorNext');
-  const enterBtn = document.getElementById('wordSelectorEnterBtn');
-  const eraseBtn = document.getElementById('wordSelectorEraseBtn');
+  const prevPageBtn = document.getElementById('bookPrevPageBtn');
+  const nextPageBtn = document.getElementById('bookNextPageBtn');
 
-  if (prevBtn) {
-    prevBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const heatedWords = getHeatedWords();
-      if (heatedWords.length > 0) {
-        gameState.wordSelectorIndex = (gameState.wordSelectorIndex - 1 + heatedWords.length) % heatedWords.length;
-        updateWordSelector();
-      }
-    });
-  }
-
-  if (nextBtn) {
-    nextBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const heatedWords = getHeatedWords();
-      if (heatedWords.length > 0) {
-        gameState.wordSelectorIndex = (gameState.wordSelectorIndex + 1) % heatedWords.length;
-        updateWordSelector();
-      }
-    });
-  }
-
-  if (enterBtn) {
-    enterBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const heatedWords = getHeatedWords();
-      if (heatedWords.length === 0) return;
-
-      const word = heatedWords[gameState.wordSelectorIndex];
-      if (!word) return;
-
-      // Place word in verse at end
-      const instanceId = 'vw-' + Date.now() + '-' + Math.random();
-      addVerseWord({ instanceId, hebrew: word.text }, gameState.verseWords.length);
-
-      // Remove word from inventory
-      removeWord(word.id);
-
-      // Reset selector index if needed
-      const remaining = getHeatedWords();
-      if (gameState.wordSelectorIndex >= remaining.length) {
-        gameState.wordSelectorIndex = Math.max(0, remaining.length - 1);
-      }
-
-      updateGrammarUI(true);
-      updateWordSelector();
-    });
-  }
-
-  if (eraseBtn) {
-    eraseBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      // Return all verse words back to inventory
-      const verseWords = [...gameState.verseWords];
-      gameState.verseWords = [];
-      verseWords.forEach(vw => {
-        const wordObj = {
-          id: getNextWordId(),
-          text: vw.hebrew,
-          english: (GRAMMAR_LEXICON[vw.hebrew] && GRAMMAR_LEXICON[vw.hebrew].gloss) || vw.hebrew,
-          length: vw.hebrew.length,
-          power: computeWordPower(vw.hebrew.length),
-          heated: true,
-        };
-        addWord(wordObj);
-      });
-      updateGrammarUI(true);
-      updateWordSelector();
-    });
-  }
+  if (prevPageBtn) prevPageBtn.addEventListener('click', (e) => { e.stopPropagation(); turnGlossarySpread(-1); });
+  if (nextPageBtn) nextPageBtn.addEventListener('click', (e) => { e.stopPropagation(); turnGlossarySpread(1); });
 }
 
 /**
@@ -659,5 +595,4 @@ export function updateUI() {
   updateEnscribeButton();
   updateLinesCompletedDisplay();
   renderGlossary();
-  updateWordSelector();
 }

@@ -4,12 +4,12 @@
  */
 
 
-import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower } from './config.js?v=9';
+import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower, GRAMMAR_LEXICON, SOLUTION_HEBREW_ORDER } from './config.js?v=9';
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
 import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
-import { setupVerseAreaDrop, completeVerse } from './grammar.js?v=9';
-import { initializeElements, updateUI, initWordSelector } from './ui.js?v=9';
+import { setupVerseAreaDrop } from './grammar.js?v=9';
+import { initializeElements, updateUI, initWordSelector, clearEnscribeSelection } from './ui.js?v=9';
 import { gameState } from './state.js?v=9';
 import { addLetters } from './state.js?v=9';
 import { HammerSystem } from './hammer.js?v=9';
@@ -18,7 +18,7 @@ import { ShovelSystem } from './shovel.js?v=9';
 import { initializeHearth, updateHearth } from './RuneHearth.js?v=9';
 import { initAudio, startBackgroundMusic, getMusicVolume, getSfxVolume, setMusicVolume, setSfxVolume, unlockAudio } from './audio.js?v=9';
 import { addInk, addVerseWord, addWord, getNextWordId, recordForgedWord } from './state.js?v=9';
-import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from './upgrades.js?v=9';
+import * as upgradesAPI from './upgrades.js?v=9';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
 import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 import { LetterPhysicsSystem } from './letterPhysics.js?v=9';
@@ -85,6 +85,11 @@ const MOBILE_MORTAR_ANCHORS = {
     height: 117
   }
 };
+
+// World element anchors (background image coordinates)
+const GLYPH_ANCHOR = { x: 488, y: 638, size: 48 };
+const BUCKET_FIRST_ANCHOR = { x: 700, y: 400, width: 210, height: 165 };
+const BUCKET_SECOND_ANCHOR = { x: 500, y: 400, width: 195, height: 112 };
 
 let bgOffsetX = 0;
 let bgOffsetY = 0;
@@ -277,6 +282,9 @@ function updateAnchoredUI() {
     root.style.setProperty('--bg-display-height', `${updatedMetrics.displayHeight}px`);
   }
 
+  // Position world elements on all screen sizes
+  positionWorldElements(updatedMetrics);
+
   if (!isMobileBackground()) return;
 
   const hearthX = updatedMetrics.originX + HEARTH_ANCHOR.x * updatedMetrics.scale;
@@ -323,6 +331,49 @@ function updateAnchoredUI() {
   }
 }
 
+function positionWorldElements(metrics) {
+  // Anvil glyph at background coordinate 438×438
+  const glyph = document.getElementById('anvilGlyph');
+  if (glyph) {
+    const gx = metrics.originX + GLYPH_ANCHOR.x * metrics.scale;
+    const gy = metrics.originY + GLYPH_ANCHOR.y * metrics.scale;
+    const gs = GLYPH_ANCHOR.size * metrics.scale;
+    glyph.style.left = `${gx - gs / 2}px`;
+    glyph.style.top = `${gy - gs / 2}px`;
+    glyph.style.width = `${gs}px`;
+    glyph.style.height = `${gs}px`;
+    glyph.style.display = 'block';
+  }
+
+  // Bucket "First" at 723 down × 426 right, area 90×65
+  const bucketFirst = document.getElementById('bucketFirst');
+  if (bucketFirst) {
+    const bx = metrics.originX + BUCKET_FIRST_ANCHOR.x * metrics.scale;
+    const by = metrics.originY + BUCKET_FIRST_ANCHOR.y * metrics.scale;
+    const bw = BUCKET_FIRST_ANCHOR.width * metrics.scale;
+    const bh = BUCKET_FIRST_ANCHOR.height * metrics.scale;
+    bucketFirst.style.left = `${bx - bw / 2}px`;
+    bucketFirst.style.top = `${by - bh / 2}px`;
+    bucketFirst.style.width = `${bw}px`;
+    bucketFirst.style.height = `${bh}px`;
+    bucketFirst.style.display = 'block';
+  }
+
+  // Bucket "Second" at 723 down × 356 right (70 left of first), area 55×72
+  const bucketSecond = document.getElementById('bucketSecond');
+  if (bucketSecond) {
+    const bx = metrics.originX + BUCKET_SECOND_ANCHOR.x * metrics.scale;
+    const by = metrics.originY + BUCKET_SECOND_ANCHOR.y * metrics.scale;
+    const bw = BUCKET_SECOND_ANCHOR.width * metrics.scale;
+    const bh = BUCKET_SECOND_ANCHOR.height * metrics.scale;
+    bucketSecond.style.left = `${bx - bw / 2}px`;
+    bucketSecond.style.top = `${by - bh / 2}px`;
+    bucketSecond.style.width = `${bw}px`;
+    bucketSecond.style.height = `${bh}px`;
+    bucketSecond.style.display = 'block';
+  }
+}
+
 function initBackgroundDrag() {
   const body = document.body;
   if (!body) return;
@@ -332,7 +383,7 @@ function initBackgroundDrag() {
     if (body.classList.contains('screen-locked')) return false;
     if (backgroundDragLockCount > 0) return false;
     return !target.closest(
-      '.tools-sidebar, .mold-viewport-wrapper, .letter-basket, .magic-book, .upgrade-modal, .workers-panel, .stats-wrap, .upgrades-btn, .crafting-forge, .letter-block-layer'
+      '.tools-sidebar, .mold-viewport-wrapper, .letter-basket, .magic-book, .upgrade-modal, .workers-panel, .stats-wrap, .upgrades-btn, .crafting-forge, .letter-block-layer, .anvil-glyph, .world-bucket'
     );
   }
 
@@ -550,9 +601,73 @@ function spawnMagicalText(word, moldBounds, delay) {
   }, delay);
 }
 
+
+
+function spawnVerseEchoWords(words) {
+  const glyph = document.getElementById('anvilGlyph');
+  const book = document.getElementById('magicBook');
+  if (!glyph || !book || !Array.isArray(words)) return;
+
+  const glyphRect = glyph.getBoundingClientRect();
+  const targetX = glyphRect.left + glyphRect.width / 2;
+  const targetY = glyphRect.top + glyphRect.height / 2;
+  const bookRect = book.getBoundingClientRect();
+
+  words.forEach((word, index) => {
+    setTimeout(() => {
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position:fixed;z-index:205;pointer-events:none;';
+      wrapper.style.left = (bookRect.left + bookRect.width * (0.30 + Math.random() * 0.4)) + 'px';
+      wrapper.style.top = (bookRect.top + 70 + Math.random() * 120) + 'px';
+
+      const el = document.createElement('div');
+      el.className = 'magical-text phase-emerge';
+      el.textContent = word;
+      wrapper.appendChild(el);
+      document.body.appendChild(wrapper);
+
+      setTimeout(() => {
+        el.classList.remove('phase-emerge');
+        el.classList.add('phase-zoom');
+        wrapper.style.transition = 'left 0.75s cubic-bezier(0.5, 0, 0.75, 0), top 0.75s cubic-bezier(0.5, 0, 0.75, 0)';
+        wrapper.style.left = targetX + 'px';
+        wrapper.style.top = targetY + 'px';
+
+        setTimeout(() => wrapper.remove(), 800);
+      }, 400 + index * 60);
+    }, index * 180);
+  });
+}
+function getWorldBucketDiscoverableWords() {
+  const bucketIds = ['bucketFirst', 'bucketSecond'];
+  const words = [];
+  const seen = new Set();
+
+  bucketIds.forEach((id) => {
+    const word = document.getElementById(id)?.dataset?.verseWord;
+    if (!word || seen.has(word)) return;
+    seen.add(word);
+    words.push({
+      id: id,
+      english: GRAMMAR_LEXICON[word]?.gloss || word,
+      hebrew: word,
+      pattern: word,
+      slots: [],
+    });
+  });
+
+  return words;
+}
+
+
 function getUndiscoveredWords() {
   const discovered = new Set(gameState.forgedWordsHistory.map((w) => w.text));
-  return gameState.currentLine.molds.filter((mold) => !discovered.has(mold.pattern));
+  const moldWords = gameState.currentLine.molds;
+  const bucketWords = getWorldBucketDiscoverableWords();
+  const allWords = [...moldWords, ...bucketWords].filter((word, index, arr) => (
+    arr.findIndex((w) => w.pattern === word.pattern) === index
+  ));
+  return allWords.filter((word) => !discovered.has(word.pattern));
 }
 
 function findAnvilWordMatch() {
@@ -665,6 +780,33 @@ function attemptWordDiscoveryFromAnvil() {
   return true;
 }
 
+
+function attemptBucketWordDiscoveryFromRedHotHit() {
+  const discovered = new Set(gameState.forgedWordsHistory.map((w) => w.text));
+  const bucketWord = getWorldBucketDiscoverableWords().find((word) => !discovered.has(word.pattern));
+  if (!bucketWord) return false;
+
+  const bucketEl = document.getElementById(bucketWord.id);
+  const bounds = bucketEl ? bucketEl.getBoundingClientRect() : {
+    left: window.innerWidth * 0.65,
+    top: window.innerHeight * 0.6,
+    width: 120,
+    height: 80,
+    right: window.innerWidth * 0.65 + 120,
+    bottom: window.innerHeight * 0.6 + 80,
+  };
+
+  const forgedWord = {
+    text: bucketWord.pattern,
+    english: bucketWord.english,
+    length: bucketWord.pattern.length,
+    power: computeWordPower(bucketWord.pattern.length),
+  };
+
+  spawnMagicalText(forgedWord, bounds, 0);
+  return true;
+}
+
 /**
  * Initialize the game
  */
@@ -672,6 +814,10 @@ function initializeGame() {
   console.log('Initializing Lingua Forge...');
   // Initialize DOM element references
   initializeElements();
+
+  // Reset enscribe mode state on fresh game start
+  gameState.enscribeModeActive = false;
+  clearEnscribeSelection();
 
   // Initialize mold slots
   initializeMoldSlots();
@@ -733,7 +879,7 @@ function initializeGame() {
         hammer: document.getElementById('selectHammer'),
         spyglass: document.getElementById('selectSpyglass'),
         pestle: document.getElementById('selectPestle'),
-        shovel: document.getElementById('selectShovel')
+        shovel: document.getElementById('selectShovel'),
       };
       const btn = btnMap[toolName];
       if (btn) btn.click();
@@ -842,13 +988,16 @@ function initializeCraftingSystems() {
     let discoveredMagicalWord = false;
     if (multiplier > 1) {
       discoveredMagicalWord = !!attemptWordDiscoveryFromAnvil();
+      if (!discoveredMagicalWord) {
+        discoveredMagicalWord = !!attemptBucketWordDiscoveryFromRedHotHit();
+      }
     }
 
     // If a red-hot strike discovered a magical word, do not spawn letters.
     if (!(multiplier > 1 && discoveredMagicalWord)) {
       // Spawn letters based on lettersPerClick and multiplier
       // On mobile, cap total spawned per strike to keep framerate smooth
-      const rawTotal = gameState.lettersPerClick * multiplier;
+      const rawTotal = (gameState.lettersPerClick + gameState.hammerHitBonusLetters) * multiplier;
       const totalLetters = isMobileDevice ? Math.min(rawTotal, 6) : rawTotal;
       const maxSpread = Math.PI / 4;
       const spreadDivisor = Math.max(1, totalLetters - 1);
@@ -996,19 +1145,23 @@ function setupToolSelection() {
   const craftingHint = document.getElementById('craftingHint');
   if (!hammerBtn || !spyglassBtn || !pestleBtn || !shovelBtn) return;
 
+  const allToolBtns = [hammerBtn, spyglassBtn, pestleBtn, shovelBtn];
+  function clearAllToolBtns(except) {
+    allToolBtns.forEach(b => { if (b !== except) b.classList.remove('active'); });
+  }
+
   hammerBtn.addEventListener('click', () => {
     if (activeTool === 'hammer') return;
 
     activeTool = 'hammer';
+    clearAllToolBtns(hammerBtn);
     hammerBtn.classList.add('active');
-    spyglassBtn.classList.remove('active');
-    pestleBtn.classList.remove('active');
-    shovelBtn.classList.remove('active');
 
     // Switch systems
     if (shovelSystem) shovelSystem.stop();
     if (pestleSystem) pestleSystem.stop();
     spyglassSystem.stop();
+
     if (hammerSystem) hammerSystem.start();
 
     // Update hint text
@@ -1024,14 +1177,13 @@ function setupToolSelection() {
     if (activeTool === 'spyglass') return;
 
     activeTool = 'spyglass';
+    clearAllToolBtns(spyglassBtn);
     spyglassBtn.classList.add('active');
-    hammerBtn.classList.remove('active');
-    pestleBtn.classList.remove('active');
-    shovelBtn.classList.remove('active');
 
     if (hammerSystem) hammerSystem.stop();
     if (pestleSystem) pestleSystem.stop();
     if (shovelSystem) shovelSystem.stop();
+
     spyglassSystem.startAt(window.innerWidth * 0.7, window.innerHeight * 0.35);
   });
 
@@ -1041,15 +1193,14 @@ function setupToolSelection() {
     if (!ensurePestleSystem(craftingCanvasRef, toolOverlayRenderer)) return;
 
     activeTool = 'pestle';
-    shovelBtn.classList.remove('active');
-    spyglassBtn.classList.remove('active');
+    clearAllToolBtns(pestleBtn);
     pestleBtn.classList.add('active');
-    hammerBtn.classList.remove('active');
 
     // Switch systems
     if (hammerSystem) hammerSystem.stop();
     if (shovelSystem) shovelSystem.stop();
     spyglassSystem.stop();
+
     if (pestleSystem) pestleSystem.start();
 
     // Update hint text
@@ -1067,15 +1218,14 @@ function setupToolSelection() {
     if (!ensureShovelSystem(craftingCanvasRef, toolOverlayRenderer)) return;
 
     activeTool = 'shovel';
+    clearAllToolBtns(shovelBtn);
     shovelBtn.classList.add('active');
-    hammerBtn.classList.remove('active');
-    pestleBtn.classList.remove('active');
-    spyglassBtn.classList.remove('active');
 
     // Switch systems
     if (hammerSystem) hammerSystem.stop();
     if (pestleSystem) pestleSystem.stop();
     spyglassSystem.stop();
+
     if (shovelSystem) shovelSystem.start();
 
     // Update hint text
@@ -1086,6 +1236,7 @@ function setupToolSelection() {
 
     console.log('Switched to Shovel');
   });
+
 }
 
 function seedStartingStructuralWords() {
@@ -1230,31 +1381,50 @@ function setupEventHandlers() {
 
   // Forge words button removed - now triggered by red-hot hammer hitting mold viewport
 
-  // Enscribe button - complete verse
   const enscribeBtn = document.getElementById('enscribeBtn');
   if (enscribeBtn) {
-    enscribeBtn.addEventListener('click', () => {
-      if (completeVerse()) {
-        // Spawn resource gain feedback at verse area center
-        const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
-        if (grammarHebrewLineDiv) {
-          const rect = grammarHebrewLineDiv.getBoundingClientRect();
-          const centerX = rect.left + rect.width / 2;
-          const centerY = rect.top + rect.height / 2;
-          spawnResourceGain(centerX, centerY, VERSE_COMPLETION_REWARD, 'ink');
-        }
-
-        alert('Verse completed! You gain ' + VERSE_COMPLETION_REWARD + ' Ink (prototype value).');
-        updateUI();
-      }
+    enscribeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
     });
   }
+
+  const anvilGlyph = document.getElementById('anvilGlyph');
+  if (anvilGlyph) {
+    anvilGlyph.style.cursor = 'pointer';
+    anvilGlyph.addEventListener('click', () => {
+      gameState.enscribeModeActive = true;
+      clearEnscribeSelection();
+    });
+  }
+
+  document.addEventListener('enscribe-attempt', (event) => {
+    const selectedWords = event?.detail?.words || [];
+    const isCorrect = selectedWords.length === SOLUTION_HEBREW_ORDER.length
+      && SOLUTION_HEBREW_ORDER.every((word, idx) => word === selectedWords[idx]);
+
+    gameState.enscribeModeActive = false;
+
+    if (isCorrect) {
+      addInk(VERSE_COMPLETION_REWARD);
+      gameState.linesCompleted += 1;
+      (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
+      spawnVerseEchoWords(selectedWords);
+      const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
+      if (grammarHebrewLineDiv) {
+        const rect = grammarHebrewLineDiv.getBoundingClientRect();
+        spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
+      }
+    }
+
+    clearEnscribeSelection();
+    updateUI();
+  });
 
   // Upgrades button
   const upgradesBtn = document.getElementById('upgradesBtn');
   if (upgradesBtn) {
     upgradesBtn.addEventListener('click', () => {
-      showUpgradeScreen();
+      upgradesAPI.showUpgradeScreen();
     });
   }
 
@@ -1262,7 +1432,7 @@ function setupEventHandlers() {
   const closeUpgradeBtn = document.getElementById('closeUpgradeBtn');
   if (closeUpgradeBtn) {
     closeUpgradeBtn.addEventListener('click', () => {
-      hideUpgradeScreen();
+      upgradesAPI.hideUpgradeScreen();
     });
   }
 
@@ -1271,7 +1441,7 @@ function setupEventHandlers() {
   if (upgradeModal) {
     upgradeModal.addEventListener('click', (e) => {
       if (e.target === upgradeModal) {
-        hideUpgradeScreen();
+        upgradesAPI.hideUpgradeScreen();
       }
     });
   }
@@ -1398,7 +1568,7 @@ function gameLoop(timestamp) {
   if (uiThrottleAcc >= uiInterval) {
     uiThrottleAcc = 0;
     updateUI();
-    updateUpgradeHeaderStats();
+    upgradesAPI.updateUpgradeHeaderStats();
   }
 
   // Continue loop

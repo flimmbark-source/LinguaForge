@@ -27,6 +27,7 @@ const UPGRADE_META = {
   gripStrength:      { column: 'forgecraft', tool: 'fist' },
   spinningThrow:     { column: 'forgecraft', tool: 'fist' },
   powerSwing:        { column: 'forgecraft', tool: 'fist' },
+  verseEcho:         { column: 'forgecraft', tool: 'fist' },
   
   // Forgecraft ─ Scribes stats
   scribeUse:         { column: 'forgecraft', tool: 'scribes' },
@@ -134,6 +135,25 @@ gripStrength: {
     onPurchase: (level) => {
       // Power swing multiplier stored in game state
       gameState.powerSwingMultiplier = 1 + (level * 0.2); // 1.2x to 2.0x
+    }
+  },
+
+
+  verseEcho: {
+    id: 'verseEcho',
+    name: 'Verse Echo',
+    description: 'Blessing of the versebook. Hammer strikes generate +1 additional letter.',
+    icon: '📜',
+    maxLevel: 1,
+    baseCost: { renown: 40, ink: 20 },
+    costPerLevel: { renown: 0, ink: 0 },
+    prerequisites: [{ id: 'gripStrength', minLevel: 1 }],
+    position: { x: -2, y: 0.3 },
+    connections: [],
+    nodeShape: NODE_SHAPES.SQUARE,
+    nodeColor: NODE_COLORS.YELLOW,
+    onPurchase: () => {
+      gameState.hammerHitBonusLetters = 1;
     }
   },
 
@@ -567,6 +587,23 @@ export function purchaseUpgrade(upgradeId) {
 
   if (upgrade.onPurchase) {
     upgrade.onPurchase(nextLevel);
+  }
+
+  return true;
+}
+
+/**
+ * Grant an upgrade level without paying cost (for scripted rewards).
+ */
+export function grantUpgradeLevel(upgradeId, level = 1) {
+  const upgrade = UPGRADE_TREE[upgradeId];
+  if (!upgrade) return false;
+
+  const nextLevel = Math.max(level, getUpgradeLevel(upgradeId));
+  gameState.upgrades[upgradeId] = Math.min(upgrade.maxLevel, nextLevel);
+
+  if (upgrade.onPurchase) {
+    upgrade.onPurchase(gameState.upgrades[upgradeId]);
   }
 
   return true;
