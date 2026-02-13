@@ -93,7 +93,9 @@ body.screen-locked {
 /* Utility helpers */
 .locked-hidden {
   display: none;
+  touch-action: manipulation;
 }
+
 
 /* Column Layout */
 .column {
@@ -1396,7 +1398,9 @@ button.secondary {
 
 .audio-controls-panel.hidden {
   display: none;
+  touch-action: manipulation;
 }
+
 
 .audio-controls-title {
   font-size: 12px;
@@ -1466,7 +1470,9 @@ button.secondary {
 /* Ensure locked tools stay hidden even when sharing .tool-button styles */
 .tool-button.locked-hidden {
   display: none;
+  touch-action: manipulation;
 }
+
 
 .tool-button:hover {
   background: #374151;
@@ -1689,7 +1695,9 @@ button.secondary {
 
 .upgrade-modal.hidden {
   display: none;
+  touch-action: manipulation;
 }
+
 
 .upgrade-modal-content {
   background: linear-gradient(135deg, #1a1625 0%, #0d0a14 100%);
@@ -2377,7 +2385,7 @@ button.secondary {
     display: flex;
     top: 12px;
     right: 12px;
-    z-index: 220;
+    z-index: 720;
   }
 
   .book-interior {
@@ -2914,14 +2922,14 @@ button.secondary {
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 220;
+    z-index: 520;
   }
 
   .magic-book .book-close-btn {
     display: flex;
     top: 12px;
     right: 12px;
-    z-index: 220;
+    z-index: 520;
   }
 
   .book-interior {
@@ -3541,7 +3549,7 @@ button.secondary {
   top: 80px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 95;
+  z-index: 595;
   user-select: none;
   transition: width 0.4s ease, height 0.4s ease;
 }
@@ -3610,7 +3618,9 @@ body.book-overlay-active .magic-book {
 /* ===== CLOSED BOOK STATE ===== */
 .magic-book.closed .book-interior {
   display: none;
+  touch-action: manipulation;
 }
+
 
 .magic-book.closed .book-cover {
   display: flex;
@@ -3618,7 +3628,9 @@ body.book-overlay-active .magic-book {
 
 .magic-book.open .book-cover {
   display: none;
+  touch-action: manipulation;
 }
+
 
 .magic-book.open .book-interior {
   display: flex;
@@ -3709,6 +3721,32 @@ body.book-overlay-active .magic-book {
   flex-direction: column;
   padding: 16px;
   min-width: 0;
+  position: relative;
+}
+
+.page-corner {
+  position: absolute;
+  top: 0;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: linear-gradient(135deg, rgba(90, 61, 26, 0.15) 50%, rgba(90, 61, 26, 0.35) 51%);
+  cursor: pointer;
+  z-index: 3;
+}
+
+.page-corner-left {
+  left: 0;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.page-corner-right {
+  right: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+.page-corner:hover {
+  filter: brightness(1.15);
 }
 
 .book-page-left {
@@ -3872,7 +3910,9 @@ body.book-overlay-active .magic-book {
 
 .tool-slot.locked-hidden {
   display: none;
+  touch-action: manipulation;
 }
+
 
 .tool-slot.dragging-out {
   opacity: 0.4;
@@ -4252,18 +4292,21 @@ body.book-overlay-active .magic-book {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow-y: auto;
+  overflow: hidden;
   max-height: 280px;
   padding-right: 4px;
 }
 
 .glossary-entry {
   display: flex;
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(93, 64, 30, 0.15);
+  background: rgba(93, 64, 30, 0.06);
+  cursor: pointer;
   align-items: flex-start;
   gap: 10px;
   padding: 8px 10px;
-  background: rgba(93, 64, 30, 0.06);
-  border: 1px solid rgba(93, 64, 30, 0.15);
   border-radius: 6px;
 }
 
@@ -4413,6 +4456,19 @@ body.book-overlay-active .magic-book {
 .word-selector-erase-btn:hover {
   background: #a04a4a;
 }
+
+.glossary-entry.is-selected {
+  outline: 2px solid #7a5d3a;
+  background: rgba(122, 93, 58, 0.2);
+}
+
+.glossary-page-indicator {
+  margin-top: 10px;
+  font-size: 11px;
+  opacity: 0.75;
+  text-align: center;
+}
+
 
 
 .mold-clink-popup {
@@ -4666,10 +4722,12 @@ body.book-overlay-active .magic-book {
   position: fixed;
   width: 48px;
   height: 48px;
-  pointer-events: none;
-  z-index: 5;
+  pointer-events: auto;
+  z-index: 12;
   display: none;
+  touch-action: manipulation;
 }
+
 
 .glyph-svg {
   width: 100%;
@@ -4710,5 +4768,7 @@ body.book-overlay-active .magic-book {
   pointer-events: none;
   z-index: 4;
   display: none;
+  touch-action: manipulation;
 }
+
 

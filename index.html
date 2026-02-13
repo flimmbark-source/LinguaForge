@@ -28,16 +28,19 @@
 
       <!-- GLOSSARY PAGE (left page) -->
       <div class="book-page book-page-left" id="glossaryPage">
+        <button id="bookPrevPageBtn" class="page-corner page-corner-left" title="Previous pages"></button>
         <div class="book-page-header">Glossary</div>
         <div class="book-page-content">
           <div id="glossaryEntries" class="glossary-entries">
             <div class="glossary-empty" style="opacity:0.6; font-size:12px;">No words forged yet.</div>
           </div>
+          <div id="glossaryPageIndicator" class="glossary-page-indicator">Pages 1-1</div>
         </div>
       </div>
 
       <!-- VERSE PAGE (right page) -->
       <div class="book-page book-page-right" id="versePage">
+        <button id="bookNextPageBtn" class="page-corner page-corner-right" title="Next pages"></button>
         <div class="book-page-header">Assembly</div>
         <div class="book-page-content">
           <div style="font-size:12px; opacity:0.8;">Verse</div>
@@ -45,27 +48,15 @@
           <div id="grammarScore" style="font-size:11px; opacity:0.7; margin-top:4px;"></div>
           <div id="grammarHebrewLine" class="letter-board"></div>
 
-          <!-- Word Selector -->
-          <div id="wordSelectorContainer" class="word-selector-container">
-            <button id="wordSelectorPrev" class="word-selector-arrow" title="Previous word">&#9664;</button>
-            <div id="wordSelectorDisplay" class="word-selector-display">
-              <span class="word-selector-empty">No words available</span>
-            </div>
-            <button id="wordSelectorNext" class="word-selector-arrow" title="Next word">&#9654;</button>
-          </div>
-          <div class="word-selector-actions">
-            <button id="wordSelectorEnterBtn" class="word-selector-enter-btn" disabled>Enter Word</button>
-            <button id="wordSelectorEraseBtn" class="word-selector-erase-btn">Erase</button>
-          </div>
-
           <div class="row" style="margin-top:10px;">
-            <button id="enscribeBtn" disabled>Enscribe Line</button>
+            <button id="enscribeBtn" disabled>Click the anvil glyph to enscribe</button>
             <span class="pill">Lines completed: <span id="linesCompleted">0</span></span>
           </div>
         </div>
       </div>
     </div>
   </div>
+
 
   <!-- Hidden elements for backward compat (grammar evaluation still uses these) -->
   <div style="display:none;">
