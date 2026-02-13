@@ -780,6 +780,33 @@ function attemptWordDiscoveryFromAnvil() {
   return true;
 }
 
+
+function attemptBucketWordDiscoveryFromRedHotHit() {
+  const discovered = new Set(gameState.forgedWordsHistory.map((w) => w.text));
+  const bucketWord = getWorldBucketDiscoverableWords().find((word) => !discovered.has(word.pattern));
+  if (!bucketWord) return false;
+
+  const bucketEl = document.getElementById(bucketWord.id);
+  const bounds = bucketEl ? bucketEl.getBoundingClientRect() : {
+    left: window.innerWidth * 0.65,
+    top: window.innerHeight * 0.6,
+    width: 120,
+    height: 80,
+    right: window.innerWidth * 0.65 + 120,
+    bottom: window.innerHeight * 0.6 + 80,
+  };
+
+  const forgedWord = {
+    text: bucketWord.pattern,
+    english: bucketWord.english,
+    length: bucketWord.pattern.length,
+    power: computeWordPower(bucketWord.pattern.length),
+  };
+
+  spawnMagicalText(forgedWord, bounds, 0);
+  return true;
+}
+
 /**
  * Initialize the game
  */
@@ -787,6 +814,10 @@ function initializeGame() {
   console.log('Initializing Lingua Forge...');
   // Initialize DOM element references
   initializeElements();
+
+  // Reset enscribe mode state on fresh game start
+  gameState.enscribeModeActive = false;
+  clearEnscribeSelection();
 
   // Initialize mold slots
   initializeMoldSlots();
@@ -957,6 +988,9 @@ function initializeCraftingSystems() {
     let discoveredMagicalWord = false;
     if (multiplier > 1) {
       discoveredMagicalWord = !!attemptWordDiscoveryFromAnvil();
+      if (!discoveredMagicalWord) {
+        discoveredMagicalWord = !!attemptBucketWordDiscoveryFromRedHotHit();
+      }
     }
 
     // If a red-hot strike discovered a magical word, do not spawn letters.
