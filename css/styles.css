@@ -93,7 +93,9 @@ body.screen-locked {
 /* Utility helpers */
 .locked-hidden {
   display: none;
+  touch-action: manipulation;
 }
+
 
 /* Column Layout */
 .column {
@@ -1396,7 +1398,9 @@ button.secondary {
 
 .audio-controls-panel.hidden {
   display: none;
+  touch-action: manipulation;
 }
+
 
 .audio-controls-title {
   font-size: 12px;
@@ -1466,7 +1470,9 @@ button.secondary {
 /* Ensure locked tools stay hidden even when sharing .tool-button styles */
 .tool-button.locked-hidden {
   display: none;
+  touch-action: manipulation;
 }
+
 
 .tool-button:hover {
   background: #374151;
@@ -1689,7 +1695,9 @@ button.secondary {
 
 .upgrade-modal.hidden {
   display: none;
+  touch-action: manipulation;
 }
+
 
 .upgrade-modal-content {
   background: linear-gradient(135deg, #1a1625 0%, #0d0a14 100%);
@@ -3610,7 +3618,9 @@ body.book-overlay-active .magic-book {
 /* ===== CLOSED BOOK STATE ===== */
 .magic-book.closed .book-interior {
   display: none;
+  touch-action: manipulation;
 }
+
 
 .magic-book.closed .book-cover {
   display: flex;
@@ -3618,7 +3628,9 @@ body.book-overlay-active .magic-book {
 
 .magic-book.open .book-cover {
   display: none;
+  touch-action: manipulation;
 }
+
 
 .magic-book.open .book-interior {
   display: flex;
@@ -3898,7 +3910,9 @@ body.book-overlay-active .magic-book {
 
 .tool-slot.locked-hidden {
   display: none;
+  touch-action: manipulation;
 }
+
 
 .tool-slot.dragging-out {
   opacity: 0.4;
@@ -4708,10 +4722,12 @@ body.book-overlay-active .magic-book {
   position: fixed;
   width: 48px;
   height: 48px;
-  pointer-events: none;
-  z-index: 5;
+  pointer-events: auto;
+  z-index: 12;
   display: none;
+  touch-action: manipulation;
 }
+
 
 .glyph-svg {
   width: 100%;
@@ -4752,5 +4768,7 @@ body.book-overlay-active .magic-book {
   pointer-events: none;
   z-index: 4;
   display: none;
+  touch-action: manipulation;
 }
+
 

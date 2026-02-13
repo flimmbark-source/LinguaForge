@@ -383,7 +383,7 @@ function initBackgroundDrag() {
     if (body.classList.contains('screen-locked')) return false;
     if (backgroundDragLockCount > 0) return false;
     return !target.closest(
-      '.tools-sidebar, .mold-viewport-wrapper, .letter-basket, .magic-book, .upgrade-modal, .workers-panel, .stats-wrap, .upgrades-btn, .crafting-forge, .letter-block-layer'
+      '.tools-sidebar, .mold-viewport-wrapper, .letter-basket, .magic-book, .upgrade-modal, .workers-panel, .stats-wrap, .upgrades-btn, .crafting-forge, .letter-block-layer, .anvil-glyph, .world-bucket'
     );
   }
 
