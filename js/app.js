@@ -4,12 +4,12 @@
  */
 
 
-import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower, GRAMMAR_LEXICON } from './config.js?v=9';
+import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower, GRAMMAR_LEXICON, SOLUTION_HEBREW_ORDER } from './config.js?v=9';
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
 import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
-import { setupVerseAreaDrop, completeVerse } from './grammar.js?v=9';
-import { initializeElements, updateUI, initWordSelector } from './ui.js?v=9';
+import { setupVerseAreaDrop } from './grammar.js?v=9';
+import { initializeElements, updateUI, initWordSelector, clearEnscribeSelection } from './ui.js?v=9';
 import { gameState } from './state.js?v=9';
 import { addLetters } from './state.js?v=9';
 import { HammerSystem } from './hammer.js?v=9';
@@ -1310,23 +1310,50 @@ function setupEventHandlers() {
 
   // Forge words button removed - now triggered by red-hot hammer hitting mold viewport
 
-  // Enscribe button - complete verse
   const enscribeBtn = document.getElementById('enscribeBtn');
   if (enscribeBtn) {
-    enscribeBtn.addEventListener('click', () => {
-      if (completeVerse()) {
-        // Spawn resource gain feedback at verse area center
-        const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
-        if (grammarHebrewLineDiv) {
-          const rect = grammarHebrewLineDiv.getBoundingClientRect();
-          const centerX = rect.left + rect.width / 2;
-          const centerY = rect.top + rect.height / 2;
-          spawnResourceGain(centerX, centerY, VERSE_COMPLETION_REWARD, 'ink');
-        }
+    enscribeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+    });
+  }
 
-        alert('Verse completed! You gain ' + VERSE_COMPLETION_REWARD + ' Ink (prototype value).');
-        updateUI();
+  const anvilGlyph = document.getElementById('anvilGlyph');
+  if (anvilGlyph) {
+    anvilGlyph.style.cursor = 'pointer';
+    anvilGlyph.addEventListener('click', () => {
+      gameState.enscribeModeActive = true;
+      clearEnscribeSelection();
+    });
+  }
+
+  document.addEventListener('enscribe-attempt', (event) => {
+    const selectedWords = event?.detail?.words || [];
+    const isCorrect = selectedWords.length === SOLUTION_HEBREW_ORDER.length
+      && SOLUTION_HEBREW_ORDER.every((word, idx) => word === selectedWords[idx]);
+
+    gameState.enscribeModeActive = false;
+
+    if (isCorrect) {
+      addInk(VERSE_COMPLETION_REWARD);
+      gameState.linesCompleted += 1;
+      const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
+      if (grammarHebrewLineDiv) {
+        const rect = grammarHebrewLineDiv.getBoundingClientRect();
+        spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
       }
+      const successScreen = document.getElementById('enscribeSuccessScreen');
+      if (successScreen) successScreen.classList.remove('hidden');
+    }
+
+    clearEnscribeSelection();
+    updateUI();
+  });
+
+  const enscribeSuccessClose = document.getElementById('enscribeSuccessClose');
+  if (enscribeSuccessClose) {
+    enscribeSuccessClose.addEventListener('click', () => {
+      const successScreen = document.getElementById('enscribeSuccessScreen');
+      if (successScreen) successScreen.classList.add('hidden');
     });
   }
 

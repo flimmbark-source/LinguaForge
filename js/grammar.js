@@ -102,6 +102,32 @@ export function completeVerse() {
   return true;
 }
 
+
+/**
+ * Check if a selected sequence exactly matches the target verse.
+ * @param {string[]} selectedWords - Hebrew words selected by player
+ * @returns {boolean}
+ */
+export function isSelectedVerseCorrect(selectedWords) {
+  if (!Array.isArray(selectedWords)) return false;
+  if (selectedWords.length !== SOLUTION_HEBREW_ORDER.length) return false;
+  return SOLUTION_HEBREW_ORDER.every((h, i) => selectedWords[i] === h);
+}
+
+/**
+ * Complete verse from glossary selection flow.
+ * @param {string[]} selectedWords
+ * @returns {boolean} True when completion succeeded
+ */
+export function completeSelectedVerse(selectedWords) {
+  if (!isSelectedVerseCorrect(selectedWords)) return false;
+
+  addInk(VERSE_COMPLETION_REWARD);
+  incrementLinesCompleted();
+  clearVerseWords();
+  return true;
+}
+
 /**
  * Setup pointer-based drag for verse word chips (more reliable than HTML5 drag-and-drop)
  * @param {HTMLElement} chip - Word chip element

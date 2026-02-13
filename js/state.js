@@ -47,6 +47,13 @@ export const gameState = {
   // Word selector index for verse page
   wordSelectorIndex: 0,
 
+  // Enscribe mode (started by clicking anvil glyph)
+  enscribeModeActive: false,
+  enscribeSelectedWords: [],
+
+  // Book glossary spread paging
+  glossarySpreadIndex: 0,
+
   // Upgrades
   upgrades: {},
 
