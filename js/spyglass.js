@@ -189,7 +189,7 @@ export class SpyglassSystem {
     if (bucketSecond) {
       const r = bucketSecond.getBoundingClientRect();
       if (r.width > 0 && pointInRect(r)) {
-        this.labelEl.textContent = 'Second';
+        this.labelEl.textContent = 'שמינייה';
         return;
       }
     }

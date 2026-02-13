@@ -184,7 +184,7 @@ export class HammerSystem {
       isHanging: false,
       hangX: 0,
       hangY: 0,
-      cooldownBounceMultiplier: 1.0  // Exponential bounce-back modifier during strike cooldown
+      cooldownBounceMultiplier: 2.0  // Exponential bounce-back modifier during strike cooldown
     };
 
     // Anvil state
@@ -252,7 +252,7 @@ export class HammerSystem {
     // Mobile browser UI (URL bar/toolbars) can finish settling well after first paint.
     // Keep re-syncing for a short window so the hammer is anchored once viewport
     // metrics stabilize, even before the player interacts with browser chrome.
-    const delays = [0, 150, 450, 900, 1400, 2000];
+    const delays = [0, 150, 450, 900];
     delays.forEach((delay) => {
       window.setTimeout(() => {
         this.resize();
@@ -1127,7 +1127,7 @@ updateHammer(dt) {
 
   // Reset the exponential bounce multiplier when the letter production cooldown expires
   if (prevCooldown > 0 && hammer.strikeCooldown <= 0) {
-    hammer.cooldownBounceMultiplier = 1.0;
+    hammer.cooldownBounceMultiplier = 2.0;
   }
 
   // If flying free, use different physics
@@ -1778,13 +1778,13 @@ updateFreeHammer(dt) {
       // This prevents the glitch where the hammer can be positioned to hit repeatedly
       // without moving away from the anvil.
       if (hammer.strikeCooldown > 0) {
-        hammer.cooldownBounceMultiplier *= 2.0;
+        hammer.cooldownBounceMultiplier *= 15.0;
         const cbm = hammer.cooldownBounceMultiplier;
         newVy *= cbm;
         newVx *= cbm;
       } else {
         // Fresh hit - reset the multiplier
-        hammer.cooldownBounceMultiplier = 1.0;
+        hammer.cooldownBounceMultiplier = 2.0;
       }
 
       hammer.headY = anvil.y - 18;

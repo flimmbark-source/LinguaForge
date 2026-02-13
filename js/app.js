@@ -88,8 +88,8 @@ const MOBILE_MORTAR_ANCHORS = {
 
 // World element anchors (background image coordinates)
 const GLYPH_ANCHOR = { x: 488, y: 638, size: 48 };
-const BUCKET_FIRST_ANCHOR = { x: 426, y: 723, width: 90, height: 65 };
-const BUCKET_SECOND_ANCHOR = { x: 356, y: 723, width: 55, height: 72 };
+const BUCKET_FIRST_ANCHOR = { x: 700, y: 400, width: 210, height: 165 };
+const BUCKET_SECOND_ANCHOR = { x: 500, y: 400, width: 195, height: 112 };
 
 let bgOffsetX = 0;
 let bgOffsetY = 0;
