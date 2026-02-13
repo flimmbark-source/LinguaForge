@@ -18,7 +18,7 @@ import { ShovelSystem } from './shovel.js?v=9';
 import { initializeHearth, updateHearth } from './RuneHearth.js?v=9';
 import { initAudio, startBackgroundMusic, getMusicVolume, getSfxVolume, setMusicVolume, setSfxVolume, unlockAudio } from './audio.js?v=9';
 import { addInk, addVerseWord, addWord, getNextWordId, recordForgedWord } from './state.js?v=9';
-import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats, grantUpgradeLevel } from './upgrades.js?v=9';
+import * as upgradesAPI from './upgrades.js?v=9';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
 import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 import { LetterPhysicsSystem } from './letterPhysics.js?v=9';
@@ -1407,7 +1407,7 @@ function setupEventHandlers() {
     if (isCorrect) {
       addInk(VERSE_COMPLETION_REWARD);
       gameState.linesCompleted += 1;
-      grantUpgradeLevel('verseEcho', 1);
+      (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
       spawnVerseEchoWords(selectedWords);
       const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
       if (grammarHebrewLineDiv) {
@@ -1424,7 +1424,7 @@ function setupEventHandlers() {
   const upgradesBtn = document.getElementById('upgradesBtn');
   if (upgradesBtn) {
     upgradesBtn.addEventListener('click', () => {
-      showUpgradeScreen();
+      upgradesAPI.showUpgradeScreen();
     });
   }
 
@@ -1432,7 +1432,7 @@ function setupEventHandlers() {
   const closeUpgradeBtn = document.getElementById('closeUpgradeBtn');
   if (closeUpgradeBtn) {
     closeUpgradeBtn.addEventListener('click', () => {
-      hideUpgradeScreen();
+      upgradesAPI.hideUpgradeScreen();
     });
   }
 
@@ -1441,7 +1441,7 @@ function setupEventHandlers() {
   if (upgradeModal) {
     upgradeModal.addEventListener('click', (e) => {
       if (e.target === upgradeModal) {
-        hideUpgradeScreen();
+        upgradesAPI.hideUpgradeScreen();
       }
     });
   }
@@ -1568,7 +1568,7 @@ function gameLoop(timestamp) {
   if (uiThrottleAcc >= uiInterval) {
     uiThrottleAcc = 0;
     updateUI();
-    updateUpgradeHeaderStats();
+    upgradesAPI.updateUpgradeHeaderStats();
   }
 
   // Continue loop
