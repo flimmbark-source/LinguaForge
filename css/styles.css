@@ -2385,7 +2385,7 @@ button.secondary {
     display: flex;
     top: 12px;
     right: 12px;
-    z-index: 220;
+    z-index: 720;
   }
 
   .book-interior {
@@ -2922,14 +2922,14 @@ button.secondary {
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 220;
+    z-index: 520;
   }
 
   .magic-book .book-close-btn {
     display: flex;
     top: 12px;
     right: 12px;
-    z-index: 220;
+    z-index: 520;
   }
 
   .book-interior {
@@ -3549,7 +3549,7 @@ button.secondary {
   top: 80px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 95;
+  z-index: 595;
   user-select: none;
   transition: width 0.4s ease, height 0.4s ease;
 }
