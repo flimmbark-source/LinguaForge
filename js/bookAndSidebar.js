@@ -348,7 +348,31 @@ function onToolSlotMouseMove(e) {
   if (toolDragActivated && toolSelectedCallback) {
     toolSelectedCallback(toolDragSource.dataset.tool, e.clientX, e.clientY);
   }
+
+  if (toolDragActivated && toolDragSource.dataset.tool === 'book') {
+    moveBookToPointer(e.clientX, e.clientY);
+  }
 }
+
+function moveBookToPointer(clientX, clientY) {
+  const book = document.getElementById('magicBook');
+  if (!book || isMobileScreen()) return;
+
+  book.style.display = '';
+  book.classList.remove('open');
+  book.classList.add('closed');
+  book.style.transform = 'none';
+  book.style.left = (clientX - 90) + 'px';
+  book.style.top = (clientY - 120) + 'px';
+
+  const btn = document.getElementById('bookToggleBtn');
+  if (btn) {
+    btn.textContent = '📖';
+    btn.title = 'Open Book';
+  }
+}
+
+
 
 function putToolAway(tool, source, onToolPutAway) {
   console.log('putToolAway called for:', tool);
@@ -361,6 +385,7 @@ function putToolAway(tool, source, onToolPutAway) {
         book.style.display = 'none';
       }
     }
+    if (source) source.classList.remove('active');
   } else {
     if (onToolPutAway) onToolPutAway(tool);
     if (source) source.classList.remove('active');
@@ -422,23 +447,12 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
  */
 function activateTool(tool, e, onToolSelected) {
   if (tool === 'book') {
-    const book = document.getElementById('magicBook');
-    if (book && book.style.display === 'none') {
-      if (isMobileScreen()) {
-        showBookMobile();
-      } else {
-        book.style.display = '';
-        book.classList.remove('open');
-        book.classList.add('closed');
-        book.style.transform = 'none';
-        book.style.left = (e.clientX - 90) + 'px';
-        book.style.top = (e.clientY - 120) + 'px';
-        const btn = document.getElementById('bookToggleBtn');
-        if (btn) {
-          btn.textContent = '📖';
-          btn.title = 'Open Book';
-        }
-      }
+        if (isMobileScreen()) {
+      showBookMobile();
+    } else {
+      moveBookToPointer(e.clientX, e.clientY);
+      const bookSlot = document.querySelector('.tool-slot[data-tool="book"]');
+      if (bookSlot) bookSlot.classList.add('active');
     }
   } else {
     if (onToolSelected) onToolSelected(tool, e.clientX, e.clientY);

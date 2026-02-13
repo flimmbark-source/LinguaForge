@@ -4,7 +4,7 @@
  */
 
 
-import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower } from './config.js?v=9';
+import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower, GRAMMAR_LEXICON } from './config.js?v=9';
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
 import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
@@ -601,9 +601,36 @@ function spawnMagicalText(word, moldBounds, delay) {
   }, delay);
 }
 
+function getWorldBucketDiscoverableWords() {
+  const bucketIds = ['bucketFirst', 'bucketSecond'];
+  const words = [];
+  const seen = new Set();
+
+  bucketIds.forEach((id) => {
+    const word = document.getElementById(id)?.dataset?.verseWord;
+    if (!word || seen.has(word)) return;
+    seen.add(word);
+    words.push({
+      id: id,
+      english: GRAMMAR_LEXICON[word]?.gloss || word,
+      hebrew: word,
+      pattern: word,
+      slots: [],
+    });
+  });
+
+  return words;
+}
+
+
 function getUndiscoveredWords() {
   const discovered = new Set(gameState.forgedWordsHistory.map((w) => w.text));
-  return gameState.currentLine.molds.filter((mold) => !discovered.has(mold.pattern));
+  const moldWords = gameState.currentLine.molds;
+  const bucketWords = getWorldBucketDiscoverableWords();
+  const allWords = [...moldWords, ...bucketWords].filter((word, index, arr) => (
+    arr.findIndex((w) => w.pattern === word.pattern) === index
+  ));
+  return allWords.filter((word) => !discovered.has(word.pattern));
 }
 
 function findAnvilWordMatch() {

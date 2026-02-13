@@ -120,7 +120,10 @@ export class SpyglassSystem {
 
   /** Helper: check if a word is used in the current mold line */
   _wordInMolds(word) {
-    return gameState.currentLine?.molds?.some((m) => m.pattern === word);
+  if (gameState.currentLine?.molds?.some((m) => m.pattern === word)) return true;
+
+    const bucketIds = ['bucketFirst', 'bucketSecond'];
+    return bucketIds.some((id) => document.getElementById(id)?.dataset?.verseWord === word);
   }
 
   /** Helper: show a word (or dash) based on whether it's in the current molds */
@@ -175,21 +178,16 @@ export class SpyglassSystem {
       return;
     }
 
-    // World buckets (positioned by app.js based on background coordinates)
-    // Always show the label when over a bucket, regardless of mold status
-    const bucketFirst = document.getElementById('bucketFirst');
-    const bucketSecond = document.getElementById('bucketSecond');
-    if (bucketFirst) {
-      const r = bucketFirst.getBoundingClientRect();
+    // Show each bucket's configured verse word so it flows through molds/glossary/anvil.
+    const worldBuckets = [
+      document.getElementById('bucketFirst'),
+      document.getElementById('bucketSecond'),
+    ];
+    for (const bucket of worldBuckets) {
+      if (!bucket) continue;
+      const r = bucket.getBoundingClientRect();
       if (r.width > 0 && pointInRect(r)) {
-        this.labelEl.textContent = 'First';
-        return;
-      }
-    }
-    if (bucketSecond) {
-      const r = bucketSecond.getBoundingClientRect();
-      if (r.width > 0 && pointInRect(r)) {
-        this.labelEl.textContent = 'שמינייה';
+        this._showWord(bucket.dataset.verseWord || '—');
         return;
       }
     }
