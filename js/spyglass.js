@@ -176,19 +176,20 @@ export class SpyglassSystem {
     }
 
     // World buckets (positioned by app.js based on background coordinates)
+    // Always show the label when over a bucket, regardless of mold status
     const bucketFirst = document.getElementById('bucketFirst');
     const bucketSecond = document.getElementById('bucketSecond');
-    if (bucketFirst && bucketFirst.style.display !== 'none') {
+    if (bucketFirst) {
       const r = bucketFirst.getBoundingClientRect();
-      if (pointInRect(r)) {
-        this._showWord('First');
+      if (r.width > 0 && pointInRect(r)) {
+        this.labelEl.textContent = 'First';
         return;
       }
     }
-    if (bucketSecond && bucketSecond.style.display !== 'none') {
+    if (bucketSecond) {
       const r = bucketSecond.getBoundingClientRect();
-      if (pointInRect(r)) {
-        this._showWord('Second');
+      if (r.width > 0 && pointInRect(r)) {
+        this.labelEl.textContent = 'Second';
         return;
       }
     }

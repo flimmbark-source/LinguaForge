@@ -4612,52 +4612,51 @@ body.book-overlay-active .magic-book {
   position: absolute;
   left: 50%;
   bottom: 100%;
-  width: 140px;
-  height: 120px;
+  width: 160px;
+  height: 140px;
   transform: translateX(-50%);
   pointer-events: none;
-  opacity: 0.35;
-  z-index: 11;
+  z-index: 120;
 }
 
 .steam-wisp {
   position: absolute;
   bottom: 0;
-  width: 20px;
-  height: 20px;
   border-radius: 999px;
   background: radial-gradient(circle,
-    rgba(200, 220, 255, 0.35) 0%,
-    rgba(180, 200, 240, 0.15) 50%,
+    rgba(220, 235, 255, 0.7) 0%,
+    rgba(200, 218, 248, 0.4) 40%,
+    rgba(180, 200, 240, 0.15) 70%,
     rgba(148, 163, 184, 0) 100%);
-  animation: steamWispRise 6s ease-in-out infinite;
-  filter: blur(1px);
+  animation: steamWispRise 5s ease-in-out infinite;
+  filter: blur(2px);
+  mix-blend-mode: screen;
 }
 
-.steam-wisp.wisp-1 { left: 30px; animation-delay: 0s; width: 24px; height: 24px; }
-.steam-wisp.wisp-2 { left: 55px; animation-delay: 1.2s; width: 18px; height: 18px; }
-.steam-wisp.wisp-3 { left: 78px; animation-delay: 2.5s; width: 22px; height: 22px; }
-.steam-wisp.wisp-4 { left: 42px; animation-delay: 3.6s; width: 16px; height: 16px; }
-.steam-wisp.wisp-5 { left: 95px; animation-delay: 4.8s; width: 20px; height: 20px; }
+.steam-wisp.wisp-1 { left: 35px; animation-delay: 0s; width: 28px; height: 28px; }
+.steam-wisp.wisp-2 { left: 60px; animation-delay: 1.0s; width: 24px; height: 24px; }
+.steam-wisp.wisp-3 { left: 85px; animation-delay: 2.2s; width: 26px; height: 26px; }
+.steam-wisp.wisp-4 { left: 48px; animation-delay: 3.3s; width: 22px; height: 22px; }
+.steam-wisp.wisp-5 { left: 100px; animation-delay: 4.2s; width: 24px; height: 24px; }
 
 @keyframes steamWispRise {
   0% {
-    transform: translate(0, 0) scale(0.5);
+    transform: translate(0, 0) scale(0.6);
     opacity: 0;
   }
-  15% {
-    opacity: 0.35;
+  12% {
+    opacity: 0.7;
   }
-  50% {
-    transform: translate(-6px, -50px) scale(1.1);
+  40% {
+    transform: translate(-5px, -40px) scale(1.2);
+    opacity: 0.5;
+  }
+  70% {
+    transform: translate(4px, -80px) scale(1.5);
     opacity: 0.25;
   }
-  80% {
-    transform: translate(4px, -90px) scale(1.4);
-    opacity: 0.1;
-  }
   100% {
-    transform: translate(8px, -110px) scale(1.6);
+    transform: translate(8px, -120px) scale(1.8);
     opacity: 0;
   }
 }
@@ -4713,56 +4712,3 @@ body.book-overlay-active .magic-book {
   display: none;
 }
 
-/* ===== SPELLBOOK (held tool) ===== */
-.spellbook-held {
-  position: fixed;
-  z-index: 150;
-  pointer-events: none;
-  width: 80px;
-  height: 100px;
-  transform: translate(-50%, -20%);
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
-  transition: transform 0.1s ease;
-}
-
-.spellbook-held .spellbook-cover {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #4a2c17 0%, #6b3a1f 30%, #5c3018 70%, #3d2010 100%);
-  border-radius: 4px 8px 8px 4px;
-  border: 2px solid #8b6914;
-  box-shadow:
-    inset 0 0 15px rgba(0, 0, 0, 0.4),
-    inset 2px 0 8px rgba(0, 0, 0, 0.3),
-    0 0 8px rgba(139, 105, 20, 0.3);
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.spellbook-held .spellbook-spine {
-  position: absolute;
-  left: 0;
-  top: 4px;
-  bottom: 4px;
-  width: 10px;
-  background: linear-gradient(to right, #3d2010, #5c3018, #4a2c17);
-  border-radius: 4px 0 0 4px;
-  border-right: 1px solid rgba(139, 105, 20, 0.4);
-}
-
-.spellbook-held .spellbook-emblem {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1.5px solid #c9a84c;
-  background: radial-gradient(circle, rgba(100, 160, 255, 0.3) 0%, rgba(74, 44, 23, 0.8) 70%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  color: #c9a84c;
-  text-shadow: 0 0 6px rgba(100, 160, 255, 0.6);
-  margin-left: 4px;
-}
