@@ -18,7 +18,7 @@ import { ShovelSystem } from './shovel.js?v=9';
 import { initializeHearth, updateHearth } from './RuneHearth.js?v=9';
 import { initAudio, startBackgroundMusic, getMusicVolume, getSfxVolume, setMusicVolume, setSfxVolume, unlockAudio } from './audio.js?v=9';
 import { addInk, addVerseWord, addWord, getNextWordId, recordForgedWord } from './state.js?v=9';
-import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from './upgrades.js?v=9';
+import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats, grantUpgradeLevel } from './upgrades.js?v=9';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
 import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 import { LetterPhysicsSystem } from './letterPhysics.js?v=9';
@@ -601,6 +601,43 @@ function spawnMagicalText(word, moldBounds, delay) {
   }, delay);
 }
 
+
+
+function spawnVerseEchoWords(words) {
+  const glyph = document.getElementById('anvilGlyph');
+  const book = document.getElementById('magicBook');
+  if (!glyph || !book || !Array.isArray(words)) return;
+
+  const glyphRect = glyph.getBoundingClientRect();
+  const targetX = glyphRect.left + glyphRect.width / 2;
+  const targetY = glyphRect.top + glyphRect.height / 2;
+  const bookRect = book.getBoundingClientRect();
+
+  words.forEach((word, index) => {
+    setTimeout(() => {
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position:fixed;z-index:205;pointer-events:none;';
+      wrapper.style.left = (bookRect.left + bookRect.width * (0.30 + Math.random() * 0.4)) + 'px';
+      wrapper.style.top = (bookRect.top + 70 + Math.random() * 120) + 'px';
+
+      const el = document.createElement('div');
+      el.className = 'magical-text phase-emerge';
+      el.textContent = word;
+      wrapper.appendChild(el);
+      document.body.appendChild(wrapper);
+
+      setTimeout(() => {
+        el.classList.remove('phase-emerge');
+        el.classList.add('phase-zoom');
+        wrapper.style.transition = 'left 0.75s cubic-bezier(0.5, 0, 0.75, 0), top 0.75s cubic-bezier(0.5, 0, 0.75, 0)';
+        wrapper.style.left = targetX + 'px';
+        wrapper.style.top = targetY + 'px';
+
+        setTimeout(() => wrapper.remove(), 800);
+      }, 400 + index * 60);
+    }, index * 180);
+  });
+}
 function getWorldBucketDiscoverableWords() {
   const bucketIds = ['bucketFirst', 'bucketSecond'];
   const words = [];
@@ -926,7 +963,7 @@ function initializeCraftingSystems() {
     if (!(multiplier > 1 && discoveredMagicalWord)) {
       // Spawn letters based on lettersPerClick and multiplier
       // On mobile, cap total spawned per strike to keep framerate smooth
-      const rawTotal = gameState.lettersPerClick * multiplier;
+      const rawTotal = (gameState.lettersPerClick + gameState.hammerHitBonusLetters) * multiplier;
       const totalLetters = isMobileDevice ? Math.min(rawTotal, 6) : rawTotal;
       const maxSpread = Math.PI / 4;
       const spreadDivisor = Math.max(1, totalLetters - 1);
@@ -1336,26 +1373,18 @@ function setupEventHandlers() {
     if (isCorrect) {
       addInk(VERSE_COMPLETION_REWARD);
       gameState.linesCompleted += 1;
+      grantUpgradeLevel('verseEcho', 1);
+      spawnVerseEchoWords(selectedWords);
       const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
       if (grammarHebrewLineDiv) {
         const rect = grammarHebrewLineDiv.getBoundingClientRect();
         spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
       }
-      const successScreen = document.getElementById('enscribeSuccessScreen');
-      if (successScreen) successScreen.classList.remove('hidden');
     }
 
     clearEnscribeSelection();
     updateUI();
   });
-
-  const enscribeSuccessClose = document.getElementById('enscribeSuccessClose');
-  if (enscribeSuccessClose) {
-    enscribeSuccessClose.addEventListener('click', () => {
-      const successScreen = document.getElementById('enscribeSuccessScreen');
-      if (successScreen) successScreen.classList.add('hidden');
-    });
-  }
 
   // Upgrades button
   const upgradesBtn = document.getElementById('upgradesBtn');

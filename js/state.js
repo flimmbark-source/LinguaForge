@@ -13,6 +13,7 @@ export const gameState = {
   letters: 0,
   ink: 0,
   lettersPerClick: 1,
+  hammerHitBonusLetters: 0,
 
   // Words (player inventory)
   words: [],

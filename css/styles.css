@@ -4455,34 +4455,6 @@ body.book-overlay-active .magic-book {
   text-align: center;
 }
 
-.enscribe-success-screen {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.58);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 210;
-}
-
-.enscribe-success-card {
-  background: #f5e6c8;
-  border: 2px solid #8b6914;
-  border-radius: 10px;
-  padding: 20px;
-  text-align: center;
-  min-width: 280px;
-}
-
-.enscribe-success-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #5a3d1a;
-}
-
-.enscribe-success-text {
-  margin: 8px 0 14px;
-}
 
 
 .mold-clink-popup {
