@@ -23,6 +23,7 @@ import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } 
 import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 import { LetterPhysicsSystem } from './letterPhysics.js?v=9';
 import { spyglassSystem } from './spyglass.js?v=9';
+import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 import { getAnvilPlacedLetters, consumeAnvilPlacedLetters } from './letters.js?v=9';
 
 // Global crafting system references
@@ -34,9 +35,16 @@ let craftingCanvasRef = null;
 let letterBlocksCanvasRef = null;
 let letterBlocksCtx = null;
 let toolOverlayRenderer = null;
-let activeTool = 'hammer'; // hammer / pestle / shovel / spyglass
+let activeTool = 'hammer'; // hammer / pestle / shovel / spyglass / spellbook
 let screenLockCount = 0;
 let backgroundDragLockCount = 0;
+
+// Spellbook held-tool state
+let spellbookEl = null;
+let spellbookHeld = false;
+let spellbookDragging = false;
+let spellbookOffsetX = 0;
+let spellbookOffsetY = 0;
 
 const BACKGROUND_IMAGE = {
   width: 1536,
@@ -85,6 +93,11 @@ const MOBILE_MORTAR_ANCHORS = {
     height: 117
   }
 };
+
+// World element anchors (background image coordinates)
+const GLYPH_ANCHOR = { x: 438, y: 438, size: 48 };
+const BUCKET_FIRST_ANCHOR = { x: 426, y: 723, width: 90, height: 65 };
+const BUCKET_SECOND_ANCHOR = { x: 356, y: 723, width: 55, height: 72 };
 
 let bgOffsetX = 0;
 let bgOffsetY = 0;
@@ -145,22 +158,110 @@ function makePutAwayHandler(toolName) {
     if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
     if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
     if (toolName === 'spyglass') spyglassSystem.stop();
+    if (toolName === 'spellbook') stopSpellbook();
     if (activeTool === toolName) activeTool = null;
     // Update sidebar slot
     const slotId = toolName === 'hammer' ? 'toolSlotHammer' :
                    toolName === 'spyglass' ? 'toolSlotSpyglass' :
                    toolName === 'pestle' ? 'toolSlotPestle' :
-                   toolName === 'shovel' ? 'toolSlotShovel' : '';
+                   toolName === 'shovel' ? 'toolSlotShovel' :
+                   toolName === 'spellbook' ? 'toolSlotSpellbook' : '';
     const slot = document.getElementById(slotId);
     if (slot) slot.classList.remove('active');
     // Update hidden button
     const btnId = toolName === 'hammer' ? 'selectHammer' :
                   toolName === 'spyglass' ? 'selectSpyglass' :
                   toolName === 'pestle' ? 'selectPestle' :
-                  toolName === 'shovel' ? 'selectShovel' : '';
+                  toolName === 'shovel' ? 'selectShovel' :
+                  toolName === 'spellbook' ? 'selectSpellbook' : '';
     const btn = document.getElementById(btnId);
     if (btn) btn.classList.remove('active');
   };
+}
+
+// ===== SPELLBOOK HELD-TOOL SYSTEM =====
+
+function ensureSpellbookElement() {
+  if (spellbookEl && spellbookEl.isConnected) return spellbookEl;
+
+  const el = document.createElement('div');
+  el.className = 'spellbook-held';
+  el.innerHTML = `
+    <div class="spellbook-cover">
+      <div class="spellbook-spine"></div>
+      <div class="spellbook-emblem">\u2726</div>
+    </div>
+  `;
+  document.body.appendChild(el);
+  spellbookEl = el;
+  return el;
+}
+
+function startSpellbook(clientX, clientY) {
+  const el = ensureSpellbookElement();
+  spellbookHeld = true;
+  el.style.display = 'block';
+  if (typeof clientX === 'number' && typeof clientY === 'number') {
+    el.style.left = `${clientX}px`;
+    el.style.top = `${clientY}px`;
+  }
+
+  // Start drag tracking immediately
+  spellbookDragging = true;
+  document.addEventListener('pointermove', onSpellbookPointerMove);
+  document.addEventListener('pointerup', onSpellbookPointerUp);
+}
+
+function stopSpellbook() {
+  spellbookHeld = false;
+  spellbookDragging = false;
+  if (spellbookEl) {
+    spellbookEl.style.display = 'none';
+  }
+  document.removeEventListener('pointermove', onSpellbookPointerMove);
+  document.removeEventListener('pointerup', onSpellbookPointerUp);
+}
+
+function onSpellbookPointerMove(e) {
+  if (!spellbookHeld || !spellbookEl) return;
+  spellbookEl.style.left = `${e.clientX}px`;
+  spellbookEl.style.top = `${e.clientY}px`;
+  handleToolDragNearSidebar(e.clientX);
+}
+
+function onSpellbookPointerUp(e) {
+  if (!spellbookHeld) return;
+
+  const sidebar = document.getElementById('toolsSidebar');
+  const sidebarRect = sidebar ? sidebar.getBoundingClientRect() : null;
+  const droppedInSidebar = sidebarRect &&
+    e.clientX >= sidebarRect.left && e.clientX <= sidebarRect.right &&
+    e.clientY >= sidebarRect.top && e.clientY <= sidebarRect.bottom;
+  const droppedNearRightEdge = e.clientX >= window.innerWidth - 110;
+
+  if (shouldPutToolAway(e.clientX, e.clientY) || droppedInSidebar || droppedNearRightEdge) {
+    makePutAwayHandler('spellbook')();
+    cleanupToolDragSidebar();
+    return;
+  }
+  cleanupToolDragSidebar();
+  // Keep spellbook at released position, wait for next pointerdown to resume dragging
+  spellbookDragging = false;
+  document.removeEventListener('pointermove', onSpellbookPointerMove);
+  document.removeEventListener('pointerup', onSpellbookPointerUp);
+
+  // Re-attach so user can pick it up again
+  if (spellbookEl) {
+    spellbookEl.addEventListener('pointerdown', onSpellbookRePickup, { once: true });
+  }
+}
+
+function onSpellbookRePickup(e) {
+  if (!spellbookHeld || !spellbookEl) return;
+  e.preventDefault();
+  spellbookDragging = true;
+  document.addEventListener('pointermove', onSpellbookPointerMove);
+  document.addEventListener('pointerup', onSpellbookPointerUp);
 }
 
 /**
@@ -277,6 +378,9 @@ function updateAnchoredUI() {
     root.style.setProperty('--bg-display-height', `${updatedMetrics.displayHeight}px`);
   }
 
+  // Position world elements on all screen sizes
+  positionWorldElements(updatedMetrics);
+
   if (!isMobileBackground()) return;
 
   const hearthX = updatedMetrics.originX + HEARTH_ANCHOR.x * updatedMetrics.scale;
@@ -320,6 +424,49 @@ function updateAnchoredUI() {
       width: mortarAnchorConfig.width * updatedMetrics.scale,
       height: mortarAnchorConfig.height * updatedMetrics.scale
     });
+  }
+}
+
+function positionWorldElements(metrics) {
+  // Anvil glyph at background coordinate 438×438
+  const glyph = document.getElementById('anvilGlyph');
+  if (glyph) {
+    const gx = metrics.originX + GLYPH_ANCHOR.x * metrics.scale;
+    const gy = metrics.originY + GLYPH_ANCHOR.y * metrics.scale;
+    const gs = GLYPH_ANCHOR.size * metrics.scale;
+    glyph.style.left = `${gx - gs / 2}px`;
+    glyph.style.top = `${gy - gs / 2}px`;
+    glyph.style.width = `${gs}px`;
+    glyph.style.height = `${gs}px`;
+    glyph.style.display = 'block';
+  }
+
+  // Bucket "First" at 723 down × 426 right, area 90×65
+  const bucketFirst = document.getElementById('bucketFirst');
+  if (bucketFirst) {
+    const bx = metrics.originX + BUCKET_FIRST_ANCHOR.x * metrics.scale;
+    const by = metrics.originY + BUCKET_FIRST_ANCHOR.y * metrics.scale;
+    const bw = BUCKET_FIRST_ANCHOR.width * metrics.scale;
+    const bh = BUCKET_FIRST_ANCHOR.height * metrics.scale;
+    bucketFirst.style.left = `${bx - bw / 2}px`;
+    bucketFirst.style.top = `${by - bh / 2}px`;
+    bucketFirst.style.width = `${bw}px`;
+    bucketFirst.style.height = `${bh}px`;
+    bucketFirst.style.display = 'block';
+  }
+
+  // Bucket "Second" at 723 down × 356 right (70 left of first), area 55×72
+  const bucketSecond = document.getElementById('bucketSecond');
+  if (bucketSecond) {
+    const bx = metrics.originX + BUCKET_SECOND_ANCHOR.x * metrics.scale;
+    const by = metrics.originY + BUCKET_SECOND_ANCHOR.y * metrics.scale;
+    const bw = BUCKET_SECOND_ANCHOR.width * metrics.scale;
+    const bh = BUCKET_SECOND_ANCHOR.height * metrics.scale;
+    bucketSecond.style.left = `${bx - bw / 2}px`;
+    bucketSecond.style.top = `${by - bh / 2}px`;
+    bucketSecond.style.width = `${bw}px`;
+    bucketSecond.style.height = `${bh}px`;
+    bucketSecond.style.display = 'block';
   }
 }
 
@@ -733,7 +880,8 @@ function initializeGame() {
         hammer: document.getElementById('selectHammer'),
         spyglass: document.getElementById('selectSpyglass'),
         pestle: document.getElementById('selectPestle'),
-        shovel: document.getElementById('selectShovel')
+        shovel: document.getElementById('selectShovel'),
+        spellbook: document.getElementById('selectSpellbook')
       };
       const btn = btnMap[toolName];
       if (btn) btn.click();
@@ -769,6 +917,9 @@ function initializeGame() {
         if (toolName === 'spyglass') {
           spyglassSystem.startAt(dropX, dropY);
         }
+        if (toolName === 'spellbook') {
+          startSpellbook(dropX, dropY);
+        }
       }
     },
     // onToolPutAway: drop a tool back in the sidebar to stow it
@@ -777,6 +928,7 @@ function initializeGame() {
       if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
       if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
       if (toolName === 'spyglass') spyglassSystem.stop();
+      if (toolName === 'spellbook') stopSpellbook();
 
       // Clear the active tool if we just put away the one that was active
       if (activeTool === toolName) {
@@ -788,7 +940,8 @@ function initializeGame() {
         toolName === 'hammer' ? 'selectHammer' :
         toolName === 'spyglass' ? 'selectSpyglass' :
         toolName === 'pestle' ? 'selectPestle' :
-        toolName === 'shovel' ? 'selectShovel' : ''
+        toolName === 'shovel' ? 'selectShovel' :
+        toolName === 'spellbook' ? 'selectSpellbook' : ''
       );
       if (btn) btn.classList.remove('active');
 
@@ -993,22 +1146,27 @@ function setupToolSelection() {
   const spyglassBtn = document.getElementById('selectSpyglass');
   const pestleBtn = document.getElementById('selectPestle');
   const shovelBtn = document.getElementById('selectShovel');
+  const spellbookBtn = document.getElementById('selectSpellbook');
   const craftingHint = document.getElementById('craftingHint');
   if (!hammerBtn || !spyglassBtn || !pestleBtn || !shovelBtn) return;
+
+  const allToolBtns = [hammerBtn, spyglassBtn, pestleBtn, shovelBtn, spellbookBtn].filter(Boolean);
+  function clearAllToolBtns(except) {
+    allToolBtns.forEach(b => { if (b !== except) b.classList.remove('active'); });
+  }
 
   hammerBtn.addEventListener('click', () => {
     if (activeTool === 'hammer') return;
 
     activeTool = 'hammer';
+    clearAllToolBtns(hammerBtn);
     hammerBtn.classList.add('active');
-    spyglassBtn.classList.remove('active');
-    pestleBtn.classList.remove('active');
-    shovelBtn.classList.remove('active');
 
     // Switch systems
     if (shovelSystem) shovelSystem.stop();
     if (pestleSystem) pestleSystem.stop();
     spyglassSystem.stop();
+    stopSpellbook();
     if (hammerSystem) hammerSystem.start();
 
     // Update hint text
@@ -1024,14 +1182,13 @@ function setupToolSelection() {
     if (activeTool === 'spyglass') return;
 
     activeTool = 'spyglass';
+    clearAllToolBtns(spyglassBtn);
     spyglassBtn.classList.add('active');
-    hammerBtn.classList.remove('active');
-    pestleBtn.classList.remove('active');
-    shovelBtn.classList.remove('active');
 
     if (hammerSystem) hammerSystem.stop();
     if (pestleSystem) pestleSystem.stop();
     if (shovelSystem) shovelSystem.stop();
+    stopSpellbook();
     spyglassSystem.startAt(window.innerWidth * 0.7, window.innerHeight * 0.35);
   });
 
@@ -1041,15 +1198,14 @@ function setupToolSelection() {
     if (!ensurePestleSystem(craftingCanvasRef, toolOverlayRenderer)) return;
 
     activeTool = 'pestle';
-    shovelBtn.classList.remove('active');
-    spyglassBtn.classList.remove('active');
+    clearAllToolBtns(pestleBtn);
     pestleBtn.classList.add('active');
-    hammerBtn.classList.remove('active');
 
     // Switch systems
     if (hammerSystem) hammerSystem.stop();
     if (shovelSystem) shovelSystem.stop();
     spyglassSystem.stop();
+    stopSpellbook();
     if (pestleSystem) pestleSystem.start();
 
     // Update hint text
@@ -1067,15 +1223,14 @@ function setupToolSelection() {
     if (!ensureShovelSystem(craftingCanvasRef, toolOverlayRenderer)) return;
 
     activeTool = 'shovel';
+    clearAllToolBtns(shovelBtn);
     shovelBtn.classList.add('active');
-    hammerBtn.classList.remove('active');
-    pestleBtn.classList.remove('active');
-    spyglassBtn.classList.remove('active');
 
     // Switch systems
     if (hammerSystem) hammerSystem.stop();
     if (pestleSystem) pestleSystem.stop();
     spyglassSystem.stop();
+    stopSpellbook();
     if (shovelSystem) shovelSystem.start();
 
     // Update hint text
@@ -1086,6 +1241,25 @@ function setupToolSelection() {
 
     console.log('Switched to Shovel');
   });
+
+  if (spellbookBtn) {
+    spellbookBtn.addEventListener('click', () => {
+      if (activeTool === 'spellbook') return;
+
+      activeTool = 'spellbook';
+      clearAllToolBtns(spellbookBtn);
+      spellbookBtn.classList.add('active');
+
+      // Switch systems
+      if (hammerSystem) hammerSystem.stop();
+      if (pestleSystem) pestleSystem.stop();
+      if (shovelSystem) shovelSystem.stop();
+      spyglassSystem.stop();
+      startSpellbook(window.innerWidth * 0.5, window.innerHeight * 0.4);
+
+      console.log('Switched to Spellbook');
+    });
+  }
 }
 
 function seedStartingStructuralWords() {

@@ -97,6 +97,10 @@
         <div class="tool-slot-icon">🧰</div>
         <div class="tool-slot-label">Shovel</div>
       </div>
+      <div class="tool-slot" data-tool="spellbook" id="toolSlotSpellbook">
+        <div class="tool-slot-icon">📜</div>
+        <div class="tool-slot-label">Spellbook</div>
+      </div>
     </div>
   </div>
 
@@ -106,6 +110,7 @@
     <button id="selectSpyglass" class="tool-button" data-tool="spyglass"></button>
     <button id="selectPestle" class="tool-button locked-hidden" data-tool="pestle"></button>
     <button id="selectShovel" class="tool-button locked-hidden" data-tool="shovel"></button>
+    <button id="selectSpellbook" class="tool-button" data-tool="spellbook"></button>
   </div>
 
   <!-- WORKERS PANEL FIXED BELOW RESOURCES -->
@@ -186,6 +191,14 @@
           </div>
           <div class="hearth-floor"></div>
         </div>
+        <!-- Steam plume rising above the fire -->
+        <div id="hearthSteamPlume" class="hearth-steam-plume" aria-hidden="true">
+          <span class="steam-wisp wisp-1"></span>
+          <span class="steam-wisp wisp-2"></span>
+          <span class="steam-wisp wisp-3"></span>
+          <span class="steam-wisp wisp-4"></span>
+          <span class="steam-wisp wisp-5"></span>
+        </div>
       </div>
 
       <!-- Hearth base/foundation -->
@@ -228,6 +241,39 @@
       </div>
     </div>
   </div>
+
+  <!-- Background-anchored world elements -->
+  <div id="anvilGlyph" class="anvil-glyph" aria-hidden="true">
+    <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" class="glyph-svg">
+      <defs>
+        <filter id="glyphGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      <!-- Embossed outline matching anvil face color -->
+      <circle cx="30" cy="30" r="24" fill="none" stroke="#78716c" stroke-width="3" opacity="0.8"/>
+      <circle cx="30" cy="30" r="21" fill="none" stroke="#57534e" stroke-width="1.5" opacity="0.6"/>
+      <!-- Inner arcane glyph lines -->
+      <g class="glyph-inner" filter="url(#glyphGlow)">
+        <circle cx="30" cy="30" r="16" fill="none" stroke="#4da6ff" stroke-width="1.2" opacity="0.9"/>
+        <path d="M30 14 L30 46 M14 30 L46 30" stroke="#4da6ff" stroke-width="1" opacity="0.7"/>
+        <path d="M20 20 L40 40 M40 20 L20 40" stroke="#4da6ff" stroke-width="0.8" opacity="0.6"/>
+        <circle cx="30" cy="30" r="8" fill="none" stroke="#6bb8ff" stroke-width="1" opacity="0.8"/>
+        <circle cx="30" cy="30" r="3" fill="#4da6ff" opacity="0.6"/>
+        <!-- Rune marks -->
+        <path d="M22 16 L26 22 M38 16 L34 22" stroke="#6bb8ff" stroke-width="0.8" opacity="0.7"/>
+        <path d="M22 44 L26 38 M38 44 L34 38" stroke="#6bb8ff" stroke-width="0.8" opacity="0.7"/>
+        <path d="M16 22 L22 26 M16 38 L22 34" stroke="#6bb8ff" stroke-width="0.8" opacity="0.7"/>
+        <path d="M44 22 L38 26 M44 38 L38 34" stroke="#6bb8ff" stroke-width="0.8" opacity="0.7"/>
+      </g>
+    </svg>
+  </div>
+  <div id="bucketFirst" class="world-bucket" data-verse-word="First"></div>
+  <div id="bucketSecond" class="world-bucket" data-verse-word="Second"></div>
 
   <!-- Load JavaScript modules -->
   <script type="module" src="js/app.js?v=9"></script>

@@ -118,6 +118,17 @@ export class SpyglassSystem {
     this.el.style.top = `${this.position.y}px`;
   }
 
+  /** Helper: check if a word is used in the current mold line */
+  _wordInMolds(word) {
+    return gameState.currentLine?.molds?.some((m) => m.pattern === word);
+  }
+
+  /** Helper: show a word (or dash) based on whether it's in the current molds */
+  _showWord(word) {
+    const usedInLine = this._wordInMolds(word);
+    this.labelEl.textContent = usedInLine ? word : '—';
+  }
+
   revealWordAtCurrentPosition() {
     if (!this.labelEl) return;
 
@@ -126,6 +137,13 @@ export class SpyglassSystem {
       this.position.x >= rect.left && this.position.x <= rect.right &&
       this.position.y >= rect.top && this.position.y <= rect.bottom
     );
+
+    // Check anvil glyph (Power)
+    const glyphRect = document.getElementById('anvilGlyph')?.getBoundingClientRect?.() || null;
+    if (glyphRect && glyphRect.width > 0 && pointInRect(glyphRect)) {
+      this._showWord('כוח');
+      return;
+    }
 
     const anvilRect = typeof window.getAnvilViewportRect === 'function'
       ? window.getAnvilViewportRect()
@@ -137,25 +155,42 @@ export class SpyglassSystem {
     );
 
     if (overAnvil) {
-      const usedInLine = gameState.currentLine?.molds?.some((m) => m.pattern === 'כוח');
-      this.labelEl.textContent = usedInLine ? 'כוח' : '—';
+      this._showWord('כוח');
       return;
     }
 
-    // Fire / Breath targets can use pointer-events:none, so detect by bounds
-    // first (instead of only relying on elementsFromPoint).
+    // Expanded fire detection: use the entire hearth-opening as the fire zone
+    const hearthOpeningRect = document.querySelector('.hearth-opening')?.getBoundingClientRect?.() || null;
     const hearthFireRect = document.getElementById('hearthFire')?.getBoundingClientRect?.() || null;
-    if (pointInRect(hearthFireRect)) {
-      const usedInLine = gameState.currentLine?.molds?.some((m) => m.pattern === 'אש');
-      this.labelEl.textContent = usedInLine ? 'אש' : '—';
+    if (pointInRect(hearthOpeningRect) || pointInRect(hearthFireRect)) {
+      this._showWord('אש');
       return;
     }
 
+    // Steam plume + breath → Breath word
+    const steamPlumeRect = document.getElementById('hearthSteamPlume')?.getBoundingClientRect?.() || null;
     const hearthBreathRect = document.getElementById('hearthBreath')?.getBoundingClientRect?.() || null;
-    if (pointInRect(hearthBreathRect)) {
-      const usedInLine = gameState.currentLine?.molds?.some((m) => m.pattern === 'נשמת');
-      this.labelEl.textContent = usedInLine ? 'נשמת' : '—';
+    if (pointInRect(steamPlumeRect) || pointInRect(hearthBreathRect)) {
+      this._showWord('נשמת');
       return;
+    }
+
+    // World buckets (positioned by app.js based on background coordinates)
+    const bucketFirst = document.getElementById('bucketFirst');
+    const bucketSecond = document.getElementById('bucketSecond');
+    if (bucketFirst && bucketFirst.style.display !== 'none') {
+      const r = bucketFirst.getBoundingClientRect();
+      if (pointInRect(r)) {
+        this._showWord('First');
+        return;
+      }
+    }
+    if (bucketSecond && bucketSecond.style.display !== 'none') {
+      const r = bucketSecond.getBoundingClientRect();
+      if (pointInRect(r)) {
+        this._showWord('Second');
+        return;
+      }
     }
 
     const hoverElements = document.elementsFromPoint(this.position.x, this.position.y);
@@ -167,7 +202,7 @@ export class SpyglassSystem {
       return;
     }
 
-    const usedInLine = gameState.currentLine?.molds?.some((m) => m.pattern === word);
+    const usedInLine = this._wordInMolds(word);
     this.labelEl.textContent = usedInLine ? word : '—';
   }
 
@@ -182,6 +217,19 @@ export class SpyglassSystem {
     steamPuffs.forEach((el) => {
       el.dataset.verseWord = 'נשמת';
     });
+
+    // Steam plume wisps
+    const steamWisps = document.querySelectorAll('.steam-wisp');
+    steamWisps.forEach((el) => {
+      el.dataset.verseWord = 'נשמת';
+    });
+
+    const steamPlume = document.getElementById('hearthSteamPlume');
+    if (steamPlume) steamPlume.dataset.verseWord = 'נשמת';
+
+    // Anvil glyph
+    const glyph = document.getElementById('anvilGlyph');
+    if (glyph) glyph.dataset.verseWord = 'כוח';
   }
 }
 

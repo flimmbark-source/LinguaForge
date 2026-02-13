@@ -183,7 +183,8 @@ export class HammerSystem {
       spinTimer: 0,
       isHanging: false,
       hangX: 0,
-      hangY: 0
+      hangY: 0,
+      cooldownBounceMultiplier: 1.0  // Exponential bounce-back modifier during strike cooldown
     };
 
     // Anvil state
@@ -1119,9 +1120,15 @@ updateHammer(dt) {
   const g = this.gravity;
   const friction = this.airFriction;
 
+  const prevCooldown = hammer.strikeCooldown;
   hammer.strikeCooldown  = Math.max(0, hammer.strikeCooldown  - dt);
   hammer.reboundLock     = Math.max(0, hammer.reboundLock     - dt);
   hammer.regrabCooldown  = Math.max(0, hammer.regrabCooldown  - dt);
+
+  // Reset the exponential bounce multiplier when the letter production cooldown expires
+  if (prevCooldown > 0 && hammer.strikeCooldown <= 0) {
+    hammer.cooldownBounceMultiplier = 1.0;
+  }
 
   // If flying free, use different physics
   if (hammer.isFree) {
@@ -1763,9 +1770,22 @@ updateFreeHammer(dt) {
       const extraBounce = 0.35 * power;
       const bounceFactor = Math.min(0.9, baseBounce + extraBounce);
       // Heavier heads reduce the outgoing velocity
-      const newVy = -downwardSpeed * bounceFactor / (hammer.headMass || 1);
+      let newVy = -downwardSpeed * bounceFactor / (hammer.headMass || 1);
       const tangentDamping = 0.3;
-      const newVx = (hammer.headVx * tangentDamping) / (hammer.headMass || 1);
+      let newVx = (hammer.headVx * tangentDamping) / (hammer.headMass || 1);
+
+      // Anti-rapid-hit: exponentially increase bounce-back force when cooldown is active.
+      // This prevents the glitch where the hammer can be positioned to hit repeatedly
+      // without moving away from the anvil.
+      if (hammer.strikeCooldown > 0) {
+        hammer.cooldownBounceMultiplier *= 2.0;
+        const cbm = hammer.cooldownBounceMultiplier;
+        newVy *= cbm;
+        newVx *= cbm;
+      } else {
+        // Fresh hit - reset the multiplier
+        hammer.cooldownBounceMultiplier = 1.0;
+      }
 
       hammer.headY = anvil.y - 18;
       // Lift slightly higher so the hammer must leave the strike zone
