@@ -1127,7 +1127,7 @@ updateHammer(dt) {
 
   // Reset the exponential bounce multiplier when the letter production cooldown expires
   if (prevCooldown > 0 && hammer.strikeCooldown <= 0) {
-    hammer.cooldownBounceMultiplier = 2.0;
+    hammer.cooldownBounceMultiplier = 1.0;
   }
 
   // If flying free, use different physics
@@ -1778,7 +1778,7 @@ updateFreeHammer(dt) {
       // This prevents the glitch where the hammer can be positioned to hit repeatedly
       // without moving away from the anvil.
       if (hammer.strikeCooldown > 0) {
-        hammer.cooldownBounceMultiplier *= 15.0;
+        hammer.cooldownBounceMultiplier *= 0.0;
         const cbm = hammer.cooldownBounceMultiplier;
         newVy *= cbm;
         newVx *= cbm;
