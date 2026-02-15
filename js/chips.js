@@ -113,7 +113,6 @@ export class ChipSystem {
     const screenY = canvasRect.top + moldTopY;
     spawnResourceGain(screenX, screenY, renownGained, 'renown');
 
-    console.log(`Chip created: "${word.text}" - Gained ${renownGained} renown (${word.length} letters × 2)`);
   }
 
   /**
@@ -305,7 +304,6 @@ export class ChipSystem {
       // If fully heated, set heat level
       if (chip.heatingProgress >= 1) {
         chip.heatLevel = 1;
-        console.log(`Chip "${chip.word.text}" fully heated - ready for verse!`);
         if (this.onChipHeated) {
           this.onChipHeated(chip);
         }
@@ -428,7 +426,6 @@ export class ChipSystem {
       // It was a click! Align chip to horizontal
       chip.angle = 0;
       chip.angularVel = 0;
-      console.log(`Chip "${chip.word.text}" aligned to horizontal`);
       this.isDragging = false;
       this.draggedChip = null;
       this.setScreenLocked(false);
@@ -470,7 +467,6 @@ export class ChipSystem {
           }
         } else {
           // Chip is not heated, bounce it back with feedback
-          console.log(`Chip "${chip.word.text}" must be heated before placing in verse!`);
           chip.vx = (Math.random() - 0.5) * 300;
           chip.vy = -200; // Bounce upward
           chip.angularVel = (Math.random() - 0.5) * 6;
@@ -597,7 +593,6 @@ export class ChipSystem {
       // Heat the chip to level 1
       if (chip.heatLevel < 1) {
         chip.heatLevel = 1;
-        console.log(`Chip "${chip.word.text}" heated to level 1 - ready for verse!`);
         if (this.onChipHeated) {
           this.onChipHeated(chip);
         }

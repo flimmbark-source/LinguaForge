@@ -279,7 +279,6 @@ export function sellOneLetterFromTile(tile) {
 export function feedLetterToHearth(tile) {
   if (!canPlaceInHearth()) {
     // maybe snap the letter back or show a tooltip
-    console.log('You cannot place letters in the hearth while it is off.');
     return false;
   }
   const tileRect = tile.getBoundingClientRect();

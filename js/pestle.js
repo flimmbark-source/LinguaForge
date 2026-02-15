@@ -662,7 +662,6 @@ export class PestleSystem {
       this.onInkProduced(letter, pestle.headX, pestle.headY);
     }
 
-    console.log(`${reason} ink from letter:`, letter, '| remaining:', pestle.attachedLetters.length);
     return true;
   }
 

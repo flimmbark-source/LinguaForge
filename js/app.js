@@ -125,7 +125,6 @@ function ensurePestleSystem(craftingCanvas, overlayRenderer) {
     }
 
     updateUI();
-    console.log('Produced', inkAmount, 'ink from letter:', letter);
   };
 
   pestleSystem.onPutAway = makePutAwayHandler('pestle');
@@ -145,7 +144,6 @@ function ensureShovelSystem(craftingCanvas, overlayRenderer) {
 
 function makePutAwayHandler(toolName) {
   return () => {
-    console.log('Tool put away via canvas drag:', toolName);
     if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
     if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
     if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
@@ -953,7 +951,6 @@ function initializeGame() {
       );
       if (btn) btn.classList.remove('active');
 
-      console.log('Put away tool:', toolName);
     }
   );
 
@@ -1185,7 +1182,6 @@ function setupToolSelection() {
       craftingHint.classList.remove('hidden');
     }
 
-    console.log('Switched to Hammer');
   });
 
   spyglassBtn.addEventListener('click', () => {
@@ -1224,7 +1220,6 @@ function setupToolSelection() {
       craftingHint.classList.remove('hidden');
     }
 
-    console.log('Switched to Pestle & Mortar');
   });
 
   shovelBtn.addEventListener('click', () => {
@@ -1249,7 +1244,6 @@ function setupToolSelection() {
       craftingHint.classList.remove('hidden');
     }
 
-    console.log('Switched to Shovel');
   });
 
 }
@@ -1559,14 +1553,19 @@ function gameLoop(timestamp) {
       if (letterBlocksCanvasRef) {
         const anyToolRunning = hammerSystem?.isRunning || pestleSystem?.isRunning || shovelSystem?.isRunning;
         if (!anyToolRunning) {
-          if (!letterBlocksCtx) {
-            letterBlocksCtx = letterBlocksCanvasRef.getContext('2d');
+          // Skip rendering entirely when there are no active or moving letters
+          const hasLetters = letterPhysics.letters.length > 0;
+          if (hasLetters || letterPhysics._lastHadLetters) {
+            if (!letterBlocksCtx) {
+              letterBlocksCtx = letterBlocksCanvasRef.getContext('2d');
+            }
+            if (!letterBlocksCtx) return;
+            letterBlocksCtx.clearRect(0, 0, letterBlocksCanvasRef.width, letterBlocksCanvasRef.height);
+            if (hasLetters) {
+              letterPhysics.render(letterBlocksCtx);
+            }
           }
-          if (!letterBlocksCtx) return;
-          letterBlocksCtx.clearRect(0, 0, letterBlocksCanvasRef.width, letterBlocksCanvasRef.height);
-          if (letterPhysics.letters.length > 0) {
-            letterPhysics.render(letterBlocksCtx);
-          }
+          letterPhysics._lastHadLetters = hasLetters;
         }
       }
     } catch (e) {

@@ -226,6 +226,8 @@ export class HammerSystem {
 
     // Cached gradients (rebuilt on resize)
     this._cachedGradients = {};
+    // Cached tile gradient for flying letters (created once on first draw)
+    this._flyingLetterGradient = null;
     this.useBackgroundAnvil = false;
 
     // Load hammer PNG image
@@ -477,6 +479,14 @@ export class HammerSystem {
     g.addColorStop(0.3, '#64748b');
     g.addColorStop(1, '#020617');
     this._cachedGradients.anvilBody = g;
+
+    // Pre-build ambient glow gradient for the hammer head
+    const baseGlowRadius = 36;
+    const bg = ctx.createRadialGradient(0, 0, 4, 0, 0, baseGlowRadius);
+    bg.addColorStop(0, 'rgba(255, 245, 230, 0.22)');
+    bg.addColorStop(1, 'rgba(255, 220, 180, 0)');
+    this._cachedGradients.hammerAmbientGlow = bg;
+    this._cachedGradients.hammerAmbientGlowRadius = baseGlowRadius;
   }
 
  /**
@@ -1094,7 +1104,6 @@ spawnSparks(x, y, power, options = {}) {
       if (targetLevel > hammer.heatLevel) {
         hammer.heatLevel = targetLevel;
         hammer.isHeated  = hammer.heatLevel > 0;
-        console.log(`Hammer heat level increased to ${hammer.heatLevel}!`);
       }
     } else {
       // Not over hearth:
@@ -1847,7 +1856,6 @@ updateFreeHammer(dt) {
         const multiplier = 1 + (4 * hammer.heatLevel);
 
         if (hammer.heatLevel > 0) {
-          console.log(`Heat level ${hammer.heatLevel} hammer struck anvil! ${multiplier}x letters produced. Cooling down.`);
           // Cool down completely after striking
           hammer.heatLevel = 0;
           hammer.heatingTimer = 0;
@@ -1874,7 +1882,6 @@ updateFreeHammer(dt) {
         // Trigger forge functionality (no letter spawning on forge strikes)
         if (this.onForgeTriggered) {
           this.onForgeTriggered(forgeableMold.id);
-          console.log('Hammer struck a mold! Forging word...');
         }
 
         hammer.heatLevel = 0;
@@ -2003,14 +2010,15 @@ drawHammer(ctx, hammer) {
 
   // Draw subtle ambient glow behind hammer head (always on for visibility)
   const headCenterY = -(handleLength + headHeight - 30);
-  const baseGlowRadius = 36;
-  const baseGlow = ctx.createRadialGradient(0, headCenterY, 4, 0, headCenterY, baseGlowRadius);
-  baseGlow.addColorStop(0, 'rgba(255, 245, 230, 0.22)');
-  baseGlow.addColorStop(1, 'rgba(255, 220, 180, 0)');
-  ctx.fillStyle = baseGlow;
+  const baseGlowRadius = this._cachedGradients.hammerAmbientGlowRadius || 36;
+  // Use cached gradient translated to the head center position
+  ctx.save();
+  ctx.translate(0, headCenterY);
+  ctx.fillStyle = this._cachedGradients.hammerAmbientGlow || 'rgba(255, 245, 230, 0.22)';
   ctx.beginPath();
-  ctx.arc(0, headCenterY, baseGlowRadius, 0, Math.PI * 3);
+  ctx.arc(0, 0, baseGlowRadius, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
 
   // Draw heat glow behind hammer head
   if (hammer.heatLevel > 0) {
@@ -2180,16 +2188,20 @@ drawHammer(ctx, hammer) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
+    // Reuse a single gradient for all tiles (origin-relative, applied via translate)
+    if (!this._flyingLetterGradient) {
+      this._flyingLetterGradient = ctx.createLinearGradient(-tileWidth / 2, -tileHeight / 2, tileWidth / 2, tileHeight / 2);
+      this._flyingLetterGradient.addColorStop(0, '#0f0f10');
+      this._flyingLetterGradient.addColorStop(1, '#1b1b1d');
+    }
+
     for (const letter of letters) {
       ctx.save();
       ctx.translate(letter.x, letter.y);
       ctx.rotate(letter.angle);
 
       // Letter tile background
-      const grad = ctx.createLinearGradient(-tileWidth / 2, -tileHeight / 2, tileWidth / 2, tileHeight / 2);
-      grad.addColorStop(0, '#0f0f10');
-      grad.addColorStop(1, '#1b1b1d');
-      ctx.fillStyle = grad;
+      ctx.fillStyle = this._flyingLetterGradient;
       ctx.beginPath();
       ctx.roundRect(-tileWidth / 2, -tileHeight / 2, tileWidth, tileHeight, 6);
       ctx.fill();
