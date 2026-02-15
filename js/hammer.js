@@ -581,7 +581,13 @@ export class HammerSystem {
       grabDist += isMobile ? 8 : 6;
     }
 
-    return dist < grabDist;
+    // Give the haft ends a modest end-cap radius so the very tip/butt remains
+    // easy to grab without bringing back the old oversized halo everywhere.
+    // t=0 or t=1 are segment ends; t=0.5 is shaft center.
+    const endProximity = Math.abs(t - 0.5) * 2;
+    const endCapBoost = (isMobile ? 10 : 8) * endProximity;
+
+    return dist < (grabDist + endCapBoost);
   }
 
   /**
