@@ -342,11 +342,11 @@ function onToolSlotMouseMove(e) {
     const sidebar = document.getElementById('toolsSidebar');
     if (sidebar) sidebar.classList.add('pinned');
 
-    activateTool(toolDragSource.dataset.tool, e, toolSelectedCallback);
+    activateTool(toolDragSource.dataset.tool, e, toolSelectedCallback, { isPointerDown: true });
   }
 
   if (toolDragActivated && toolSelectedCallback) {
-    toolSelectedCallback(toolDragSource.dataset.tool, e.clientX, e.clientY);
+    toolSelectedCallback(toolDragSource.dataset.tool, e.clientX, e.clientY, { isPointerDown: true });
   }
 
   if (toolDragActivated && toolDragSource.dataset.tool === 'book') {
@@ -445,7 +445,7 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
 /**
  * Activate a tool (shared by click and drag-out)
  */
-function activateTool(tool, e, onToolSelected) {
+function activateTool(tool, e, onToolSelected, interaction = { isPointerDown: false }) {
   if (tool === 'book') {
         if (isMobileScreen()) {
       showBookMobile();
@@ -455,7 +455,7 @@ function activateTool(tool, e, onToolSelected) {
       if (bookSlot) bookSlot.classList.add('active');
     }
   } else {
-    if (onToolSelected) onToolSelected(tool, e.clientX, e.clientY);
+    if (onToolSelected) onToolSelected(tool, e.clientX, e.clientY, interaction);
 
     // Update active states on sidebar slots
     const allSlots = document.querySelectorAll('.tool-slot[data-tool]');
