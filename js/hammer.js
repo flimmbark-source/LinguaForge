@@ -184,7 +184,7 @@ export class HammerSystem {
       isHanging: false,
       hangX: 0,
       hangY: 0,
-      cooldownBounceMultiplier: 2.0  // Exponential bounce-back modifier during strike cooldown
+      cooldownBounceMultiplier: 1.0  // Exponential bounce-back modifier during strike cooldown
     };
 
     // Anvil state
@@ -1784,7 +1784,7 @@ updateFreeHammer(dt) {
         newVx *= cbm;
       } else {
         // Fresh hit - reset the multiplier
-        hammer.cooldownBounceMultiplier = 2.0;
+        hammer.cooldownBounceMultiplier = 1.0;
       }
 
       hammer.headY = anvil.y - 18;
