@@ -8,9 +8,35 @@ import { gameState } from './state.js?v=9';
 import { playHammerClank } from './audio.js?v=9';
 import { handleToolDragNearSidebar, shouldPutToolAway, cleanupToolDragSidebar } from './toolSidebarHelpers.js?v=9';
 import { getUpgradeLevel } from './upgrades.js?v=9';
-import { getHeatedMoldAtPoint } from './molds.js?v=9';
+import { getForgeableMoldAtPoint } from './molds.js?v=9';
 
 const MOBILE_BREAKPOINT = 900;
+const MOBILE_ANVIL_PORTRAIT_OFFSET_X = -30;
+const MOBILE_ANVIL_PORTRAIT_OFFSET_Y = 44;
+const MOBILE_ANVIL_LANDSCAPE_OFFSET_X = -5;
+const MOBILE_ANVIL_LANDSCAPE_OFFSET_Y = 38;
+const DESKTOP_HANG_SNAP_OFFSET_Y = 150;
+
+function getMobileAnvilVisualOffset() {
+  const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+  if (!isMobile) {
+    return { x: 0, y: 0 };
+  }
+
+  const isLandscape = window.innerWidth > window.innerHeight;
+  if (isLandscape) {
+    return {
+      x: MOBILE_ANVIL_LANDSCAPE_OFFSET_X,
+      y: MOBILE_ANVIL_LANDSCAPE_OFFSET_Y
+    };
+  }
+
+  return {
+    x: MOBILE_ANVIL_PORTRAIT_OFFSET_X,
+    y: MOBILE_ANVIL_PORTRAIT_OFFSET_Y
+  };
+}
+
 function setScreenLocked(locked) {
   if (window.setScreenLocked) {
     window.setScreenLocked(locked);
@@ -64,12 +90,12 @@ export class HammerSystem {
     // Callbacks set by app
     this.onLetterForged = null;
     this.onLetterLanded = null;
-    this.onForgeTriggered = null; // Called when red-hot hammer hits a heated mold
+    this.onForgeTriggered = null; // Called when hammer hits a forgeable mold
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
 
     // World physics constants
-    this.gravity = 4600; // px/s^2
-    this.airFriction = 0.9;
+    this.gravity = 3600; // px/s^2
+    this.airFriction = 0.90;
     this.throwPhysicsPresets = {
       realistic: {
         comOffsetPct: 0.61,
@@ -155,10 +181,10 @@ export class HammerSystem {
       throwingAxeMode: false, // True for player throws (pivot rotation), false for rips
       throwOrbitRadius: 0, // Distance from throw pivot to head during spinning throw
       spinTimer: 0,
-      floorSpinContactTime: 0,
       isHanging: false,
       hangX: 0,
-      hangY: 0
+      hangY: 0,
+      cooldownBounceMultiplier: 1.0  // Exponential bounce-back modifier during strike cooldown
     };
 
     // Anvil state
@@ -196,6 +222,7 @@ export class HammerSystem {
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
     this.onPointerUp = this.onPointerUp.bind(this);
+    this.onViewportChange = this.onViewportChange.bind(this);
 
     // Cached gradients (rebuilt on resize)
     this._cachedGradients = {};
@@ -203,6 +230,8 @@ export class HammerSystem {
 
     // Load hammer PNG image
     this._hammerImg = new Image();
+    this._hammerImg.decoding = 'sync';
+    this._hammerImg.fetchPriority = 'high';
     this._hammerImg.src = 'Public/Hammer.png';
     this.anvilAnchor = null;
 
@@ -212,6 +241,27 @@ export class HammerSystem {
     // Initialize
     this.resize();
     this.setupEventListeners();
+
+    // Mobile browser chrome can settle a few frames after first paint, which can
+    // temporarily place the hearth/anvil outside canvas coordinates. Re-sync once
+    // layout stabilizes so the hammer always spawns in view.
+    this.scheduleViewportResync();
+  }
+
+  scheduleViewportResync() {
+    // Mobile browser UI (URL bar/toolbars) can finish settling well after first paint.
+    // Keep re-syncing for a short window so the hammer is anchored once viewport
+    // metrics stabilize, even before the player interacts with browser chrome.
+    const delays = [0, 150, 450, 700];
+    delays.forEach((delay) => {
+      window.setTimeout(() => {
+        this.resize();
+      }, delay);
+    });
+  }
+
+  onViewportChange() {
+    this.resize();
   }
 
   /**
@@ -219,8 +269,7 @@ export class HammerSystem {
    */
   resize() {
     const rect = this.canvas.getBoundingClientRect();
-    const rawDpr = window.devicePixelRatio || 1;
-    const dpr = this._isMobile ? Math.min(rawDpr, 1.5) : rawDpr;
+    const dpr = window.devicePixelRatio || 1;
     this.canvas.width = rect.width * dpr;
     this.canvas.height = rect.height * dpr;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -259,21 +308,22 @@ export class HammerSystem {
     const letterPoolBarHeight = 160;
     this.anvil.width = Math.min(260, this.width * 0.35) + 50;
     this.anvil.height = 70;
+    const mobileAnvilOffset = getMobileAnvilVisualOffset();
     this.anvil.x = this.width * 0.5 - this.anvil.width / 2 - 20;
-    // Nudge anvil right by 50px (reduced)
-    this.anvil.x += 50;
+    // Nudge anvil right to align with the background anvil art.
+    this.anvil.x += mobileAnvilOffset.x;
     if (!this._isMobile) {
-      this.anvil.x -= 300;
+      this.anvil.x -= 250;
     }
 
     // On mobile portrait (<=768px), sit the anvil directly on top of the hearth
     const isMobilePortrait = window.innerWidth <= MOBILE_BREAKPOINT && window.innerHeight > window.innerWidth;
     if (isMobilePortrait) {
       // Hearth top is at 100vh - 164px; overlap anvil base onto hearth mantle
-      this.anvil.y = this.height - 164 - this.anvil.height + 4;
+      this.anvil.y = this.height - 164 - this.anvil.height + 4 + mobileAnvilOffset.y;
     } else if (isMobileLandscape && typeof anvilBottom === 'number') {
       // Sit the anvil directly on the hearth in landscape
-      this.anvil.y = anvilBottom - this.anvil.height;
+      this.anvil.y = anvilBottom - this.anvil.height + mobileAnvilOffset.y;
     } else {
       this.anvil.y = this.height - letterPoolBarHeight - this.anvil.height - 10;
     }
@@ -329,9 +379,10 @@ export class HammerSystem {
 
     this.anvil.width = this.anvilAnchor.width + 50;
     this.anvil.height = this.anvilAnchor.height;
-    // Position anvil centered on anchor, then shift right by 50px
-    this.anvil.x = this.anvilAnchor.x - canvasRect.left - this.anvil.width / 2 + 50;
-    this.anvil.y = this.anvilAnchor.y - canvasRect.top - this.anvil.height / 2;
+    const mobileAnvilOffset = getMobileAnvilVisualOffset();
+    // Position anvil centered on anchor, then nudge to align with the background art.
+    this.anvil.x = this.anvilAnchor.x - canvasRect.left - this.anvil.width / 2 + mobileAnvilOffset.x;
+    this.anvil.y = this.anvilAnchor.y - canvasRect.top - this.anvil.height / 2 + mobileAnvilOffset.y;
 
 
     const newCenterX = this.anvil.x + this.anvil.width / 2;
@@ -373,9 +424,14 @@ export class HammerSystem {
 
     const hearthRect = hearth.getBoundingClientRect();
     const canvasRect = this.canvas.getBoundingClientRect();
+    const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+    const isLandscape = window.innerWidth > window.innerHeight;
+    const mobileYOffset = isLandscape ? -10 : -25;
+    const desktopYOffset = 40;
+
     return {
       x: hearthRect.left + hearthRect.width / 2 - canvasRect.left,
-      y: hearthRect.top + 40 - canvasRect.top
+      y: hearthRect.top + (isMobile ? mobileYOffset : desktopYOffset) - canvasRect.top
     };
   }
 
@@ -482,6 +538,11 @@ export class HammerSystem {
     document.addEventListener('touchmove', this.onPointerMove, { passive: false, capture: true });
     document.addEventListener('touchend', this.onPointerUp, true);
     window.addEventListener('resize', this.resize);
+    window.addEventListener('orientationchange', this.onViewportChange);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', this.onViewportChange);
+      window.visualViewport.addEventListener('scroll', this.onViewportChange);
+    }
   }
 
   /**
@@ -489,6 +550,8 @@ export class HammerSystem {
    */
   isPointNearHammer(px, py) {
     const h = this.hammer;
+    const isMobile = this.width <= MOBILE_BREAKPOINT;
+    const adjustedPy = py;
     const x1 = h.pivotX;
     const y1 = h.pivotY;
     const x2 = h.headX;
@@ -496,14 +559,14 @@ export class HammerSystem {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const lenSq = dx * dx + dy * dy || 1;
-    let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+    let t = ((px - x1) * dx + (adjustedPy - y1) * dy) / lenSq;
     t = Math.max(0, Math.min(1, t));
     const cx = x1 + dx * t;
     const cy = y1 + dy * t;
-    const dist = Math.hypot(px - cx, py - cy);
+    const dist = Math.hypot(px - cx, adjustedPy - cy);
 
     // Base grab distance
-    let grabDist = this.width <= MOBILE_BREAKPOINT ? 70 : 140;
+    let grabDist = isMobile ? 70 : 140;
 
     // Increase grab radius for falling hammers in bottom zone
     const isInBottomZone = py > this.height * 0.8;
@@ -663,15 +726,19 @@ onPointerDown(e) {
         // Use both pointer-release distance and hammer-head distance.
         // The player may grab the handle far away from the head, so relying on
         // pointer position alone can make hearth pinning feel broken.
-        const pointerDist = Math.hypot(client.clientX - hangClientX, client.clientY - hangClientY);
+        const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+        const hangSnapOffsetY = isMobile ? 0 : DESKTOP_HANG_SNAP_OFFSET_Y;
+
+        const adjustedPointerY = client.clientY + hangSnapOffsetY;
+        const pointerDist = Math.hypot(client.clientX - hangClientX, adjustedPointerY - hangClientY);
         const headClientX = canvasRect.left + this.hammer.headX;
         const headClientY = canvasRect.top + this.hammer.headY;
-        const headDist = Math.hypot(headClientX - hangClientX, headClientY - hangClientY);
+        const adjustedHeadY = headClientY + hangSnapOffsetY;
+        const headDist = Math.hypot(headClientX - hangClientX, adjustedHeadY - hangClientY);
 
-        const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
         const isLandscape = window.innerWidth > window.innerHeight;
         const snapRadius = isMobile
-          ? (isLandscape ? 90 : 100)
+          ? (isLandscape ? 40 : 50)
           : 70;
 
         if (Math.min(pointerDist, headDist) < snapRadius) {
@@ -781,7 +848,7 @@ onPointerDown(e) {
   /**
    * Spawn a flying letter with physics
    */
-  spawnFlyingLetter(impactX, impactY, power, strikeVx, letterChar) {
+  spawnFlyingLetter(impactX, impactY, power, strikeVx, letterChar, options = {}) {
     const poolPos = this.getLetterPoolWorldPosition();
     const canvasRect = this.canvas.getBoundingClientRect();
 
@@ -794,8 +861,18 @@ onPointerDown(e) {
     const launchSpeed = 200 + power * 500; // px/s upward
     const baseVx = (strikeVx || 0) * 0.25;
     const biasVx = (targetX - impactX) * 0.8 / Math.max(1, this.width);
-    const vx = baseVx + biasVx * launchSpeed * 0.2;
-    const vy = -launchSpeed;
+    const launchAngleOffset = options.launchAngleOffset || 0;
+    let vx = baseVx + biasVx * launchSpeed * 0.2;
+    let vy = -launchSpeed;
+
+    if (launchAngleOffset !== 0) {
+      const cos = Math.cos(launchAngleOffset);
+      const sin = Math.sin(launchAngleOffset);
+      const rotatedVx = vx * cos - vy * sin;
+      const rotatedVy = vx * sin + vy * cos;
+      vx = rotatedVx;
+      vy = rotatedVy;
+    }
 
     // Spin based on strike power and direction
     const spinBase = 6; // rad/s
@@ -884,7 +961,8 @@ spawnSparks(x, y, power, options = {}) {
     // Increase velocity a bit for snappier pop; rip hits may be stronger
     const speedBias = options.isRip ? 1.2 : 1.0;
     const vx = side * (100 + Math.random() * 180) * (0.9 + (power || 0)) * speedBias;
-    const vy = -(100 + Math.random() * 120) - (power || 0) * 160 * speedBias;
+    // Negative Y velocity so the text pops upward first, then falls with gravity.
+    const vy = -(160 + Math.random() * 140 + (power || 0) * 130 * speedBias);
 
     // Visual sizes: start small, grow to target. Make 'Clonk!' larger than the others.
     const startSize = 4;
@@ -921,6 +999,16 @@ spawnSparks(x, y, power, options = {}) {
     const hearthBounds = getHearthBounds();
     if (!hearthBounds) return false;
 
+    const isLandscape = window.innerWidth > window.innerHeight;
+    const heatZoneTopExtension = isLandscape ? 24 : 0;
+
+    const adjustedBounds = {
+      left: hearthBounds.left,
+      right: hearthBounds.right,
+      top: hearthBounds.top - heatZoneTopExtension,
+      bottom: hearthBounds.bottom
+    };
+
     const headX = this.hammer.headX;
     const headY = this.hammer.headY;
 
@@ -930,22 +1018,34 @@ spawnSparks(x, y, power, options = {}) {
     const viewportY = canvasRect.top + headY;
 
     return (
-      viewportX > hearthBounds.left &&
-      viewportX < hearthBounds.right &&
-      viewportY > hearthBounds.top &&
-      viewportY < hearthBounds.bottom
+      viewportX > adjustedBounds.left &&
+      viewportX < adjustedBounds.right &&
+      viewportY > adjustedBounds.top &&
+      viewportY < adjustedBounds.bottom
     );
   }
 
   /**
-   * Check if hammer head is over a heated mold in world space
+   * Check if hammer head is over a forgeable mold in the viewport
    * @returns {Object|null}
    */
-  getHeatedMoldUnderHammer() {
+  getForgeableMoldUnderHammer() {
     const canvasRect = this.canvas.getBoundingClientRect();
     const viewportX = canvasRect.left + this.hammer.headX;
     const viewportY = canvasRect.top + this.hammer.headY;
-    return getHeatedMoldAtPoint(viewportX, viewportY);
+    return getForgeableMoldAtPoint(viewportX, viewportY);
+  }
+
+  getAnvilViewportRect() {
+    const canvasRect = this.canvas.getBoundingClientRect();
+    return {
+      left: canvasRect.left + this.anvil.x,
+      right: canvasRect.left + this.anvil.x + this.anvil.width,
+      top: canvasRect.top + this.anvil.y,
+      bottom: canvasRect.top + this.anvil.y + this.anvil.height,
+      width: this.anvil.width,
+      height: this.anvil.height,
+    };
   }
 
   /**
@@ -1020,9 +1120,15 @@ updateHammer(dt) {
   const g = this.gravity;
   const friction = this.airFriction;
 
+  const prevCooldown = hammer.strikeCooldown;
   hammer.strikeCooldown  = Math.max(0, hammer.strikeCooldown  - dt);
   hammer.reboundLock     = Math.max(0, hammer.reboundLock     - dt);
   hammer.regrabCooldown  = Math.max(0, hammer.regrabCooldown  - dt);
+
+  // Reset the exponential bounce multiplier when the letter production cooldown expires
+  if (prevCooldown > 0 && hammer.strikeCooldown <= 0) {
+    hammer.cooldownBounceMultiplier = 1.0;
+  }
 
   // If flying free, use different physics
   if (hammer.isFree) {
@@ -1031,6 +1137,16 @@ updateHammer(dt) {
   }
 
   if (hammer.isHanging && !hammer.isHeld) {
+    // Keep the hanging hammer pinned to the *current* hearth position.
+    // The hearth can move when the player pans the background; if we only use
+    // the cached hangX/hangY from the original drop, the hammer can appear to
+    // disappear off-screen and not recover after panning back.
+    const liveHangPoint = this.getHearthHangPoint();
+    if (this.isPointNearCanvas(liveHangPoint)) {
+      hammer.hangX = liveHangPoint.x;
+      hammer.hangY = liveHangPoint.y;
+    }
+
     hammer.headX = hammer.hangX;
     hammer.headY = hammer.hangY;
     hammer.prevHeadX = hammer.hangX;
@@ -1224,8 +1340,8 @@ updateFreeHammer(dt) {
   const hammer = this.hammer;
   const g = this.gravity;
   const frictionAir = this.airFriction * 1.033;
-  const rotationSettleSpeed = 180.15; // 1/s - lower value for a heavier, slower return to resting orientation
-  const maxSettleRate = 2.7; // rad/s - cap settle velocity so the final shift never looks snappy
+  const rotationSettleSpeed = 8.15; // 1/s - lower value for a heavier, slower return to resting orientation
+  const maxSettleRate = 2.2; // rad/s - cap settle velocity so the final shift never looks snappy
   const profile = this.throwPhysics;
 
   // --- Update spinning rotation ---
@@ -1319,12 +1435,9 @@ updateFreeHammer(dt) {
   const restitution = 1;   // 1.0 = perfectly bouncy, <1 loses energy
   const tangentialDamp = 0.85; // reduce sideways motion on impacts
   const stopThreshold = 40;    // below this speed we just stop bouncing
-  const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
-  let touchingFloor = false;
 
   // ----- FLOOR -----
   if (hammer.headY + radius > floorY) {
-    touchingFloor = true;
     const penetration = hammer.headY + radius - floorY;
 
     if (hammer.throwingAxeMode) {
@@ -1352,45 +1465,16 @@ updateFreeHammer(dt) {
         hammer.headVy = 0;
       }
 
-      // Landing spin response: kick into a quick rotational shift, then let floor friction slow it.
-      // Use either existing spin or horizontal skid at impact so the effect is always noticeable.
-      const spinDirection = Math.sign(hammer.angularVelocity) || Math.sign(hammer.headVx) || 1;
-      const skidSpinKick = Math.abs(hammer.headVx) * 0.03;
-      const dropSpinKick = Math.abs(hammer.headVy) * 0.0025;
-      const impactSpinKick = Math.min(22, Math.max(8, skidSpinKick + dropSpinKick));
-
-      if (Math.abs(hammer.angularVelocity) >= spinThreshold || Math.abs(hammer.headVx) > 120) {
-        const maxLandingSpin = Math.max(spinThreshold * 3.2, 24);
-        const boosted = Math.max(Math.abs(hammer.angularVelocity) * 1.35, impactSpinKick);
-        hammer.angularVelocity = spinDirection * Math.min(maxLandingSpin, boosted);
-        hammer.floorSpinContactTime = 0;
+      // If spinning above threshold when hitting floor, keep spinning
+      const spinThreshold = gameState.spinRetentionThreshold || 5; // rad/s
+      if (Math.abs(hammer.angularVelocity) >= spinThreshold) {
+        // Retain spin, just dampen it slightly
+        hammer.angularVelocity *= 0.9;
       } else {
-        // No meaningful rotational energy on impact.
+        // Below threshold, stop spinning
         hammer.angularVelocity = 0;
       }
     }
-  }
-
-  if (touchingFloor && Math.abs(hammer.angularVelocity) > 0) {
-    // Progressive floor friction: starts loose, then tightens aggressively.
-    // Result: quick initial rotation, then a heavy drag into final stop.
-    hammer.floorSpinContactTime += dt;
-    const contactT = hammer.floorSpinContactTime;
-    const progress = Math.min(1, contactT / 0.9);
-    const rampedFrictionPerSec = 0.9 + 14 * progress * progress;
-    hammer.angularVelocity *= Math.exp(-rampedFrictionPerSec * dt);
-
-    // Add dry-friction style braking so the final phase reliably settles.
-    const dryFriction = (0.8 + 6 * progress) * dt;
-    const spinAbs = Math.abs(hammer.angularVelocity);
-    const nextSpinAbs = Math.max(0, spinAbs - dryFriction);
-    hammer.angularVelocity = nextSpinAbs * (Math.sign(hammer.angularVelocity) || 1);
-
-    if (nextSpinAbs < 0.22) {
-      hammer.angularVelocity = 0;
-    }
-  } else {
-    hammer.floorSpinContactTime = 0;
   }
 
   // ----- CEILING -----
@@ -1613,6 +1697,14 @@ updateFreeHammer(dt) {
     }
 
     if (!hammer.throwingAxeMode && anvilCollision && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
+      // If the player is still holding the hammer during strike cooldown, let it
+      // ghost through the anvil instead of repeatedly bouncing in place.
+      // This prevents the static-position jitter exploit that can retrigger hits.
+      if (hammer.isHeld && hammer.strikeCooldown > 0) {
+        hammer.anvilExitReady = false;
+        return;
+      }
+
       const power = Math.min(1.5, downwardSpeed / (impactThreshold * 1.3));
       const ripThreshold = gameState.ripSpeedThreshold;
 
@@ -1645,7 +1737,6 @@ updateFreeHammer(dt) {
         hammer.isHeld = false;
         this.input.isDown = false;
         hammer.isFree = true;
-        hammer.throwingAxeMode = false; // Rips use normal physics, not throwing axe
         hammer.regrabCooldown = 0.25;
 
         // Place the head just above the anvil face
@@ -1656,14 +1747,9 @@ updateFreeHammer(dt) {
         hammer.headVx = dirX * backSpeed;
         hammer.headVy = dirY * backSpeed;
 
-        // Add only a modest amount of spin on rip hits so the hammer stays recoverable.
-        // Reuse the existing spin-retention threshold as a soft cap to keep this behavior consistent
-        // with anvil/floor spin logic elsewhere in the file.
+        // Add angular velocity based on the impact power (spinning hammer throw)
         const spinPower = Math.min(1, downwardSpeed / ripThreshold);
-        const ripSpinDirection = incomingVx >= 0 ? 1 : -1;
-        const ripSpinCap = Math.max(1.8, spinRetentionThreshold * 4.35);
-        const ripSpin = Math.min(ripSpinCap, 1.6 + spinPower * 2.4); // ~1.6 to ~4.0 rad/s max
-        hammer.angularVelocity = ripSpinDirection * ripSpin;
+        hammer.angularVelocity = (incomingVx >= 0 ? 1 : -1) * (8 + spinPower * 12); // rad/s
 
         // Encode that into prevHead* for the verlet integrator
         hammer.prevHeadX = hammer.headX - hammer.headVx * dt;
@@ -1692,9 +1778,22 @@ updateFreeHammer(dt) {
       const extraBounce = 0.35 * power;
       const bounceFactor = Math.min(0.9, baseBounce + extraBounce);
       // Heavier heads reduce the outgoing velocity
-      const newVy = -downwardSpeed * bounceFactor / (hammer.headMass || 1);
+      let newVy = -downwardSpeed * bounceFactor / (hammer.headMass || 1);
       const tangentDamping = 0.3;
-      const newVx = (hammer.headVx * tangentDamping) / (hammer.headMass || 1);
+      let newVx = (hammer.headVx * tangentDamping) / (hammer.headMass || 1);
+
+      // Anti-rapid-hit: exponentially increase bounce-back force when cooldown is active.
+      // This prevents the glitch where the hammer can be positioned to hit repeatedly
+      // without moving away from the anvil.
+      if (hammer.strikeCooldown > 0) {
+        hammer.cooldownBounceMultiplier *= 2.5;
+        const cbm = hammer.cooldownBounceMultiplier;
+        newVy *= cbm;
+        newVx *= cbm;
+      } else {
+        // Fresh hit - reset the multiplier
+        hammer.cooldownBounceMultiplier = 1.0;
+      }
 
       hammer.headY = anvil.y - 18;
       // Lift slightly higher so the hammer must leave the strike zone
@@ -1734,26 +1833,25 @@ updateFreeHammer(dt) {
       }
     }
 
-    // Check for heated mold collision (hammer must be hot and mold must be heated)
-    const heatedMold = this.getHeatedMoldUnderHammer();
-    if (hammer.heatLevel > 0 && heatedMold && downwardSpeed > impactThreshold) {
+    // Check for mold collision (requires a red-hot strike)
+    const forgeableMold = this.getForgeableMoldUnderHammer();
+    if (forgeableMold && downwardSpeed > impactThreshold && hammer.heatLevel > 0) {
       if (hammer.strikeCooldown <= 0) {
         hammer.strikeCooldown = 0.25;
         const impactX = headX;
         const impactY = headY;
-
-        // Cool down the hammer
-        hammer.heatLevel = 0;
-        hammer.heatingTimer = 0;
 
         // Spawn sparks at impact point
         this.spawnSparks(impactX, impactY, 1.2);
 
         // Trigger forge functionality (no letter spawning on forge strikes)
         if (this.onForgeTriggered) {
-          this.onForgeTriggered(heatedMold.id);
-          console.log('Red-hot hammer struck a heated mold! Forging word...');
+          this.onForgeTriggered(forgeableMold.id);
+          console.log('Hammer struck a mold! Forging word...');
         }
+
+        hammer.heatLevel = 0;
+        hammer.heatingTimer = 0;
 
         // Bounce the hammer back
         const bounceFactor = 0.6;
@@ -1919,28 +2017,6 @@ drawHammer(ctx, hammer) {
     // Head (top of image) anchored to physics head position;
     // handle extends past the grip point when grabbing mid-haft
     ctx.drawImage(this._hammerImg, -imgWidth / 2, -(handleLength + headHeight), imgWidth, imgHeight);
-  } else {
-    // Fast fallback so the hammer is visible immediately while image is still loading.
-    const handleWidth = Math.max(8, hammer.handleThickness * 0.6);
-    const headY = -(handleLength + headHeight);
-
-    ctx.fillStyle = '#6b4f2a';
-    ctx.fillRect(-handleWidth / 2, -handleLength, handleWidth, handleLength + 4);
-
-    const fallbackHeadGradient = ctx.createLinearGradient(
-      -headWidth * 0.5,
-      headY,
-      headWidth * 0.5,
-      headY + headHeight
-    );
-    fallbackHeadGradient.addColorStop(0, '#f3f4f6');
-    fallbackHeadGradient.addColorStop(0.5, '#9ca3af');
-    fallbackHeadGradient.addColorStop(1, '#4b5563');
-    ctx.fillStyle = fallbackHeadGradient;
-    ctx.fillRect(-headWidth / 2, headY, headWidth, headHeight);
-
-    ctx.fillStyle = 'rgba(17, 24, 39, 0.32)';
-    ctx.fillRect(-headWidth / 2, headY + headHeight - 8, headWidth, 8);
   }
 
   // Show progress indicator for heating to next level
@@ -2197,5 +2273,10 @@ drawHammer(ctx, hammer) {
     document.removeEventListener('touchmove', this.onPointerMove, true);
     document.removeEventListener('touchend', this.onPointerUp, true);
     window.removeEventListener('resize', this.resize);
+    window.removeEventListener('orientationchange', this.onViewportChange);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this.onViewportChange);
+      window.visualViewport.removeEventListener('scroll', this.onViewportChange);
+    }
   }
 }

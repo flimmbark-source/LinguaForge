@@ -4,12 +4,12 @@
  */
 
 
-import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower } from './config.js?v=9';
+import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, computeWordPower, GRAMMAR_LEXICON, SOLUTION_HEBREW_ORDER } from './config.js?v=9';
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
-import { setMoldViewportWidth, initializeMoldSystem, getWorldMoldElement, forgeSingleMold, navigatePreviousMold, navigateNextMold } from './molds.js?v=9';
+import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
-import { setupVerseAreaDrop, completeVerse } from './grammar.js?v=9';
-import { initializeElements, updateUI, initWordSelector } from './ui.js?v=9';
+import { setupVerseAreaDrop } from './grammar.js?v=9';
+import { initializeElements, updateUI, initWordSelector, clearEnscribeSelection } from './ui.js?v=9';
 import { gameState } from './state.js?v=9';
 import { addLetters } from './state.js?v=9';
 import { HammerSystem } from './hammer.js?v=9';
@@ -18,10 +18,12 @@ import { ShovelSystem } from './shovel.js?v=9';
 import { initializeHearth, updateHearth } from './RuneHearth.js?v=9';
 import { initAudio, startBackgroundMusic, getMusicVolume, getSfxVolume, setMusicVolume, setSfxVolume, unlockAudio } from './audio.js?v=9';
 import { addInk, addVerseWord, addWord, getNextWordId, recordForgedWord } from './state.js?v=9';
-import { showUpgradeScreen, hideUpgradeScreen, updateUpgradeHeaderStats } from './upgrades.js?v=9';
+import * as upgradesAPI from './upgrades.js?v=9';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
 import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 import { LetterPhysicsSystem } from './letterPhysics.js?v=9';
+import { spyglassSystem } from './spyglass.js?v=9';
+import { getAnvilPlacedLetters, consumeAnvilPlacedLetters } from './letters.js?v=9';
 
 // Global crafting system references
 let hammerSystem = null;
@@ -31,7 +33,8 @@ let letterPhysics = null;
 let craftingCanvasRef = null;
 let letterBlocksCanvasRef = null;
 let letterBlocksCtx = null;
-let activeTool = 'hammer'; // 'hammer' or 'pestle'
+let toolOverlayRenderer = null;
+let activeTool = 'hammer'; // hammer / pestle / shovel / spyglass
 let screenLockCount = 0;
 let backgroundDragLockCount = 0;
 
@@ -53,11 +56,117 @@ const ANVIL_ANCHOR = {
   height: 70
 };
 
+const MOBILE_ANVIL_ANCHORS = {
+  portrait: {
+    x: 500,
+    y: 610,
+    width: 300,
+    height: 62
+  },
+  landscape: {
+    x: 470,
+    y: 590,
+    width: 270,
+    height: 56
+  }
+};
+
+const MOBILE_MORTAR_ANCHORS = {
+  portrait: {
+    x: 1172,
+    y: 728,
+    width: 210,
+    height: 78
+  },
+  landscape: {
+    x: 1130,
+    y: 718,
+    width: 315,
+    height: 117
+  }
+};
+
+// World element anchors (background image coordinates)
+const GLYPH_ANCHOR = { x: 488, y: 638, size: 48 };
+const BUCKET_FIRST_ANCHOR = { x: 700, y: 400, width: 210, height: 165 };
+const BUCKET_SECOND_ANCHOR = { x: 500, y: 400, width: 195, height: 112 };
+
 let bgOffsetX = 0;
 let bgOffsetY = 0;
 let bgDragging = false;
 let bgDragStartX = 0;
 let bgDragStartOffsetX = 0;
+
+function ensurePestleSystem(craftingCanvas, overlayRenderer) {
+  if (pestleSystem) return pestleSystem;
+  if (!craftingCanvas) return null;
+
+  pestleSystem = new PestleSystem(craftingCanvas);
+  updateAnchoredUI();
+  const renderer = overlayRenderer || toolOverlayRenderer;
+  if (renderer) {
+    if (typeof pestleSystem.setOverlayRenderer === 'function') {
+      pestleSystem.setOverlayRenderer(renderer);
+    } else {
+      pestleSystem.overlayRenderer = renderer;
+    }
+  }
+
+  pestleSystem.onInkProduced = (letter, canvasX, canvasY) => {
+    const inkAmount = gameState.inkPerChurn;
+    addInk(inkAmount);
+
+    const activeCraftingCanvas = document.getElementById('craftingCanvas');
+    if (activeCraftingCanvas) {
+      const rect = activeCraftingCanvas.getBoundingClientRect();
+      const screenX = rect.left + canvasX;
+      const screenY = rect.top + canvasY;
+      spawnResourceGain(screenX, screenY, inkAmount, 'ink');
+    }
+
+    updateUI();
+    console.log('Produced', inkAmount, 'ink from letter:', letter);
+  };
+
+  pestleSystem.onPutAway = makePutAwayHandler('pestle');
+  return pestleSystem;
+}
+
+function ensureShovelSystem(craftingCanvas, overlayRenderer) {
+  if (shovelSystem) return shovelSystem;
+  if (!craftingCanvas) return null;
+
+  shovelSystem = new ShovelSystem(craftingCanvas);
+  const renderer = overlayRenderer || toolOverlayRenderer;
+  if (renderer) shovelSystem.setOverlayRenderer(renderer);
+  shovelSystem.onPutAway = makePutAwayHandler('shovel');
+  return shovelSystem;
+}
+
+function makePutAwayHandler(toolName) {
+  return () => {
+    console.log('Tool put away via canvas drag:', toolName);
+    if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
+    if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
+    if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
+    if (toolName === 'spyglass') spyglassSystem.stop();
+    if (activeTool === toolName) activeTool = null;
+    // Update sidebar slot
+    const slotId = toolName === 'hammer' ? 'toolSlotHammer' :
+                   toolName === 'spyglass' ? 'toolSlotSpyglass' :
+                   toolName === 'pestle' ? 'toolSlotPestle' :
+                   toolName === 'shovel' ? 'toolSlotShovel' : '';
+    const slot = document.getElementById(slotId);
+    if (slot) slot.classList.remove('active');
+    // Update hidden button
+    const btnId = toolName === 'hammer' ? 'selectHammer' :
+                  toolName === 'spyglass' ? 'selectSpyglass' :
+                  toolName === 'pestle' ? 'selectPestle' :
+                  toolName === 'shovel' ? 'selectShovel' : '';
+    const btn = document.getElementById(btnId);
+    if (btn) btn.classList.remove('active');
+  };
+}
 
 /**
  * Handle mold slot being filled by a letter drop.
@@ -173,6 +282,9 @@ function updateAnchoredUI() {
     root.style.setProperty('--bg-display-height', `${updatedMetrics.displayHeight}px`);
   }
 
+  // Position world elements on all screen sizes
+  positionWorldElements(updatedMetrics);
+
   if (!isMobileBackground()) return;
 
   const hearthX = updatedMetrics.originX + HEARTH_ANCHOR.x * updatedMetrics.scale;
@@ -186,15 +298,79 @@ function updateAnchoredUI() {
   root.style.setProperty('--hearth-size', `${hearthSize}px`);
 
   if (hammerSystem && typeof hammerSystem.setAnvilAnchor === 'function') {
-    const anvilX = updatedMetrics.originX + ANVIL_ANCHOR.x * updatedMetrics.scale;
-    const anvilY = updatedMetrics.originY + ANVIL_ANCHOR.y * updatedMetrics.scale;
+    const isMobile = isMobileBackground();
+    const isPortrait = isPortraitBackground();
+    const anvilAnchorConfig = isMobile
+      ? (isPortrait ? MOBILE_ANVIL_ANCHORS.portrait : MOBILE_ANVIL_ANCHORS.landscape)
+      : ANVIL_ANCHOR;
+
+    const anvilX = updatedMetrics.originX + anvilAnchorConfig.x * updatedMetrics.scale;
+    const anvilY = updatedMetrics.originY + anvilAnchorConfig.y * updatedMetrics.scale;
     hammerSystem.setAnvilAnchor({
       x: anvilX,
       y: anvilY,
-      width: ANVIL_ANCHOR.width * updatedMetrics.scale,
-      height: ANVIL_ANCHOR.height * updatedMetrics.scale
+      width: anvilAnchorConfig.width * updatedMetrics.scale,
+      height: anvilAnchorConfig.height * updatedMetrics.scale
     });
     hammerSystem.setUseBackgroundAnvil(true);
+  }
+
+  if (pestleSystem && typeof pestleSystem.setMortarAnchor === 'function') {
+    const mortarAnchorConfig = isPortraitBackground()
+      ? MOBILE_MORTAR_ANCHORS.portrait
+      : MOBILE_MORTAR_ANCHORS.landscape;
+
+    const mortarX = updatedMetrics.originX + mortarAnchorConfig.x * updatedMetrics.scale;
+    const mortarY = updatedMetrics.originY + mortarAnchorConfig.y * updatedMetrics.scale;
+    pestleSystem.setMortarAnchor({
+      x: mortarX,
+      y: mortarY,
+      width: mortarAnchorConfig.width * updatedMetrics.scale,
+      height: mortarAnchorConfig.height * updatedMetrics.scale
+    });
+  }
+}
+
+function positionWorldElements(metrics) {
+  // Anvil glyph at background coordinate 438×438
+  const glyph = document.getElementById('anvilGlyph');
+  if (glyph) {
+    const gx = metrics.originX + GLYPH_ANCHOR.x * metrics.scale;
+    const gy = metrics.originY + GLYPH_ANCHOR.y * metrics.scale;
+    const gs = GLYPH_ANCHOR.size * metrics.scale;
+    glyph.style.left = `${gx - gs / 2}px`;
+    glyph.style.top = `${gy - gs / 2}px`;
+    glyph.style.width = `${gs}px`;
+    glyph.style.height = `${gs}px`;
+    glyph.style.display = 'block';
+  }
+
+  // Bucket "First" at 723 down × 426 right, area 90×65
+  const bucketFirst = document.getElementById('bucketFirst');
+  if (bucketFirst) {
+    const bx = metrics.originX + BUCKET_FIRST_ANCHOR.x * metrics.scale;
+    const by = metrics.originY + BUCKET_FIRST_ANCHOR.y * metrics.scale;
+    const bw = BUCKET_FIRST_ANCHOR.width * metrics.scale;
+    const bh = BUCKET_FIRST_ANCHOR.height * metrics.scale;
+    bucketFirst.style.left = `${bx - bw / 2}px`;
+    bucketFirst.style.top = `${by - bh / 2}px`;
+    bucketFirst.style.width = `${bw}px`;
+    bucketFirst.style.height = `${bh}px`;
+    bucketFirst.style.display = 'block';
+  }
+
+  // Bucket "Second" at 723 down × 356 right (70 left of first), area 55×72
+  const bucketSecond = document.getElementById('bucketSecond');
+  if (bucketSecond) {
+    const bx = metrics.originX + BUCKET_SECOND_ANCHOR.x * metrics.scale;
+    const by = metrics.originY + BUCKET_SECOND_ANCHOR.y * metrics.scale;
+    const bw = BUCKET_SECOND_ANCHOR.width * metrics.scale;
+    const bh = BUCKET_SECOND_ANCHOR.height * metrics.scale;
+    bucketSecond.style.left = `${bx - bw / 2}px`;
+    bucketSecond.style.top = `${by - bh / 2}px`;
+    bucketSecond.style.width = `${bw}px`;
+    bucketSecond.style.height = `${bh}px`;
+    bucketSecond.style.display = 'block';
   }
 }
 
@@ -207,7 +383,7 @@ function initBackgroundDrag() {
     if (body.classList.contains('screen-locked')) return false;
     if (backgroundDragLockCount > 0) return false;
     return !target.closest(
-      '.tools-sidebar, .mold-viewport-wrapper, .letter-basket, .magic-book, .upgrade-modal, .workers-panel, .stats-wrap, .upgrades-btn, .crafting-forge, .letter-block-layer'
+      '.tools-sidebar, .mold-viewport-wrapper, .letter-basket, .magic-book, .upgrade-modal, .workers-panel, .stats-wrap, .upgrades-btn, .crafting-forge, .letter-block-layer, .anvil-glyph, .world-bucket'
     );
   }
 
@@ -346,9 +522,9 @@ function spawnMagicalText(word, moldBounds, delay) {
     // Create a wrapper to handle centering (so the animation transform doesn't fight it)
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'position:fixed;z-index:200;pointer-events:none;';
-    // Start above the mold viewport so the text pops up from it
+    // Start just below the mold viewport so the text is visible on-screen
     const startX = moldBounds.left + moldBounds.width / 2;
-    const startY = moldBounds.top - 10;
+    const startY = moldBounds.bottom + 12;
     wrapper.style.left = startX + 'px';
     wrapper.style.top = startY + 'px';
 
@@ -425,6 +601,212 @@ function spawnMagicalText(word, moldBounds, delay) {
   }, delay);
 }
 
+
+
+function spawnVerseEchoWords(words) {
+  const glyph = document.getElementById('anvilGlyph');
+  const book = document.getElementById('magicBook');
+  if (!glyph || !book || !Array.isArray(words)) return;
+
+  const glyphRect = glyph.getBoundingClientRect();
+  const targetX = glyphRect.left + glyphRect.width / 2;
+  const targetY = glyphRect.top + glyphRect.height / 2;
+  const bookRect = book.getBoundingClientRect();
+
+  words.forEach((word, index) => {
+    setTimeout(() => {
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position:fixed;z-index:205;pointer-events:none;';
+      wrapper.style.left = (bookRect.left + bookRect.width * (0.30 + Math.random() * 0.4)) + 'px';
+      wrapper.style.top = (bookRect.top + 70 + Math.random() * 120) + 'px';
+
+      const el = document.createElement('div');
+      el.className = 'magical-text phase-emerge';
+      el.textContent = word;
+      wrapper.appendChild(el);
+      document.body.appendChild(wrapper);
+
+      setTimeout(() => {
+        el.classList.remove('phase-emerge');
+        el.classList.add('phase-zoom');
+        wrapper.style.transition = 'left 0.75s cubic-bezier(0.5, 0, 0.75, 0), top 0.75s cubic-bezier(0.5, 0, 0.75, 0)';
+        wrapper.style.left = targetX + 'px';
+        wrapper.style.top = targetY + 'px';
+
+        setTimeout(() => wrapper.remove(), 800);
+      }, 400 + index * 60);
+    }, index * 180);
+  });
+}
+function getWorldBucketDiscoverableWords() {
+  const bucketIds = ['bucketFirst', 'bucketSecond'];
+  const words = [];
+  const seen = new Set();
+
+  bucketIds.forEach((id) => {
+    const word = document.getElementById(id)?.dataset?.verseWord;
+    if (!word || seen.has(word)) return;
+    seen.add(word);
+    words.push({
+      id: id,
+      english: GRAMMAR_LEXICON[word]?.gloss || word,
+      hebrew: word,
+      pattern: word,
+      slots: [],
+    });
+  });
+
+  return words;
+}
+
+
+function getUndiscoveredWords() {
+  const discovered = new Set(gameState.forgedWordsHistory.map((w) => w.text));
+  const moldWords = gameState.currentLine.molds;
+  const bucketWords = getWorldBucketDiscoverableWords();
+  const allWords = [...moldWords, ...bucketWords].filter((word, index, arr) => (
+    arr.findIndex((w) => w.pattern === word.pattern) === index
+  ));
+  return allWords.filter((word) => !discovered.has(word.pattern));
+}
+
+function findAnvilWordMatch() {
+  const physicsTiles = (letterPhysics?.getAnvilLetters?.() || []).map((t) => ({ ...t, source: 'physics' }));
+  const placedTiles = getAnvilPlacedLetters().map((t) => ({ ...t, source: 'placed' }));
+  const allTiles = [...physicsTiles, ...placedTiles];
+  const rtlTiles = allTiles.slice().sort((a, b) => b.x - a.x);
+  const ltrTiles = allTiles.slice().sort((a, b) => a.x - b.x);
+  const directionSets = [rtlTiles, ltrTiles];
+  const wordDirections = [
+    (word) => word.pattern,
+    (word) => word.pattern.split('').reverse().join(''),
+  ];
+
+  const hasAnyTiles = directionSets.some((set) => set.length > 0);
+  if (!hasAnyTiles) return null;
+
+  const words = getUndiscoveredWords();
+  for (const word of words) {
+    const length = word.pattern.length;
+    for (const tiles of directionSets) {
+      if (tiles.length < length) continue;
+
+      for (const buildTarget of wordDirections) {
+        const targetChars = buildTarget(word);
+
+        for (let i = 0; i <= tiles.length - length; i += 1) {
+          const slice = tiles.slice(i, i + length);
+          const chars = slice.map((t) => t.char).join('');
+          const yValues = slice.map((t) => t.y);
+          const ySpan = Math.max(...yValues) - Math.min(...yValues);
+          if (ySpan > 96) continue;
+
+          let gapsValid = true;
+          for (let g = 0; g < slice.length - 1; g += 1) {
+            if (Math.abs(slice[g].x - slice[g + 1].x) > 150) {
+              gapsValid = false;
+              break;
+            }
+          }
+          if (!gapsValid) continue;
+          if (chars !== targetChars) continue;
+
+          const xValues = slice.map((t) => t.x);
+          const minX = Math.min(...xValues);
+          const maxX = Math.max(...xValues);
+          const minY = Math.min(...yValues);
+          const maxY = Math.max(...yValues);
+          const midX = (minX + maxX) / 2;
+          const midY = (minY + maxY) / 2;
+
+          return {
+            word,
+            tileRefs: slice.map((t) => ({ id: t.id, source: t.source })),
+            origin: {
+              left: midX - 60,
+              top: midY - 28,
+              width: 120,
+              height: 56,
+              right: midX + 60,
+              bottom: midY + 28,
+            }
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function spawnAnvilClickPopup(x, y) {
+  const el = document.createElement('div');
+  el.className = 'mold-clink-popup';
+  el.textContent = 'Click!';
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 600);
+}
+
+function attemptWordDiscoveryFromAnvil() {
+  const match = findAnvilWordMatch();
+  if (!match) return false;
+
+  const placedIds = match.tileRefs.filter((t) => t.source === 'placed').map((t) => t.id);
+  const physicsIds = match.tileRefs.filter((t) => t.source === 'physics').map((t) => t.id);
+  consumeAnvilPlacedLetters(placedIds);
+  letterPhysics?.consumeLettersByIds?.(physicsIds);
+
+  const forgedWord = {
+    text: match.word.pattern,
+    english: match.word.english,
+    length: match.word.pattern.length,
+    power: computeWordPower(match.word.pattern.length),
+  };
+
+  const bounds = match.origin || {
+    left: window.innerWidth * 0.5 - 80,
+    right: window.innerWidth * 0.5 + 80,
+    top: window.innerHeight * 0.6 - 40,
+    bottom: window.innerHeight * 0.6 + 40,
+    width: 160,
+    height: 80,
+  };
+
+  const renownGained = forgedWord.length * 2;
+  addLetters(renownGained);
+  spawnResourceGain(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2, renownGained, 'renown');
+  spawnMagicalText(forgedWord, bounds, 0);
+  return true;
+}
+
+
+function attemptBucketWordDiscoveryFromRedHotHit() {
+  const discovered = new Set(gameState.forgedWordsHistory.map((w) => w.text));
+  const bucketWord = getWorldBucketDiscoverableWords().find((word) => !discovered.has(word.pattern));
+  if (!bucketWord) return false;
+
+  const bucketEl = document.getElementById(bucketWord.id);
+  const bounds = bucketEl ? bucketEl.getBoundingClientRect() : {
+    left: window.innerWidth * 0.65,
+    top: window.innerHeight * 0.6,
+    width: 120,
+    height: 80,
+    right: window.innerWidth * 0.65 + 120,
+    bottom: window.innerHeight * 0.6 + 80,
+  };
+
+  const forgedWord = {
+    text: bucketWord.pattern,
+    english: bucketWord.english,
+    length: bucketWord.pattern.length,
+    power: computeWordPower(bucketWord.pattern.length),
+  };
+
+  spawnMagicalText(forgedWord, bounds, 0);
+  return true;
+}
+
 /**
  * Initialize the game
  */
@@ -432,6 +814,10 @@ function initializeGame() {
   console.log('Initializing Lingua Forge...');
   // Initialize DOM element references
   initializeElements();
+
+  // Reset enscribe mode state on fresh game start
+  gameState.enscribeModeActive = false;
+  clearEnscribeSelection();
 
   // Initialize mold slots
   initializeMoldSlots();
@@ -454,6 +840,8 @@ function initializeGame() {
 
   // Initialize hearth system
   initializeHearth();
+  spyglassSystem.registerWorldTargets();
+  seedStartingStructuralWords();
 
   // Initialize audio on first user gesture (Web Audio API requirement)
   const startAudio = async () => {
@@ -480,16 +868,23 @@ function initializeGame() {
   initToolsSidebar(
     // onToolSelected: pull a tool out to use it
     (toolName, dropX, dropY) => {
+      const craftingCanvas = document.getElementById('craftingCanvas');
+
+      // Ensure lazy tools exist before activation/positioning so drag-out
+      // always feels like "tool in hand" on first pull.
+      if (toolName === 'pestle') ensurePestleSystem(craftingCanvas, null);
+      if (toolName === 'shovel') ensureShovelSystem(craftingCanvas, null);
+
       const btnMap = {
         hammer: document.getElementById('selectHammer'),
+        spyglass: document.getElementById('selectSpyglass'),
         pestle: document.getElementById('selectPestle'),
-        shovel: document.getElementById('selectShovel')
+        shovel: document.getElementById('selectShovel'),
       };
       const btn = btnMap[toolName];
       if (btn) btn.click();
 
       // Position the tool at the drop location (convert screen coords to canvas coords)
-      const craftingCanvas = document.getElementById('craftingCanvas');
       if (craftingCanvas && dropX != null && dropY != null) {
         const rect = craftingCanvas.getBoundingClientRect();
         const canvasX = dropX - rect.left;
@@ -517,6 +912,9 @@ function initializeGame() {
           shovelSystem.shovel.headX = canvasX;
           shovelSystem.shovel.headY = canvasY + (shovelSystem.shovel.length || 120);
         }
+        if (toolName === 'spyglass') {
+          spyglassSystem.startAt(dropX, dropY);
+        }
       }
     },
     // onToolPutAway: drop a tool back in the sidebar to stow it
@@ -524,6 +922,7 @@ function initializeGame() {
       if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
       if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
       if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
+      if (toolName === 'spyglass') spyglassSystem.stop();
 
       // Clear the active tool if we just put away the one that was active
       if (activeTool === toolName) {
@@ -533,6 +932,7 @@ function initializeGame() {
       // Also clear active state on hidden tool buttons
       const btn = document.getElementById(
         toolName === 'hammer' ? 'selectHammer' :
+        toolName === 'spyglass' ? 'selectSpyglass' :
         toolName === 'pestle' ? 'selectPestle' :
         toolName === 'shovel' ? 'selectShovel' : ''
       );
@@ -544,9 +944,8 @@ function initializeGame() {
 
   initBackgroundDrag();
 
-  // Spawn starting letters (slightly reduced on mobile for faster initial load)
-  const startingLetters = isMobileDevice ? Math.max(3, STARTING_LETTERS - 2) : STARTING_LETTERS;
-  for (let i = 0; i < startingLetters; i++) {
+  // Spawn starting letters
+  for (let i = 0; i < STARTING_LETTERS; i++) {
     spawnLetter(handleMoldSlotFilled);
   }
 
@@ -586,19 +985,41 @@ function initializeCraftingSystems() {
 
   // Callback when hammer strikes anvil - spawn flying physics letters
   hammerSystem.onLetterForged = (impactX, impactY, power, strikeVx, multiplier = 1) => {
-    // Spawn letters based on lettersPerClick and multiplier
-    // On mobile, cap total spawned per strike to keep framerate smooth
-    const rawTotal = gameState.lettersPerClick * multiplier;
-    const totalLetters = isMobileDevice ? Math.min(rawTotal, 6) : rawTotal;
-    for (let i = 0; i < totalLetters; i++) {
-      // Get random Hebrew letter
-      const letterChar = randomAllowedLetter();
+    let discoveredMagicalWord = false;
+    if (multiplier > 1) {
+      discoveredMagicalWord = !!attemptWordDiscoveryFromAnvil();
+      if (!discoveredMagicalWord) {
+        discoveredMagicalWord = !!attemptBucketWordDiscoveryFromRedHotHit();
+      }
+    }
 
-      // Slight delay between multiple letters for visual effect (shorter on mobile)
-      const delay = isMobileDevice ? i * 16 : i * 50;
-      setTimeout(() => {
-        hammerSystem.spawnFlyingLetter(impactX, impactY, power, strikeVx, letterChar);
-      }, delay);
+    // If a red-hot strike discovered a magical word, do not spawn letters.
+    if (!(multiplier > 1 && discoveredMagicalWord)) {
+      // Spawn letters based on lettersPerClick and multiplier
+      // On mobile, cap total spawned per strike to keep framerate smooth
+      const rawTotal = (gameState.lettersPerClick + gameState.hammerHitBonusLetters) * multiplier;
+      const totalLetters = isMobileDevice ? Math.min(rawTotal, 6) : rawTotal;
+      const maxSpread = Math.PI / 4;
+      const spreadDivisor = Math.max(1, totalLetters - 1);
+      for (let i = 0; i < totalLetters; i++) {
+        // Get random Hebrew letter
+        const letterChar = randomAllowedLetter();
+
+        let launchAngleOffset = 0;
+        if (multiplier > 1) {
+          // Red-hot hits fan letters out at varied angles.
+          const normalized = spreadDivisor === 0 ? 0 : (i / spreadDivisor) - 0.5;
+          const deterministicSpread = normalized * maxSpread;
+          const jitter = (Math.random() - 0.5) * (maxSpread * 0.35);
+          launchAngleOffset = deterministicSpread + jitter;
+        }
+
+        // Slight delay between multiple letters for visual effect (shorter on mobile)
+        const delay = isMobileDevice ? i * 30 : i * 50;
+        setTimeout(() => {
+          hammerSystem.spawnFlyingLetter(impactX, impactY, power, strikeVx, letterChar, { launchAngleOffset });
+        }, delay);
+      }
     }
 
     // Hide hint after first strike
@@ -669,33 +1090,15 @@ function initializeCraftingSystems() {
     updateUI();
   };
 
-  // Callback when red-hot hammer strikes a heated mold.
-  hammerSystem.onForgeTriggered = (moldId) => {
-    const mold = gameState.currentLine.molds.find(m => m.id === moldId);
-    if (!mold) return;
-
-    const forgedWord = forgeSingleMold(mold);
-    if (!forgedWord) return;
-
-    const moldEl = getWorldMoldElement(moldId);
-    const fallback = document.querySelector('.mold-viewport');
-    const bounds = moldEl ? moldEl.getBoundingClientRect() : (fallback ? fallback.getBoundingClientRect() : null);
-    if (bounds) {
-      const renownGained = forgedWord.length * 2;
-      addLetters(renownGained);
-      const screenX = bounds.left + bounds.width / 2;
-      const screenY = bounds.top + bounds.height / 2;
-      spawnResourceGain(screenX, screenY, renownGained, 'renown');
-      spawnMagicalText(forgedWord, bounds, 0);
-    }
-
-    updateUI();
-  };
+  hammerSystem.onForgeTriggered = null;
 
   // Initialize letter physics system (thrown letter blocks)
   letterPhysics = new LetterPhysicsSystem();
   window.letterPhysics = letterPhysics;
   letterPhysics.onSlotFilled = handleMoldSlotFilled;
+  letterPhysics.onAnvilClick = (x, y) => {
+    spawnAnvilClickPopup(x, y);
+  };
 
   // Overlay renderer: draw physics letters on the letter blocks canvas
   const renderPhysicsLetters = () => {
@@ -710,66 +1113,23 @@ function initializeCraftingSystems() {
       console.warn('Physics letter render error:', e);
     }
   };
+  toolOverlayRenderer = renderPhysicsLetters;
 
-  // Create pestle system with callbacks
-  pestleSystem = new PestleSystem(craftingCanvas);
-  if (typeof pestleSystem.setOverlayRenderer === 'function') {
-    pestleSystem.setOverlayRenderer(renderPhysicsLetters);
-  } else {
-    pestleSystem.overlayRenderer = renderPhysicsLetters;
-  }
-
-  // Callback when ink is produced
-  pestleSystem.onInkProduced = (letter, canvasX, canvasY) => {
-    const inkAmount = gameState.inkPerChurn;
-    addInk(inkAmount);
-
-    // Spawn resource gain feedback at pestle tip position
-    const craftingCanvas = document.getElementById('craftingCanvas');
-    if (craftingCanvas) {
-      const rect = craftingCanvas.getBoundingClientRect();
-      const screenX = rect.left + canvasX;
-      const screenY = rect.top + canvasY;
-      spawnResourceGain(screenX, screenY, inkAmount, 'ink');
-    }
-
-    updateUI();
-    console.log('Produced', inkAmount, 'ink from letter:', letter);
-  };
+  // Create pestle system lazily to improve mobile startup time.
+  // It will initialize immediately when the user selects the pestle tool.
+  pestleSystem = null;
 
   // Start with hammer active
   hammerSystem.setOverlayRenderer(renderPhysicsLetters);
   hammerSystem.start();
-  // Create and start shovel (initialized but not active by default)
-  shovelSystem = new ShovelSystem(craftingCanvas);
-  shovelSystem.setOverlayRenderer(renderPhysicsLetters);
-  // do not start shovel until selected
+  // Create shovel lazily to improve mobile startup time.
+  // It will initialize immediately when the user selects the shovel tool.
+  shovelSystem = null;
 
   // Wire up put-away callbacks: when a tool is released near the sidebar, stow it
-  function makePutAwayHandler(toolName) {
-    return () => {
-      console.log('Tool put away via canvas drag:', toolName);
-      if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
-      if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
-      if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
-      if (activeTool === toolName) activeTool = null;
-      // Update sidebar slot
-      const slotId = toolName === 'hammer' ? 'toolSlotHammer' :
-                     toolName === 'pestle' ? 'toolSlotPestle' :
-                     toolName === 'shovel' ? 'toolSlotShovel' : '';
-      const slot = document.getElementById(slotId);
-      if (slot) slot.classList.remove('active');
-      // Update hidden button
-      const btnId = toolName === 'hammer' ? 'selectHammer' :
-                    toolName === 'pestle' ? 'selectPestle' :
-                    toolName === 'shovel' ? 'selectShovel' : '';
-      const btn = document.getElementById(btnId);
-      if (btn) btn.classList.remove('active');
-    };
-  }
   hammerSystem.onPutAway = makePutAwayHandler('hammer');
-  pestleSystem.onPutAway = makePutAwayHandler('pestle');
-  shovelSystem.onPutAway = makePutAwayHandler('shovel');
+  spyglassSystem.onPutAway = makePutAwayHandler('spyglass');
+  window.getAnvilViewportRect = () => hammerSystem.getAnvilViewportRect();
 
   console.log('Crafting systems initialized');
 }
@@ -779,22 +1139,29 @@ function initializeCraftingSystems() {
  */
 function setupToolSelection() {
   const hammerBtn = document.getElementById('selectHammer');
+  const spyglassBtn = document.getElementById('selectSpyglass');
   const pestleBtn = document.getElementById('selectPestle');
   const shovelBtn = document.getElementById('selectShovel');
   const craftingHint = document.getElementById('craftingHint');
-  if (!hammerBtn || !pestleBtn || !shovelBtn) return;
+  if (!hammerBtn || !spyglassBtn || !pestleBtn || !shovelBtn) return;
+
+  const allToolBtns = [hammerBtn, spyglassBtn, pestleBtn, shovelBtn];
+  function clearAllToolBtns(except) {
+    allToolBtns.forEach(b => { if (b !== except) b.classList.remove('active'); });
+  }
 
   hammerBtn.addEventListener('click', () => {
     if (activeTool === 'hammer') return;
 
     activeTool = 'hammer';
+    clearAllToolBtns(hammerBtn);
     hammerBtn.classList.add('active');
-    pestleBtn.classList.remove('active');
-    shovelBtn.classList.remove('active');
 
     // Switch systems
     if (shovelSystem) shovelSystem.stop();
     if (pestleSystem) pestleSystem.stop();
+    spyglassSystem.stop();
+
     if (hammerSystem) hammerSystem.start();
 
     // Update hint text
@@ -806,17 +1173,34 @@ function setupToolSelection() {
     console.log('Switched to Hammer');
   });
 
+  spyglassBtn.addEventListener('click', () => {
+    if (activeTool === 'spyglass') return;
+
+    activeTool = 'spyglass';
+    clearAllToolBtns(spyglassBtn);
+    spyglassBtn.classList.add('active');
+
+    if (hammerSystem) hammerSystem.stop();
+    if (pestleSystem) pestleSystem.stop();
+    if (shovelSystem) shovelSystem.stop();
+
+    spyglassSystem.startAt(window.innerWidth * 0.7, window.innerHeight * 0.35);
+  });
+
   pestleBtn.addEventListener('click', () => {
     if (activeTool === 'pestle') return;
 
+    if (!ensurePestleSystem(craftingCanvasRef, toolOverlayRenderer)) return;
+
     activeTool = 'pestle';
-    shovelBtn.classList.remove('active');
+    clearAllToolBtns(pestleBtn);
     pestleBtn.classList.add('active');
-    hammerBtn.classList.remove('active');
 
     // Switch systems
     if (hammerSystem) hammerSystem.stop();
     if (shovelSystem) shovelSystem.stop();
+    spyglassSystem.stop();
+
     if (pestleSystem) pestleSystem.start();
 
     // Update hint text
@@ -831,14 +1215,17 @@ function setupToolSelection() {
   shovelBtn.addEventListener('click', () => {
     if (activeTool === 'shovel') return;
 
+    if (!ensureShovelSystem(craftingCanvasRef, toolOverlayRenderer)) return;
+
     activeTool = 'shovel';
+    clearAllToolBtns(shovelBtn);
     shovelBtn.classList.add('active');
-    hammerBtn.classList.remove('active');
-    pestleBtn.classList.remove('active');
 
     // Switch systems
     if (hammerSystem) hammerSystem.stop();
     if (pestleSystem) pestleSystem.stop();
+    spyglassSystem.stop();
+
     if (shovelSystem) shovelSystem.start();
 
     // Update hint text
@@ -848,6 +1235,25 @@ function setupToolSelection() {
     }
 
     console.log('Switched to Shovel');
+  });
+
+}
+
+function seedStartingStructuralWords() {
+  const structuralWords = gameState.currentLine.molds.filter((mold) => (
+    mold.english === 'is' || mold.english === 'the' || mold.english === 'of'
+  ));
+
+  structuralWords.forEach((mold) => {
+    addWord({
+      id: getNextWordId(),
+      text: mold.pattern,
+      english: mold.english,
+      length: mold.pattern.length,
+      power: computeWordPower(mold.pattern.length),
+      heated: true,
+    });
+    recordForgedWord({ text: mold.pattern, english: mold.english });
   });
 }
 
@@ -866,20 +1272,6 @@ function setupEventHandlers() {
       if (hireScribe()) {
         updateUI();
       }
-    });
-  }
-
-  // Mold navigation buttons
-  const prevMoldBtn = document.getElementById('prevMoldBtn');
-  const nextMoldBtn = document.getElementById('nextMoldBtn');
-  if (prevMoldBtn && nextMoldBtn) {
-    prevMoldBtn.addEventListener('click', () => {
-      navigatePreviousMold();
-      updateUI();
-    });
-    nextMoldBtn.addEventListener('click', () => {
-      navigateNextMold();
-      updateUI();
     });
   }
 
@@ -989,31 +1381,50 @@ function setupEventHandlers() {
 
   // Forge words button removed - now triggered by red-hot hammer hitting mold viewport
 
-  // Enscribe button - complete verse
   const enscribeBtn = document.getElementById('enscribeBtn');
   if (enscribeBtn) {
-    enscribeBtn.addEventListener('click', () => {
-      if (completeVerse()) {
-        // Spawn resource gain feedback at verse area center
-        const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
-        if (grammarHebrewLineDiv) {
-          const rect = grammarHebrewLineDiv.getBoundingClientRect();
-          const centerX = rect.left + rect.width / 2;
-          const centerY = rect.top + rect.height / 2;
-          spawnResourceGain(centerX, centerY, VERSE_COMPLETION_REWARD, 'ink');
-        }
-
-        alert('Verse completed! You gain ' + VERSE_COMPLETION_REWARD + ' Ink (prototype value).');
-        updateUI();
-      }
+    enscribeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
     });
   }
+
+  const anvilGlyph = document.getElementById('anvilGlyph');
+  if (anvilGlyph) {
+    anvilGlyph.style.cursor = 'pointer';
+    anvilGlyph.addEventListener('click', () => {
+      gameState.enscribeModeActive = true;
+      clearEnscribeSelection();
+    });
+  }
+
+  document.addEventListener('enscribe-attempt', (event) => {
+    const selectedWords = event?.detail?.words || [];
+    const isCorrect = selectedWords.length === SOLUTION_HEBREW_ORDER.length
+      && SOLUTION_HEBREW_ORDER.every((word, idx) => word === selectedWords[idx]);
+
+    gameState.enscribeModeActive = false;
+
+    if (isCorrect) {
+      addInk(VERSE_COMPLETION_REWARD);
+      gameState.linesCompleted += 1;
+      (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
+      spawnVerseEchoWords(selectedWords);
+      const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
+      if (grammarHebrewLineDiv) {
+        const rect = grammarHebrewLineDiv.getBoundingClientRect();
+        spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
+      }
+    }
+
+    clearEnscribeSelection();
+    updateUI();
+  });
 
   // Upgrades button
   const upgradesBtn = document.getElementById('upgradesBtn');
   if (upgradesBtn) {
     upgradesBtn.addEventListener('click', () => {
-      showUpgradeScreen();
+      upgradesAPI.showUpgradeScreen();
     });
   }
 
@@ -1021,7 +1432,7 @@ function setupEventHandlers() {
   const closeUpgradeBtn = document.getElementById('closeUpgradeBtn');
   if (closeUpgradeBtn) {
     closeUpgradeBtn.addEventListener('click', () => {
-      hideUpgradeScreen();
+      upgradesAPI.hideUpgradeScreen();
     });
   }
 
@@ -1030,7 +1441,7 @@ function setupEventHandlers() {
   if (upgradeModal) {
     upgradeModal.addEventListener('click', (e) => {
       if (e.target === upgradeModal) {
-        hideUpgradeScreen();
+        upgradesAPI.hideUpgradeScreen();
       }
     });
   }
@@ -1127,12 +1538,7 @@ function gameLoop(timestamp) {
         canvasRectAge = 0;
       }
 
-      // Hammer pushes nearby physics letters
-      if (hammerSystem && hammerSystem.isRunning && cachedCanvasRect) {
-        const hx = cachedCanvasRect.left + hammerSystem.hammer.headX;
-        const hy = cachedCanvasRect.top + hammerSystem.hammer.headY;
-        letterPhysics.pushFrom(hx, hy, 45, hammerSystem.hammer.headVx || 0, hammerSystem.hammer.headVy || 0);
-      }
+      // Hammer should pass through physics letters (no push interaction).
 
       // Render physics letters when no tool is active
       if (letterBlocksCanvasRef) {
@@ -1162,7 +1568,7 @@ function gameLoop(timestamp) {
   if (uiThrottleAcc >= uiInterval) {
     uiThrottleAcc = 0;
     updateUI();
-    updateUpgradeHeaderStats();
+    upgradesAPI.updateUpgradeHeaderStats();
   }
 
   // Continue loop

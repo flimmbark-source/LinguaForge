@@ -13,6 +13,7 @@ export const gameState = {
   letters: 0,
   ink: 0,
   lettersPerClick: 1,
+  hammerHitBonusLetters: 0,
 
   // Words (player inventory)
   words: [],
@@ -47,6 +48,13 @@ export const gameState = {
   // Word selector index for verse page
   wordSelectorIndex: 0,
 
+  // Enscribe mode (started by clicking anvil glyph)
+  enscribeModeActive: false,
+  enscribeSelectedWords: [],
+
+  // Book glossary spread paging
+  glossarySpreadIndex: 0,
+
   // Upgrades
   upgrades: {},
 
@@ -65,7 +73,7 @@ export const gameState = {
   lettersPerRedHot: 4,
   scribeLettersPerInk: 5,
   inkPerChurn: 1,
-  ripSpeedThreshold: 3400, // Base threshold for hammer rip
+  ripSpeedThreshold: 4000, // Base threshold for hammer rip
   spinRetentionThreshold: 5, // rad/s - threshold for spin retention when hitting ground/anvil
   fastHeatLevel: 0, // Level of Fast Heat upgrade (reduces heating time)
   powerSwingMultiplier: 1, // Multiplier for angular velocity during swings (Power Swing upgrade)

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RuneHearth</title>
+  <link rel="preload" href="Public/Hammer.png" as="image" fetchpriority="high" />
   <link rel="stylesheet" href="css/styles.css?v=9" />
 </head>
 <body>
@@ -27,16 +28,19 @@
 
       <!-- GLOSSARY PAGE (left page) -->
       <div class="book-page book-page-left" id="glossaryPage">
+        <button id="bookPrevPageBtn" class="page-corner page-corner-left" title="Previous pages"></button>
         <div class="book-page-header">Glossary</div>
         <div class="book-page-content">
           <div id="glossaryEntries" class="glossary-entries">
             <div class="glossary-empty" style="opacity:0.6; font-size:12px;">No words forged yet.</div>
           </div>
+          <div id="glossaryPageIndicator" class="glossary-page-indicator">Pages 1-1</div>
         </div>
       </div>
 
       <!-- VERSE PAGE (right page) -->
       <div class="book-page book-page-right" id="versePage">
+        <button id="bookNextPageBtn" class="page-corner page-corner-right" title="Next pages"></button>
         <div class="book-page-header">Assembly</div>
         <div class="book-page-content">
           <div style="font-size:12px; opacity:0.8;">Verse</div>
@@ -44,27 +48,15 @@
           <div id="grammarScore" style="font-size:11px; opacity:0.7; margin-top:4px;"></div>
           <div id="grammarHebrewLine" class="letter-board"></div>
 
-          <!-- Word Selector -->
-          <div id="wordSelectorContainer" class="word-selector-container">
-            <button id="wordSelectorPrev" class="word-selector-arrow" title="Previous word">&#9664;</button>
-            <div id="wordSelectorDisplay" class="word-selector-display">
-              <span class="word-selector-empty">No words available</span>
-            </div>
-            <button id="wordSelectorNext" class="word-selector-arrow" title="Next word">&#9654;</button>
-          </div>
-          <div class="word-selector-actions">
-            <button id="wordSelectorEnterBtn" class="word-selector-enter-btn" disabled>Enter Word</button>
-            <button id="wordSelectorEraseBtn" class="word-selector-erase-btn">Erase</button>
-          </div>
-
           <div class="row" style="margin-top:10px;">
-            <button id="enscribeBtn" disabled>Enscribe Line</button>
+            <button id="enscribeBtn" disabled>Click the anvil glyph to enscribe</button>
             <span class="pill">Lines completed: <span id="linesCompleted">0</span></span>
           </div>
         </div>
       </div>
     </div>
   </div>
+
 
   <!-- Hidden elements for backward compat (grammar evaluation still uses these) -->
   <div style="display:none;">
@@ -84,6 +76,10 @@
         <div class="tool-slot-icon">🔨</div>
         <div class="tool-slot-label">Hammer</div>
       </div>
+      <div class="tool-slot" data-tool="spyglass" id="toolSlotSpyglass">
+        <div class="tool-slot-icon">🔍</div>
+        <div class="tool-slot-label">Spyglass</div>
+      </div>
       <div class="tool-slot locked-hidden" data-tool="pestle" id="toolSlotPestle">
         <div class="tool-slot-icon">🥄</div>
         <div class="tool-slot-label">Pestle</div>
@@ -98,6 +94,7 @@
   <!-- Hidden original tool buttons for JS compatibility -->
   <div style="display:none;">
     <button id="selectHammer" class="tool-button active" data-tool="hammer"></button>
+    <button id="selectSpyglass" class="tool-button" data-tool="spyglass"></button>
     <button id="selectPestle" class="tool-button locked-hidden" data-tool="pestle"></button>
     <button id="selectShovel" class="tool-button locked-hidden" data-tool="shovel"></button>
   </div>
@@ -173,7 +170,20 @@
         <div class="hearth-opening">
           <div class="hearth-back-wall"></div>
           <div id="hearthFire" class="hearth-fire"></div>
+          <div id="hearthBreath" class="hearth-breath" aria-hidden="true">
+            <span class="hearth-steam puff-1"></span>
+            <span class="hearth-steam puff-2"></span>
+            <span class="hearth-steam puff-3"></span>
+          </div>
           <div class="hearth-floor"></div>
+        </div>
+        <!-- Steam plume rising above the fire -->
+        <div id="hearthSteamPlume" class="hearth-steam-plume" aria-hidden="true">
+          <span class="steam-wisp wisp-1"></span>
+          <span class="steam-wisp wisp-2"></span>
+          <span class="steam-wisp wisp-3"></span>
+          <span class="steam-wisp wisp-4"></span>
+          <span class="steam-wisp wisp-5"></span>
         </div>
       </div>
 
@@ -182,20 +192,6 @@
     </div>
 
   </div>
-
-<!-- FLOATING MOLD VIEWPORT -->
-<div class="mold-viewport-wrapper">
-  <div class="mold-sidebar-tab">Molds</div>
-  <div class="section mold-panel">
-    <h2 style="margin-bottom:6px;"></h2>
-    <div class="mold-viewport">
-      <button id="prevMoldBtn" class="secondary" aria-label="Previous mold">&lt;</button>
-      <div id="moldList" class="mold-list"></div>
-      <button id="nextMoldBtn" class="secondary" aria-label="Next mold">&gt;</button>
-    </div>
-    <div id="moldIndexLabel" class="mold-index-label">1 / 1</div>
-  </div>
-</div>
 
   <!-- LETTER BASKET (FIXED AT BOTTOM LEFT) -->
   <div class="letter-basket">
@@ -231,6 +227,39 @@
       </div>
     </div>
   </div>
+
+  <!-- Background-anchored world elements -->
+  <div id="anvilGlyph" class="anvil-glyph" aria-hidden="true">
+    <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" class="glyph-svg">
+      <defs>
+        <filter id="glyphGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      <!-- Embossed outline matching anvil face color -->
+      <circle cx="30" cy="30" r="24" fill="none" stroke="#78716c" stroke-width="3" opacity="0.8"/>
+      <circle cx="30" cy="30" r="21" fill="none" stroke="#57534e" stroke-width="1.5" opacity="0.6"/>
+      <!-- Inner arcane glyph lines -->
+      <g class="glyph-inner" filter="url(#glyphGlow)">
+        <circle cx="30" cy="30" r="16" fill="none" stroke="#4da6ff" stroke-width="1.2" opacity="0.9"/>
+        <path d="M30 14 L30 46 M14 30 L46 30" stroke="#4da6ff" stroke-width="1" opacity="0.7"/>
+        <path d="M20 20 L40 40 M40 20 L20 40" stroke="#4da6ff" stroke-width="0.8" opacity="0.6"/>
+        <circle cx="30" cy="30" r="8" fill="none" stroke="#6bb8ff" stroke-width="1" opacity="0.8"/>
+        <circle cx="30" cy="30" r="3" fill="#4da6ff" opacity="0.6"/>
+        <!-- Rune marks -->
+        <path d="M22 16 L26 22 M38 16 L34 22" stroke="#6bb8ff" stroke-width="0.8" opacity="0.7"/>
+        <path d="M22 44 L26 38 M38 44 L34 38" stroke="#6bb8ff" stroke-width="0.8" opacity="0.7"/>
+        <path d="M16 22 L22 26 M16 38 L22 34" stroke="#6bb8ff" stroke-width="0.8" opacity="0.7"/>
+        <path d="M44 22 L38 26 M44 38 L38 34" stroke="#6bb8ff" stroke-width="0.8" opacity="0.7"/>
+      </g>
+    </svg>
+  </div>
+  <div id="bucketFirst" class="world-bucket" data-verse-word="ראשונה"></div>
+  <div id="bucketSecond" class="world-bucket" data-verse-word="שנייה"></div>
 
   <!-- Load JavaScript modules -->
   <script type="module" src="js/app.js?v=9"></script>

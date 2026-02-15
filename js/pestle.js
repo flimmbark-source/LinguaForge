@@ -38,7 +38,7 @@ export class PestleSystem {
     this._mortarImg.src = 'Public/Mortar.png';
 
     // World physics constants
-    this.gravity = 3400;
+    this.gravity = 5400;
     this.mortarGravity = 12000; // Dramatically increased gravity inside mortar
     this.airFriction = 0.9;
 
@@ -54,6 +54,7 @@ export class PestleSystem {
       width: 30,
       handleThickness: 12,
       angle: 0,
+      isHeld: false,
       attachedLetters: [],
     };
 
@@ -74,6 +75,10 @@ export class PestleSystem {
       distance: 0,
       threshold: 50, // pixels of horizontal movement to produce ink
       cooldown: 0,
+    };
+
+    this.pressTracker = {
+      wasNearBottom: false,
     };
 
     // Visual effects
@@ -98,6 +103,9 @@ export class PestleSystem {
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
     this.onPointerUp = this.onPointerUp.bind(this);
+    this.onViewportChange = this.onViewportChange.bind(this);
+
+    this.mortarAnchor = null;
 
     // Initialize
     this.resize();
@@ -158,6 +166,62 @@ export class PestleSystem {
     this.pestle.angle = -Math.PI / 2;
 
     this.insideMortar = false;
+    this.pressTracker.wasNearBottom = false;
+
+    // Keep mobile mortar anchored to the background after viewport/orientation changes.
+    this.applyMortarAnchor();
+  }
+
+  onViewportChange() {
+    this.resize();
+  }
+
+  setMortarAnchor(anchor) {
+    this.mortarAnchor = anchor;
+    this.applyMortarAnchor();
+  }
+
+  applyMortarAnchor() {
+    if (!this.mortarAnchor || window.innerWidth > MOBILE_BREAKPOINT) return;
+
+    const canvasRect = this.canvas.getBoundingClientRect();
+    const oldCenterX = this.mortar.x + this.mortar.width / 2;
+    const oldCenterY = this.mortar.y + this.mortar.height / 2;
+
+    this.mortar.width = this.mortarAnchor.width;
+    this.mortar.height = this.mortarAnchor.height;
+    this.mortar.x = this.mortarAnchor.x - canvasRect.left - this.mortar.width / 2;
+    this.mortar.y = this.mortarAnchor.y - canvasRect.top - this.mortar.height / 2;
+
+    const newCenterX = this.mortar.x + this.mortar.width / 2;
+    const newCenterY = this.mortar.y + this.mortar.height / 2;
+
+    const isMobileLandscape = window.innerWidth <= MOBILE_BREAKPOINT && window.innerWidth > window.innerHeight;
+    this.pestle.constantLength = isMobileLandscape ? 120 : 140;
+
+    if (this._mortarAnchorInitialized) {
+      // Keep current interaction state by translating existing pestle positions.
+      const dx = newCenterX - oldCenterX;
+      const dy = newCenterY - oldCenterY;
+      this.pestle.pivotX += dx;
+      this.pestle.pivotY += dy;
+      this.pestle.headX += dx;
+      this.pestle.headY += dy;
+      this.pestle.prevHeadX += dx;
+      this.pestle.prevHeadY += dy;
+      return;
+    }
+
+    this._mortarAnchorInitialized = true;
+    const pivotX = this.mortar.x + this.mortar.width / 2;
+    const pivotY = this.mortar.y - (isMobileLandscape ? 64 : 76);
+    this.pestle.pivotX = pivotX;
+    this.pestle.pivotY = pivotY;
+    this.pestle.headX = pivotX;
+    this.pestle.headY = pivotY + this.pestle.constantLength;
+    this.pestle.prevHeadX = this.pestle.headX;
+    this.pestle.prevHeadY = this.pestle.headY;
+    this.pestle.angle = -Math.PI / 2;
   }
 
   /**
@@ -171,6 +235,11 @@ export class PestleSystem {
     document.addEventListener('touchmove', this.onPointerMove, { passive: false });
     document.addEventListener('touchend', this.onPointerUp);
     window.addEventListener('resize', this.resize);
+    window.addEventListener('orientationchange', this.onViewportChange);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', this.onViewportChange);
+      window.visualViewport.addEventListener('scroll', this.onViewportChange);
+    }
   }
 
   /**
@@ -236,7 +305,18 @@ export class PestleSystem {
     const client = e.touches ? e.touches[0] : e;
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
+
+    if (!this.isPointNearPestle(this.input.mouseX, this.input.mouseY)) {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+
     this.input.isDown = true;
+    this.pestle.isHeld = true;
+    this.pestle.pivotX = this.input.mouseX;
+    this.pestle.pivotY = this.input.mouseY;
     setScreenLocked(true);
     setBackgroundDragLocked(true);
   }
@@ -253,7 +333,8 @@ export class PestleSystem {
     this.input.mouseX = client.clientX - rect.left;
     this.input.mouseY = client.clientY - rect.top;
     // Open sidebar when dragging near the tab
-    if (this.input.isDown) {
+    if (this.input.isDown && this.pestle.isHeld) {
+      e.preventDefault();
       handleToolDragNearSidebar(client.clientX);
     }
   }
@@ -261,10 +342,14 @@ export class PestleSystem {
   onPointerUp(e) {
     if (!this.isRunning) return;
 
+    if (!this.pestle.isHeld) return;
+
     // Only put tool away if released over the open sidebar content
     const client = e.changedTouches ? e.changedTouches[0] : e;
     if (shouldPutToolAway(client.clientX, client.clientY) && this.onPutAway) {
       cleanupToolDragSidebar();
+      this.input.isDown = false;
+      this.pestle.isHeld = false;
       setScreenLocked(false);
       setBackgroundDragLocked(false);
       this.onPutAway();
@@ -273,6 +358,7 @@ export class PestleSystem {
     cleanupToolDragSidebar();
 
     this.input.isDown = false;
+    this.pestle.isHeld = false;
     setScreenLocked(false);
     setBackgroundDragLocked(false);
   }
@@ -415,9 +501,11 @@ export class PestleSystem {
     const safeDt = Math.max(dt, 0.0001);
     const headRadius = pestle.width / 2;
 
-    // ── Pivot (handle end) snaps directly to mouse ──
-    pestle.pivotX = this.input.mouseX;
-    pestle.pivotY = this.input.mouseY;
+    // ── Pivot (handle end) follows pointer only while held ──
+    if (pestle.isHeld && this.input.isDown) {
+      pestle.pivotX = this.input.mouseX;
+      pestle.pivotY = this.input.mouseY;
+    }
 
     // ── Head (grinding end) swings below pivot with gravity (Verlet) ──
     const g = this.insideMortar ? this.mortarGravity : this.gravity;
@@ -562,6 +650,22 @@ export class PestleSystem {
     ) - Math.PI / 2;
   }
 
+  consumeLetterForInk(reason = 'grind') {
+    const pestle = this.pestle;
+    if (pestle.attachedLetters.length <= 0) return false;
+
+    const letter = pestle.attachedLetters.pop();
+    this.spawnInkDrop(pestle.headX, pestle.headY);
+    if (Math.random() < 0.6) playPestleGrind(); else playPestleSquelch();
+
+    if (this.onInkProduced) {
+      this.onInkProduced(letter, pestle.headX, pestle.headY);
+    }
+
+    console.log(`${reason} ink from letter:`, letter, '| remaining:', pestle.attachedLetters.length);
+    return true;
+  }
+
   /**
    * Check and produce ink when grinding the mortar bottom
    */
@@ -569,39 +673,52 @@ export class PestleSystem {
     const pestle = this.pestle;
     const m = this.mortar;
     const gt = this.grindTracker;
+    const pt = this.pressTracker;
     const headRadius = pestle.width / 2;
 
     gt.cooldown = Math.max(0, gt.cooldown - dt);
 
-    // Only grind when held, inside mortar, and near the bottom
+    // Only grind/press when held, inside mortar, and near the bottom
     const mBottom = m.y + m.height;
-    const nearBottom = pestle.headY >= mBottom - headRadius - 6;
+    const nearBottom = this.insideMortar && pestle.headY >= mBottom - headRadius - 6;
 
-    if (!this.insideMortar || !nearBottom) {
+    if (!this.insideMortar) {
       gt.lastX = pestle.headX;
       gt.distance = 0;
+      pt.wasNearBottom = false;
       return;
     }
 
-    // Accumulate horizontal movement
-    const moved = Math.abs(pestle.headX - gt.lastX);
-    gt.distance += moved;
-    gt.lastX = pestle.headX;
-
-    // Produce ink when enough grinding has occurred
-    if (gt.distance >= gt.threshold && gt.cooldown <= 0 && pestle.attachedLetters.length > 0) {
+    if (!nearBottom) {
+      gt.lastX = pestle.headX;
       gt.distance = 0;
-      gt.cooldown = 0.2;
+      pt.wasNearBottom = false;
+    } else {
+      // Accumulate horizontal movement for existing grind behavior
+      const moved = Math.abs(pestle.headX - gt.lastX);
+      gt.distance += moved;
+      gt.lastX = pestle.headX;
 
-      const letter = pestle.attachedLetters.pop();
-      this.spawnInkDrop(pestle.headX, pestle.headY);
-      if (Math.random() < 0.6) playPestleGrind(); else playPestleSquelch();
-
-      if (this.onInkProduced) {
-        this.onInkProduced(letter, pestle.headX, pestle.headY);
+      // Smoosh on first contact with the mortar bottom.
+      const firstBottomContact = !pt.wasNearBottom;
+      if (firstBottomContact && gt.cooldown <= 0) {
+        if (this.consumeLetterForInk('Pressed')) {
+          gt.cooldown = 0.2;
+          gt.distance = 0;
+        }
       }
 
-      console.log('Ground ink from letter:', letter, '| remaining:', pestle.attachedLetters.length);
+      pt.wasNearBottom = true;
+    }
+
+    // Existing grinding ink behavior
+    if (nearBottom && gt.distance >= gt.threshold && gt.cooldown <= 0) {
+      if (this.consumeLetterForInk('Ground')) {
+        gt.distance = 0;
+        gt.cooldown = 0.2;
+        pt.wasNearBottom = true;
+      }
+      return;
     }
   }
 
@@ -933,5 +1050,10 @@ export class PestleSystem {
     document.removeEventListener('touchmove', this.onPointerMove);
     document.removeEventListener('touchend', this.onPointerUp);
     window.removeEventListener('resize', this.resize);
+    window.removeEventListener('orientationchange', this.onViewportChange);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this.onViewportChange);
+      window.visualViewport.removeEventListener('scroll', this.onViewportChange);
+    }
   }
 }
