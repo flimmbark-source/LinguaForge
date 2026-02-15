@@ -552,18 +552,64 @@ export class HammerSystem {
     const h = this.hammer;
     const isMobile = this.width <= MOBILE_BREAKPOINT;
     const adjustedPy = py;
+    const distanceToSegment = (ax, ay, bx, by) => {
+      const sdx = bx - ax;
+      const sdy = by - ay;
+      const lenSq = sdx * sdx + sdy * sdy || 1;
+      let segT = ((px - ax) * sdx + (adjustedPy - ay) * sdy) / lenSq;
+      segT = Math.max(0, Math.min(1, segT));
+      const cx = ax + sdx * segT;
+      const cy = ay + sdy * segT;
+      return {
+        dist: Math.hypot(px - cx, adjustedPy - cy),
+        t: segT
+      };
+    };
+
     const x1 = h.pivotX;
     const y1 = h.pivotY;
     const x2 = h.headX;
     const y2 = h.headY;
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const lenSq = dx * dx + dy * dy || 1;
-    let t = ((px - x1) * dx + (adjustedPy - y1) * dy) / lenSq;
-    t = Math.max(0, Math.min(1, t));
-    const cx = x1 + dx * t;
-    const cy = y1 + dy * t;
-    const dist = Math.hypot(px - cx, adjustedPy - cy);
+
+    const baseHit = distanceToSegment(x1, y1, x2, y2);
+    let dist = baseHit.dist;
+    let t = baseHit.t;
+
+    // When a hard rip sends the hammer into free-flight, rendering applies an
+    // extra visual spin around the head. Keep grab tests aligned with the
+    // visible haft so players can re-grab what they see on screen.
+    if (h.isFree && !h.throwingAxeMode && Math.abs(h.visualRotation) > 0.001) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const length = Math.hypot(dx, dy) || h.length || 180;
+      const baseAngle = Math.atan2(dy, dx) + Math.PI / 2;
+      const spin = h.visualRotation;
+      const cosBase = Math.cos(baseAngle);
+      const sinBase = Math.sin(baseAngle);
+      const cosSpin = Math.cos(spin);
+      const sinSpin = Math.sin(spin);
+      const headOffsetY = -(length + 21);
+
+      const transformPoint = (localX, localY) => {
+        const ox = localX;
+        const oy = localY - headOffsetY;
+        const spunX = ox * cosSpin - oy * sinSpin;
+        const spunY = ox * sinSpin + oy * cosSpin + headOffsetY;
+        return {
+          x: h.pivotX + spunX * cosBase - spunY * sinBase,
+          y: h.pivotY + spunX * sinBase + spunY * cosBase
+        };
+      };
+
+      const visualPivot = transformPoint(0, 0);
+      const visualHead = transformPoint(0, -length);
+      const visualHit = distanceToSegment(visualPivot.x, visualPivot.y, visualHead.x, visualHead.y);
+
+      if (visualHit.dist < dist) {
+        dist = visualHit.dist;
+        t = visualHit.t;
+      }
+    }
 
     // Keep grabbing valid anywhere along the haft (segment projection above),
     // but tighten how far away from the hammer the pointer can be.
