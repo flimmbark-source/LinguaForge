@@ -346,7 +346,7 @@ function onToolSlotMouseMove(e) {
   }
 
   if (toolDragActivated && toolSelectedCallback) {
-    toolSelectedCallback(toolDragSource.dataset.tool, e.clientX, e.clientY, { fromSidebarDrag: true });
+    toolSelectedCallback(toolDragSource.dataset.tool, e.clientX, e.clientY);
   }
 
   if (toolDragActivated && toolDragSource.dataset.tool === 'book') {
@@ -455,7 +455,7 @@ function activateTool(tool, e, onToolSelected) {
       if (bookSlot) bookSlot.classList.add('active');
     }
   } else {
-    if (onToolSelected) onToolSelected(tool, e.clientX, e.clientY, { fromSidebarDrag: toolDragActivated });
+    if (onToolSelected) onToolSelected(tool, e.clientX, e.clientY);
 
     // Update active states on sidebar slots
     const allSlots = document.querySelectorAll('.tool-slot[data-tool]');
