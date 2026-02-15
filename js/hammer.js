@@ -1720,6 +1720,16 @@ updateFreeHammer(dt) {
 
       // --- Was this a huge hit that rips the hammer free? ---
       if (hammer.isHeld && downwardSpeed > ripThreshold) {
+        // Preserve the current haft axis before we release the hammer.
+        // If the player was gripping mid-haft, the physics pivot can sit in the
+        // middle of the visible handle; on a rip we want to restore the full
+        // butt-to-head span so re-grabs work along the entire haft.
+        const haftDx = hammer.headX - hammer.pivotX;
+        const haftDy = hammer.headY - hammer.pivotY;
+        const haftLen = Math.hypot(haftDx, haftDy) || 1;
+        const haftAxisX = haftDx / haftLen;
+        const haftAxisY = haftDy / haftLen;
+
         // Capture incoming velocity (direction of swing)
         const incomingVx = hammer.headVx;
         const incomingVy = hammer.headVy;
@@ -1752,6 +1762,13 @@ updateFreeHammer(dt) {
         // Place the head just above the anvil face
         hammer.headX = headX;
         hammer.headY = anvil.y - 18;
+
+        // Reset the haft to its full endpoint so the entire visible handle is
+        // represented by the grab segment after a ripped hit.
+        const fullHaftLength = this.getMaxHandleLength();
+        hammer.length = fullHaftLength;
+        hammer.pivotX = hammer.headX - haftAxisX * fullHaftLength;
+        hammer.pivotY = hammer.headY - haftAxisY * fullHaftLength;
 
         // Give it the "flung back" velocity
         hammer.headVx = dirX * backSpeed;
