@@ -881,6 +881,7 @@ function initializeGame() {
         pestle: document.getElementById('selectPestle'),
         shovel: document.getElementById('selectShovel'),
       };
+      const wasActiveTool = activeTool === toolName;
       const btn = btnMap[toolName];
       if (btn) btn.click();
 
@@ -891,12 +892,26 @@ function initializeGame() {
         const canvasY = dropY - rect.top;
 
         if (toolName === 'hammer' && hammerSystem) {
+          // Snap once when the hammer first enters from the sidebar while the
+          // player is dragging it out. On subsequent drag-move callbacks, only
+          // track pointer/pivot so we don't repeatedly re-initialize state.
+          if (!wasActiveTool) {
+            hammerSystem.input.isDown = true;
+            hammerSystem.hammer.isHeld = true;
+            hammerSystem.hammer.isFree = false;
+            hammerSystem.hammer.isHanging = false;
+            if (window.setScreenLocked) window.setScreenLocked(true);
+            if (window.setBackgroundDragLocked) window.setBackgroundDragLocked(true);
+            hammerSystem.hammer.headX = canvasX;
+            hammerSystem.hammer.headY = canvasY + hammerSystem.hammer.length;
+            hammerSystem.hammer.prevHeadX = hammerSystem.hammer.headX;
+            hammerSystem.hammer.prevHeadY = hammerSystem.hammer.headY;
+          }
+
+          hammerSystem.input.mouseX = canvasX;
+          hammerSystem.input.mouseY = canvasY;
           hammerSystem.hammer.pivotX = canvasX;
           hammerSystem.hammer.pivotY = canvasY;
-          hammerSystem.hammer.headX = canvasX;
-          hammerSystem.hammer.headY = canvasY + hammerSystem.hammer.length;
-          hammerSystem.hammer.prevHeadX = hammerSystem.hammer.headX;
-          hammerSystem.hammer.prevHeadY = hammerSystem.hammer.headY;
         }
         if (toolName === 'pestle' && pestleSystem) {
           pestleSystem.pestle.pivotX = canvasX;
