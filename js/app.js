@@ -891,6 +891,16 @@ function initializeGame() {
         const canvasY = dropY - rect.top;
 
         if (toolName === 'hammer' && hammerSystem) {
+          // Dragging a tool out of the sidebar means the pointer is already
+          // "holding" it. Snap the hammer pivot to that hold point
+          // immediately so it doesn't enter with an offset before the first
+          // in-canvas pointer event.
+          hammerSystem.input.mouseX = canvasX;
+          hammerSystem.input.mouseY = canvasY;
+          hammerSystem.input.isDown = true;
+          hammerSystem.hammer.isHeld = true;
+          hammerSystem.hammer.isFree = false;
+          hammerSystem.hammer.isHanging = false;
           hammerSystem.hammer.pivotX = canvasX;
           hammerSystem.hammer.pivotY = canvasY;
           hammerSystem.hammer.headX = canvasX;
