@@ -867,7 +867,8 @@ function initializeGame() {
   initFloatingPanels();
   initToolsSidebar(
     // onToolSelected: pull a tool out to use it
-    (toolName, dropX, dropY) => {
+    (toolName, dropX, dropY, options = {}) => {
+      const isSidebarDrag = Boolean(options?.fromSidebarDrag);
       const craftingCanvas = document.getElementById('craftingCanvas');
 
       // Ensure lazy tools exist before activation/positioning so drag-out
@@ -882,7 +883,7 @@ function initializeGame() {
         shovel: document.getElementById('selectShovel'),
       };
       const btn = btnMap[toolName];
-      if (btn) btn.click();
+      if (btn && !btn.classList.contains('active')) btn.click();
 
       // Position the tool at the drop location (convert screen coords to canvas coords)
       if (craftingCanvas && dropX != null && dropY != null) {
@@ -897,6 +898,12 @@ function initializeGame() {
           hammerSystem.hammer.headY = canvasY + hammerSystem.hammer.length;
           hammerSystem.hammer.prevHeadX = hammerSystem.hammer.headX;
           hammerSystem.hammer.prevHeadY = hammerSystem.hammer.headY;
+          if (isSidebarDrag) {
+            hammerSystem.input.isDown = true;
+            hammerSystem.hammer.isHeld = true;
+            hammerSystem.hammer.isFree = false;
+            hammerSystem.hammer.isHanging = false;
+          }
         }
         if (toolName === 'pestle' && pestleSystem) {
           pestleSystem.pestle.pivotX = canvasX;
