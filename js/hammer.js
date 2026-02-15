@@ -565,19 +565,29 @@ export class HammerSystem {
     const cy = y1 + dy * t;
     const dist = Math.hypot(px - cx, adjustedPy - cy);
 
-    // Base grab distance
-    let grabDist = isMobile ? 70 : 140;
+    // Keep grabbing valid anywhere along the haft (segment projection above),
+    // but tighten how far away from the hammer the pointer can be.
+    // Use handle thickness as the baseline so interaction hugs the visible tool.
+    const handleHalfThickness = (h.handleThickness || 20) * 0.5;
+    const basePadding = isMobile ? 12 : 8;
+    let grabDist = handleHalfThickness + basePadding;
 
-    // Increase grab radius for falling hammers in bottom zone
+    // Give a small boost when the hammer is free-falling near the bottom so
+    // recovery remains forgiving, but keep it much tighter than before.
     const isInBottomZone = py > this.height * 0.8;
     const isFalling = h.isFree && h.headVy > 0;
 
-    if (isInBottomZone || (isFalling && h.isFree)) {
-      // Make it 1.5x easier to grab falling hammers
-      grabDist *= 1.5;
+    if (isInBottomZone || isFalling) {
+      grabDist += isMobile ? 8 : 6;
     }
 
-    return dist < grabDist;
+    // Give the haft ends a modest end-cap radius so the very tip/butt remains
+    // easy to grab without bringing back the old oversized halo everywhere.
+    // t=0 or t=1 are segment ends; t=0.5 is shaft center.
+    const endProximity = Math.abs(t - 0.5) * 2;
+    const endCapBoost = (isMobile ? 10 : 8) * endProximity;
+
+    return dist < (grabDist + endCapBoost);
   }
 
   /**
