@@ -1778,7 +1778,7 @@ updateFreeHammer(dt) {
       // This prevents the glitch where the hammer can be positioned to hit repeatedly
       // without moving away from the anvil.
       if (hammer.strikeCooldown > 0) {
-        hammer.cooldownBounceMultiplier *= 0.0;
+        hammer.cooldownBounceMultiplier *= -4.0;
         const cbm = hammer.cooldownBounceMultiplier;
         newVy *= cbm;
         newVx *= cbm;
