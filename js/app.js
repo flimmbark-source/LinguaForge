@@ -897,14 +897,6 @@ function initializeGame() {
           hammerSystem.hammer.headY = canvasY + hammerSystem.hammer.length;
           hammerSystem.hammer.prevHeadX = hammerSystem.hammer.headX;
           hammerSystem.hammer.prevHeadY = hammerSystem.hammer.headY;
-          const hammerSlot = document.querySelector('.tool-slot[data-tool="hammer"]');
-          const draggingOutFromToolsTab = hammerSlot?.classList.contains('dragging-out');
-          if (draggingOutFromToolsTab && !hammerSystem.hammer.isHeld) {
-            hammerSystem.input.isDown = true;
-            hammerSystem.hammer.isHeld = true;
-            hammerSystem.hammer.isFree = false;
-            hammerSystem.hammer.isHanging = false;
-          }
         }
         if (toolName === 'pestle' && pestleSystem) {
           pestleSystem.pestle.pivotX = canvasX;
