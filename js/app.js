@@ -867,7 +867,7 @@ function initializeGame() {
   initFloatingPanels();
   initToolsSidebar(
     // onToolSelected: pull a tool out to use it
-    (toolName, dropX, dropY) => {
+    (toolName, dropX, dropY, interaction = { isPointerDown: false }) => {
       const craftingCanvas = document.getElementById('craftingCanvas');
 
       // Ensure lazy tools exist before activation/positioning so drag-out
@@ -897,6 +897,14 @@ function initializeGame() {
           hammerSystem.hammer.headY = canvasY + hammerSystem.hammer.length;
           hammerSystem.hammer.prevHeadX = hammerSystem.hammer.headX;
           hammerSystem.hammer.prevHeadY = hammerSystem.hammer.headY;
+          hammerSystem.input.mouseX = canvasX;
+          hammerSystem.input.mouseY = canvasY;
+          hammerSystem.input.isDown = !!interaction.isPointerDown;
+          hammerSystem.hammer.isHeld = !!interaction.isPointerDown;
+          if (interaction.isPointerDown) {
+            if (window.setScreenLocked) window.setScreenLocked(true);
+            if (window.setBackgroundDragLocked) window.setBackgroundDragLocked(true);
+          }
         }
         if (toolName === 'pestle' && pestleSystem) {
           pestleSystem.pestle.pivotX = canvasX;
