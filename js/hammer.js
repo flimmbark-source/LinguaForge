@@ -95,7 +95,7 @@ export class HammerSystem {
 
     // World physics constants
     this.gravity = 3600; // px/s^2
-    this.airFriction = 0.95;
+    this.airFriction = 0.90;
     this.throwPhysicsPresets = {
       realistic: {
         comOffsetPct: 0.61,
