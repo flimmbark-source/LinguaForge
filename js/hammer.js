@@ -1757,7 +1757,7 @@ updateFreeHammer(dt) {
 
         // Optional: still do effects / letters on a ripped hit
         if (hammer.strikeCooldown <= 0) {
-          hammer.strikeCooldown = 0.25;
+          hammer.strikeCooldown = 0.1;
           hammer.anvilExitReady = false;
           const impactX = headX;
           const impactY = anvil.y;
