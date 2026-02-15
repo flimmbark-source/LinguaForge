@@ -1697,6 +1697,14 @@ updateFreeHammer(dt) {
     }
 
     if (!hammer.throwingAxeMode && anvilCollision && downwardSpeed > impactThreshold && hammer.anvilExitReady) {
+      // If the player is still holding the hammer during strike cooldown, let it
+      // ghost through the anvil instead of repeatedly bouncing in place.
+      // This prevents the static-position jitter exploit that can retrigger hits.
+      if (hammer.isHeld && hammer.strikeCooldown > 0) {
+        hammer.anvilExitReady = false;
+        return;
+      }
+
       const power = Math.min(1.5, downwardSpeed / (impactThreshold * 1.3));
       const ripThreshold = gameState.ripSpeedThreshold;
 
