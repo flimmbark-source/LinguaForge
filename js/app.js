@@ -780,35 +780,79 @@ function attemptWordDiscoveryFromAnvil() {
 
 
 function attemptBucketWordDiscoveryFromRedHotHit() {
-  // Only discover bucket words if there are letters on the anvil
-  const physicsTiles = letterPhysics?.getAnvilLetters?.() || [];
-  const placedTiles = getAnvilPlacedLetters();
-  const hasAnyLetters = physicsTiles.length > 0 || placedTiles.length > 0;
-  if (!hasAnyLetters) return false;
+  // Get all letters on the anvil
+  const physicsTiles = (letterPhysics?.getAnvilLetters?.() || []).map((t) => ({ ...t, source: 'physics' }));
+  const placedTiles = getAnvilPlacedLetters().map((t) => ({ ...t, source: 'placed' }));
+  const allTiles = [...physicsTiles, ...placedTiles];
 
+  if (allTiles.length === 0) return false;
+
+  // Get undiscovered bucket words
   const discovered = new Set(gameState.forgedWordsHistory.map((w) => w.text));
-  const bucketWord = getWorldBucketDiscoverableWords().find((word) => !discovered.has(word.pattern));
-  if (!bucketWord) return false;
+  const bucketWords = getWorldBucketDiscoverableWords().filter((word) => !discovered.has(word.pattern));
+  if (bucketWords.length === 0) return false;
 
-  const bucketEl = document.getElementById(bucketWord.id);
-  const bounds = bucketEl ? bucketEl.getBoundingClientRect() : {
-    left: window.innerWidth * 0.65,
-    top: window.innerHeight * 0.6,
-    width: 120,
-    height: 80,
-    right: window.innerWidth * 0.65 + 120,
-    bottom: window.innerHeight * 0.6 + 80,
-  };
+  // Try to match anvil letters to bucket word patterns
+  const rtlTiles = allTiles.slice().sort((a, b) => b.x - a.x);
+  const ltrTiles = allTiles.slice().sort((a, b) => a.x - b.x);
+  const directionSets = [rtlTiles, ltrTiles];
+  const wordDirections = [
+    (word) => word.pattern,
+    (word) => word.pattern.split('').reverse().join(''),
+  ];
 
-  const forgedWord = {
-    text: bucketWord.pattern,
-    english: bucketWord.english,
-    length: bucketWord.pattern.length,
-    power: computeWordPower(bucketWord.pattern.length),
-  };
+  for (const bucketWord of bucketWords) {
+    const length = bucketWord.pattern.length;
 
-  spawnMagicalText(forgedWord, bounds, 0);
-  return true;
+    for (const tiles of directionSets) {
+      if (tiles.length < length) continue;
+
+      for (const buildTarget of wordDirections) {
+        const targetChars = buildTarget(bucketWord);
+
+        for (let i = 0; i <= tiles.length - length; i += 1) {
+          const slice = tiles.slice(i, i + length);
+          const chars = slice.map((t) => t.char).join('');
+          const yValues = slice.map((t) => t.y);
+          const ySpan = Math.max(...yValues) - Math.min(...yValues);
+          if (ySpan > 96) continue;
+
+          let gapsValid = true;
+          for (let g = 0; g < slice.length - 1; g += 1) {
+            if (Math.abs(slice[g].x - slice[g + 1].x) > 150) {
+              gapsValid = false;
+              break;
+            }
+          }
+          if (!gapsValid) continue;
+          if (chars !== targetChars) continue;
+
+          // Found a match! Discover this bucket word
+          const bucketEl = document.getElementById(bucketWord.id);
+          const bounds = bucketEl ? bucketEl.getBoundingClientRect() : {
+            left: window.innerWidth * 0.65,
+            top: window.innerHeight * 0.6,
+            width: 120,
+            height: 80,
+            right: window.innerWidth * 0.65 + 120,
+            bottom: window.innerHeight * 0.6 + 80,
+          };
+
+          const forgedWord = {
+            text: bucketWord.pattern,
+            english: bucketWord.english,
+            length: bucketWord.pattern.length,
+            power: computeWordPower(bucketWord.pattern.length),
+          };
+
+          spawnMagicalText(forgedWord, bounds, 0);
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
 }
 
 /**
