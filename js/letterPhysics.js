@@ -36,6 +36,9 @@ export class LetterPhysicsSystem {
     this.onSlotFilled = null;
     this.onAnvilClick = null;
 
+    // Cached tile gradient (rebuilt when canvas context changes)
+    this._tileGradient = null;
+
     // Cached DOM refs/rects to avoid per-frame layout reads
     this._slotCache = null;
     this._slotCacheTime = 0;
@@ -214,8 +217,14 @@ export class LetterPhysicsSystem {
     this.hasActiveLetters = hasActive;
     this.hasMovingLetters = hasMoving;
 
-    // Purge consumed
-    this.letters = this.letters.filter(l => !l.consumed);
+    // Purge consumed (in-place to avoid allocating a new array every frame)
+    let writeIdx = 0;
+    for (let i = 0; i < this.letters.length; i++) {
+      if (!this.letters[i].consumed) {
+        this.letters[writeIdx++] = this.letters[i];
+      }
+    }
+    this.letters.length = writeIdx;
   }
 
   // ─── Mold-slot auto-fill ─────────────────────────────────
@@ -361,16 +370,22 @@ export class LetterPhysicsSystem {
 
       if (this._basketRef) {
         const basketRect = this._basketRef.getBoundingClientRect();
-        const basketStyles = getComputedStyle(this._basketRef);
-        const padLeft = parseFloat(basketStyles.paddingLeft) || 0;
-        const padRight = parseFloat(basketStyles.paddingRight) || 0;
-        const padTop = parseFloat(basketStyles.paddingTop) || 0;
-        const padBottom = parseFloat(basketStyles.paddingBottom) || 0;
+        // Cache computed padding to avoid forcing layout with getComputedStyle every refresh
+        if (!this._basketPadding) {
+          const basketStyles = getComputedStyle(this._basketRef);
+          this._basketPadding = {
+            left: parseFloat(basketStyles.paddingLeft) || 0,
+            right: parseFloat(basketStyles.paddingRight) || 0,
+            top: parseFloat(basketStyles.paddingTop) || 0,
+            bottom: parseFloat(basketStyles.paddingBottom) || 0,
+          };
+        }
+        const pad = this._basketPadding;
 
-        left = Math.max(left, basketRect.left + padLeft - margin);
-        right = Math.min(right, basketRect.right - padRight + margin);
-        top = Math.max(top, basketRect.top + padTop - margin);
-        bottom = Math.min(bottom, basketRect.bottom - padBottom + margin);
+        left = Math.max(left, basketRect.left + pad.left - margin);
+        right = Math.min(right, basketRect.right - pad.right + margin);
+        top = Math.max(top, basketRect.top + pad.top - margin);
+        bottom = Math.min(bottom, basketRect.bottom - pad.bottom + margin);
       }
 
       this._basketRectCache = { left, top, right, bottom };
@@ -498,6 +513,13 @@ export class LetterPhysicsSystem {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
+    // Reuse a single gradient for all tiles (origin-relative, applied via translate)
+    if (!this._tileGradient) {
+      this._tileGradient = ctx.createLinearGradient(-tileW / 2, -tileH / 2, tileW / 2, tileH / 2);
+      this._tileGradient.addColorStop(0, '#0f0f10');
+      this._tileGradient.addColorStop(1, '#1b1b1d');
+    }
+
     for (const l of this.letters) {
       if (l.consumed) continue;
 
@@ -506,11 +528,8 @@ export class LetterPhysicsSystem {
       ctx.rotate(l.angle);
 
       // Tile background — match DOM basket tile visuals
-      const grad = ctx.createLinearGradient(-tileW / 2, -tileH / 2, tileW / 2, tileH / 2);
-      grad.addColorStop(0, '#0f0f10');
-      grad.addColorStop(1, '#1b1b1d');
       roundRect(ctx, -tileW / 2, -tileH / 2, tileW, tileH, 6);
-      ctx.fillStyle = grad;
+      ctx.fillStyle = this._tileGradient;
       ctx.fill();
 
       // Border: use basket gold color; on mobile keep previous behavior of skipping stroke for settled
@@ -530,7 +549,11 @@ export class LetterPhysicsSystem {
 
   /** Number of active (non-consumed) letters */
   get count() {
-    return this.letters.filter(l => !l.consumed).length;
+    let n = 0;
+    for (let i = 0; i < this.letters.length; i++) {
+      if (!this.letters[i].consumed) n++;
+    }
+    return n;
   }
 }
 

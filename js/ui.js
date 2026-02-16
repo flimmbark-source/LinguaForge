@@ -72,17 +72,19 @@ export function updateStatsDisplay() {
   updateSidebarToolVisibility(gameState.pestleUnlocked, gameState.shovelUnlocked);
 }
 
+// Cache visibility-toggle elements to avoid querySelector on every UI update
+let _cachedHearthWrapper = null;
+let _cachedScribeSection = null;
+
 /**
  * Update hearth visibility based on unlock state
  */
 function updateHearthVisibility() {
-  const hearthWrapper = document.querySelector('.hearth-wrapper');
-  if (hearthWrapper) {
-    if (gameState.hearthUnlocked) {
-      hearthWrapper.style.display = 'block';
-    } else {
-      hearthWrapper.style.display = 'none';
-    }
+  if (!_cachedHearthWrapper || !_cachedHearthWrapper.isConnected) {
+    _cachedHearthWrapper = document.querySelector('.hearth-wrapper');
+  }
+  if (_cachedHearthWrapper) {
+    _cachedHearthWrapper.style.display = gameState.hearthUnlocked ? 'block' : 'none';
   }
 }
 
@@ -90,13 +92,11 @@ function updateHearthVisibility() {
  * Update scribe section visibility based on unlock state
  */
 function updateScribeVisibility() {
-  const scribeSection = document.querySelector('.section:has(#scribeBlocks)');
-  if (scribeSection) {
-    if (gameState.scribesUnlocked) {
-      scribeSection.style.display = 'block';
-    } else {
-      scribeSection.style.display = 'none';
-    }
+  if (!_cachedScribeSection || !_cachedScribeSection.isConnected) {
+    _cachedScribeSection = document.querySelector('.section:has(#scribeBlocks)');
+  }
+  if (_cachedScribeSection) {
+    _cachedScribeSection.style.display = gameState.scribesUnlocked ? 'block' : 'none';
   }
 }
 
@@ -319,9 +319,7 @@ export function renderScribeBlocks(force = false) {
 
     // Click to toggle pause
     block.addEventListener('click', (e) => {
-      console.log('Scribe block clicked! ID:', scribe.id, 'Paused:', scribe.paused);
       toggleScribePaused(scribe.id);
-      console.log('After toggle, paused:', gameState.scribeList.find(s => s.id === scribe.id)?.paused);
       renderScribeBlocks(true); // Force re-render after pause toggle
     });
 
