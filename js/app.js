@@ -780,6 +780,12 @@ function attemptWordDiscoveryFromAnvil() {
 
 
 function attemptBucketWordDiscoveryFromRedHotHit() {
+  // Only discover bucket words if there are letters on the anvil
+  const physicsTiles = letterPhysics?.getAnvilLetters?.() || [];
+  const placedTiles = getAnvilPlacedLetters();
+  const hasAnyLetters = physicsTiles.length > 0 || placedTiles.length > 0;
+  if (!hasAnyLetters) return false;
+
   const discovered = new Set(gameState.forgedWordsHistory.map((w) => w.text));
   const bucketWord = getWorldBucketDiscoverableWords().find((word) => !discovered.has(word.pattern));
   if (!bucketWord) return false;
