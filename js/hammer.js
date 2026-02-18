@@ -558,14 +558,66 @@ export class HammerSystem {
   /**
    * Check if point is near hammer (for grabbing)
    */
+  getRenderedHandleSegment() {
+    const h = this.hammer;
+    const dx = h.headX - h.pivotX;
+    const dy = h.headY - h.pivotY;
+    const length = Math.hypot(dx, dy) || h.length || 1;
+    const baseAngle = Math.atan2(dy, dx) + Math.PI / 2;
+
+    // Local-space points before applying base orientation.
+    let buttX = 0;
+    let buttY = 0;
+    let headX = 0;
+    let headY = -length;
+
+    // Match the same post-rotation transform used in drawHammer so hit-testing
+    // stays aligned with the visible haft while free-flight spin is rendering.
+    if (h.isFree && h.visualRotation !== 0 && !h.throwingAxeMode) {
+      const headOffsetY = -(length + 21);
+      const cosSpin = Math.cos(h.visualRotation);
+      const sinSpin = Math.sin(h.visualRotation);
+
+      const rotateAroundHead = (x, y) => {
+        const relX = x;
+        const relY = y - headOffsetY;
+        return {
+          x: relX * cosSpin - relY * sinSpin,
+          y: relX * sinSpin + relY * cosSpin + headOffsetY
+        };
+      };
+
+      const rotatedButt = rotateAroundHead(buttX, buttY);
+      const rotatedHead = rotateAroundHead(headX, headY);
+      buttX = rotatedButt.x;
+      buttY = rotatedButt.y;
+      headX = rotatedHead.x;
+      headY = rotatedHead.y;
+    }
+
+    const cosBase = Math.cos(baseAngle);
+    const sinBase = Math.sin(baseAngle);
+    const toWorld = (x, y) => ({
+      x: h.pivotX + x * cosBase - y * sinBase,
+      y: h.pivotY + x * sinBase + y * cosBase
+    });
+
+    const buttWorld = toWorld(buttX, buttY);
+    const headWorld = toWorld(headX, headY);
+
+    return {
+      x1: buttWorld.x,
+      y1: buttWorld.y,
+      x2: headWorld.x,
+      y2: headWorld.y
+    };
+  }
+
   isPointNearHammer(px, py) {
     const h = this.hammer;
     const isMobile = this.width <= MOBILE_BREAKPOINT;
     const adjustedPy = py;
-    const x1 = h.pivotX;
-    const y1 = h.pivotY;
-    const x2 = h.headX;
-    const y2 = h.headY;
+    const { x1, y1, x2, y2 } = this.getRenderedHandleSegment();
     const dx = x2 - x1;
     const dy = y2 - y1;
     const lenSq = dx * dx + dy * dy || 1;
