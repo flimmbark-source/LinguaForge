@@ -4939,13 +4939,28 @@ body.book-overlay-active .magic-book {
 .wrong-order { animation: wrongWobble .32s ease; }
 @keyframes wrongWobble { 0%,100% { transform: translateX(0);} 25% { transform: translateX(-2px);} 75% { transform: translateX(2px);} }
 
-.word-info-sheet { position: fixed; inset: 0; background: rgba(15,23,42,.45); display:none; align-items:flex-end; justify-content:center; z-index: 720; }
-.word-info-sheet.open { display:flex; }
-.word-info-sheet-card { width:min(520px,95vw); background:#f5e6c8; color:#2d1f0e; border-radius:16px 16px 0 0; padding:14px; position: relative; }
-.word-info-close-btn { position:absolute; right:10px; top:10px; border:none; background:transparent; font-size:18px; cursor:pointer; }
-.word-info-hebrew { font-size: 28px; direction: rtl; font-weight: 700; margin-bottom: 8px; }
-.word-info-toggle-row { display:flex; gap:6px; font-size:12px; margin-bottom: 6px; }
-.word-info-translit,.word-info-meaning,.word-info-example,.word-info-attach { font-size: 13px; margin-top: 4px; }
+.word-info-sheet {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  display:none;
+  z-index: 720;
+  pointer-events: none;
+}
+.word-info-sheet.open { display:block; }
+.word-info-sheet-card {
+  position: fixed;
+  width: min(280px, 72vw);
+  background:#f5e6c8;
+  color:#2d1f0e;
+  border-radius:12px;
+  padding:10px 12px;
+  border: 1px solid #c9b58a;
+  box-shadow: 0 10px 24px rgba(0,0,0,.22);
+  pointer-events: none;
+}
+.word-info-hebrew { font-size: 26px; direction: rtl; font-weight: 700; margin-bottom: 4px; }
+.word-info-translit,.word-info-meaning,.word-info-example { font-size: 13px; margin-top: 2px; color:#2b2113; }
 
 .verse-line .line-word-chip {
   background: #eedcbc;

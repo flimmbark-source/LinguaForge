@@ -49,13 +49,11 @@ export function initializeElements() {
   elements.verseWorkMatRight = document.getElementById('verseWorkMatRight');
   elements.releaseParkedWordsBtn = document.getElementById('releaseParkedWordsBtn');
   elements.wordInfoSheet = document.getElementById('wordInfoSheet');
-  elements.wordInfoCloseBtn = document.getElementById('wordInfoCloseBtn');
+  elements.wordInfoCard = document.getElementById('wordInfoCard');
   elements.wordInfoHebrew = document.getElementById('wordInfoHebrew');
   elements.wordInfoTranslit = document.getElementById('wordInfoTranslit');
   elements.wordInfoMeaning = document.getElementById('wordInfoMeaning');
   elements.wordInfoExample = document.getElementById('wordInfoExample');
-  elements.wordInfoAttach = document.getElementById('wordInfoAttach');
-  elements.wordInfoTranslitToggle = document.getElementById('wordInfoTranslitToggle');
   elements.pestle = document.getElementById('selectPestle');
   elements.shovel = document.getElementById('selectShovel');
 }
@@ -681,17 +679,55 @@ function wordOrbitPosition(index, total, parked) {
   return { left: 18, top: 80 - (t - 0.75) / 0.25 * 60 };
 }
 
-function openWordInfo(wordText) {
+let wordInfoDismissListenerActive = false;
+
+function positionWordInfoAtPoint(clientX, clientY) {
+  if (!elements.wordInfoCard) return;
+  const card = elements.wordInfoCard;
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+
+  card.style.left = '-9999px';
+  card.style.top = '-9999px';
+  card.style.visibility = 'hidden';
+  elements.wordInfoSheet.classList.add('open');
+
+  const rect = card.getBoundingClientRect();
+  const width = rect.width || 220;
+  const height = rect.height || 120;
+
+  let left = clientX < centerX ? clientX : clientX - width;
+  let top = clientY < centerY ? clientY : clientY - height;
+
+  left = Math.max(8, Math.min(window.innerWidth - width - 8, left));
+  top = Math.max(8, Math.min(window.innerHeight - height - 8, top));
+
+  card.style.left = `${left}px`;
+  card.style.top = `${top}px`;
+  card.style.visibility = 'visible';
+}
+
+function openWordInfo(wordText, clientX, clientY) {
   if (!elements.wordInfoSheet) return;
   const lex = GRAMMAR_LEXICON[wordText] || {};
   elements.wordInfoHebrew.textContent = wordText;
-  elements.wordInfoTranslit.textContent = lex.translit ? `Transliteration: ${lex.translit}` : '';
-  elements.wordInfoMeaning.textContent = lex.gloss ? `Meaning: ${lex.gloss}` : '';
-  elements.wordInfoExample.textContent = lex.gloss ? `Example: ${wordText} (${lex.gloss})` : '';
-  const isMorpheme = ['ה', 'ב', 'ל', 'מ', 'ו'].includes(wordText);
-  elements.wordInfoAttach.textContent = isMorpheme ? 'Attaches to nouns as a grammar rune.' : '';
-  elements.wordInfoSheet.classList.add('open');
+  elements.wordInfoTranslit.textContent = lex.translit || '';
+  elements.wordInfoMeaning.textContent = lex.gloss || '';
+  elements.wordInfoExample.textContent = lex.gloss ? `${wordText} (${lex.gloss})` : wordText;
   elements.wordInfoSheet.setAttribute('aria-hidden', 'false');
+  positionWordInfoAtPoint(clientX ?? window.innerWidth / 2, clientY ?? window.innerHeight / 2);
+
+  if (!wordInfoDismissListenerActive) {
+    wordInfoDismissListenerActive = true;
+    setTimeout(() => {
+      const dismiss = () => {
+        closeWordInfo();
+        document.removeEventListener('pointerdown', dismiss, true);
+        wordInfoDismissListenerActive = false;
+      };
+      document.addEventListener('pointerdown', dismiss, true);
+    }, 0);
+  }
 }
 
 function closeWordInfo() {
@@ -703,14 +739,6 @@ function closeWordInfo() {
 function setupWordInfoHandlers() {
   if (setupWordInfoHandlers._done) return;
   setupWordInfoHandlers._done = true;
-  elements.wordInfoCloseBtn?.addEventListener('click', closeWordInfo);
-  elements.wordInfoSheet?.addEventListener('click', (e) => {
-    if (e.target === elements.wordInfoSheet) closeWordInfo();
-  });
-  elements.wordInfoTranslitToggle?.addEventListener('change', () => {
-    if (!elements.wordInfoTranslit) return;
-    elements.wordInfoTranslit.style.display = elements.wordInfoTranslitToggle.checked ? '' : 'none';
-  });
 }
 
 function renderVerseWordOrbit() {
@@ -778,7 +806,7 @@ function renderVerseWordOrbit() {
           orbitSnapshotKey = '';
           updateUI();
         } else if (!moved) {
-          openWordInfo(word.text);
+          openWordInfo(word.text, e.clientX, e.clientY);
         } else {
           orbitSnapshotKey = '';
           updateUI();
