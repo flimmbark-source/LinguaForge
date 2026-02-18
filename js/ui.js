@@ -698,12 +698,27 @@ function wordOrbitPosition(index, total, parked) {
     const col = index % 3;
     return { left: 20 + col * 28, top: 72 + row * 12, parked: true };
   }
-  const perimeter = Math.max(total, 1);
-  const t = index / perimeter;
-  if (t < 0.25) return { left: 10 + t / 0.25 * 80, top: 10 };
-  if (t < 0.5) return { left: 90, top: 10 + (t - 0.25) / 0.25 * 80 };
-  if (t < 0.75) return { left: 90 - (t - 0.5) / 0.25 * 80, top: 90 };
-  return { left: 10, top: 90 - (t - 0.75) / 0.25 * 80 };
+
+  const orbitRect = elements.verseWordOrbit?.getBoundingClientRect();
+  const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
+  const hasOrbit = orbitRect && orbitRect.width > 0 && orbitRect.height > 0;
+
+  const leftMin = 12;
+  const leftMax = 88;
+  let topMin = 66;
+  const topMax = 94;
+
+  if (hasOrbit && lineRect) {
+    const lineBottom = lineRect.bottom - orbitRect.top;
+    const belowLinePercent = (lineBottom / orbitRect.height) * 100;
+    topMin = Math.max(topMin, Math.min(90, belowLinePercent + 6));
+  }
+
+  const safeTopMin = Math.min(topMin, topMax - 2);
+  return {
+    left: leftMin + Math.random() * (leftMax - leftMin),
+    top: safeTopMin + Math.random() * (topMax - safeTopMin),
+  };
 }
 
 let wordInfoDismissListenerActive = false;
