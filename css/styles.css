@@ -4904,7 +4904,7 @@ body.book-overlay-active .magic-book {
   background: #eedcbc;
   border-color: #b9975f;
   color:#120d07;
-  animation: orbitFloat 4s ease-in-out infinite;
+  animation: none;
   z-index: 3;
 }
 
@@ -4966,4 +4966,9 @@ body.book-overlay-active .magic-book {
   background: #eedcbc;
   border-color: #b9975f;
   color: #120d07;
+}
+
+.verse-orbit-chip:hover {
+  transform: translate(-50%, -50%);
+  box-shadow: none;
 }

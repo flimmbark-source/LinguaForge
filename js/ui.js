@@ -767,25 +767,34 @@ function renderVerseWordOrbit() {
       let moved = false;
       chip.addEventListener('pointerdown', (e) => {
         moved = false;
-        orbitDragState = { wordId: word.id, chip };
+        const rect = chip.getBoundingClientRect();
+        orbitDragState = { wordId: word.id, chip, width: rect.width, height: rect.height };
         chip.classList.add('dragging');
         elements.grammarHebrewLineDiv?.classList.add('compose-active');
-        chip.style.left = `${(e.clientX / window.innerWidth) * 100}%`;
-        chip.style.top = `${(e.clientY / window.innerHeight) * 100}%`;
+        chip.style.position = 'fixed';
+        chip.style.left = (e.clientX - rect.width / 2) + 'px';
+        chip.style.top = (e.clientY - rect.height / 2) + 'px';
+        chip.style.transform = 'none';
+        chip.style.zIndex = '1200';
         chip.setPointerCapture(e.pointerId);
       });
 
       chip.addEventListener('pointermove', (e) => {
         if (!orbitDragState || orbitDragState.wordId !== word.id) return;
         moved = true;
-        chip.style.left = `${(e.clientX / window.innerWidth) * 100}%`;
-        chip.style.top = `${(e.clientY / window.innerHeight) * 100}%`;
+        chip.style.left = (e.clientX - orbitDragState.width / 2) + 'px';
+        chip.style.top = (e.clientY - orbitDragState.height / 2) + 'px';
       });
 
       chip.addEventListener('pointerup', (e) => {
         if (!orbitDragState || orbitDragState.wordId !== word.id) return;
         chip.releasePointerCapture(e.pointerId);
         chip.classList.remove('dragging');
+        chip.style.position = '';
+        chip.style.left = '';
+        chip.style.top = '';
+        chip.style.transform = '';
+        chip.style.zIndex = '';
         elements.grammarHebrewLineDiv?.classList.remove('compose-active');
 
         const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
