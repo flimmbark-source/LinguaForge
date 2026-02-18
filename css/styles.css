@@ -4808,12 +4808,12 @@ body.book-overlay-active .magic-book {
 .verse-center-stack {
   position: absolute;
   left: 50%;
-  top: 48%;
+  top: 50%;
   transform: translate(-50%, -50%);
   width: min(360px, 86%);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   align-items: stretch;
   pointer-events: auto;
 }
@@ -4827,18 +4827,28 @@ body.book-overlay-active .magic-book {
   color: #17120b;
 }
 
+.verse-entry-container {
+  position: relative;
+  min-height: 84px;
+  border-radius: 12px;
+  border: 1px solid rgba(93,64,30,0.28);
+  background: rgba(245, 230, 200, 0.38);
+  box-shadow: inset 0 0 0 1px rgba(201, 181, 138, 0.34);
+  padding: 8px 10px;
+}
+
 .verse-line {
   position: relative;
-  min-height: 66px;
+  min-height: 56px;
   align-items: center;
   justify-content: center;
-  padding: 10px;
+  padding: 8px 10px;
   border-style: solid;
   border-width: 1px;
-  border-color: rgba(93,64,30,0.25);
-  background: rgba(245, 230, 200, 0.5);
+  border-color: rgba(93,64,30,0.2);
+  background: rgba(245, 230, 200, 0.34);
   transition: all .25s ease;
-  box-shadow: inset 0 0 0 1px rgba(201, 181, 138, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(201, 181, 138, 0.3);
 }
 
 .verse-line::before {
@@ -4877,7 +4887,6 @@ body.book-overlay-active .magic-book {
   to { transform: translateY(-4px); box-shadow: 0 0 12px rgba(245,158,11,.35); }
 }
 
-.verse-meter-label { margin-top: 2px; font-size: 11px; opacity: .82; text-align: center; color: #1d1710; }
 .verse-meter-track { height: 6px; width: 100%; border-radius: 999px; background: rgba(93,64,30,.15); overflow: hidden; }
 .verse-meter-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#60a5fa,#fbbf24); transition: width .2s ease; }
 .verse-meter-fill.pulse { animation: verseMeterPulse .25s ease; }
@@ -4935,6 +4944,13 @@ body.book-overlay-active .magic-book {
 #verseWorkMatRight { left: 56%; right: 8%; bottom: 10%; justify-content: flex-end; }
 .verse-work-mat.active { display:flex; }
 .work-mat-release-btn { border: 1px solid rgba(93,64,30,.35); background: rgba(245,230,200,.8); border-radius: 999px; width: 24px; height: 24px; }
+.verse-release-btn {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 10;
+  pointer-events: auto;
+}
 
 .wrong-order { animation: wrongWobble .32s ease; }
 @keyframes wrongWobble { 0%,100% { transform: translateX(0);} 25% { transform: translateX(-2px);} 75% { transform: translateX(2px);} }
@@ -4966,6 +4982,15 @@ body.book-overlay-active .magic-book {
   background: #eedcbc;
   border-color: #b9975f;
   color: #120d07;
+}
+
+.verse-line .line-word-chip.dragging-out {
+  position: fixed;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  z-index: 1300;
+  opacity: 0.95;
+  pointer-events: none;
 }
 
 .verse-orbit-chip:hover {

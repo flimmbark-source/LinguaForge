@@ -167,11 +167,12 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
     chip.parentElement.insertBefore(placeholder, chip);
 
     // Make chip draggable
+    chip.classList.add('dragging-out');
     chip.style.position = 'fixed';
-    chip.style.left = (e.clientX - rect.width / 2) + 'px';
-    chip.style.top = (e.clientY - rect.height / 2) + 'px';
-    chip.style.zIndex = '1000';
-    chip.style.opacity = '0.8';
+    chip.style.left = e.clientX + 'px';
+    chip.style.top = e.clientY + 'px';
+    chip.style.zIndex = '1300';
+    chip.style.opacity = '0.95';
     chip.setPointerCapture(e.pointerId);
 
     gameState.draggedVerseInstanceId = instanceId;
@@ -180,10 +181,8 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
   chip.addEventListener('pointermove', e => {
     if (!dragState || dragState.chip !== chip) return;
     e.preventDefault();
-    const x = e.clientX - dragState.width / 2;
-    const y = e.clientY - dragState.height / 2;
-    chip.style.left = x + 'px';
-    chip.style.top = y + 'px';
+    chip.style.left = e.clientX + 'px';
+    chip.style.top = e.clientY + 'px';
 
     // Update placeholder position based on where drop would occur
     updatePlaceholderPosition(e.clientX, e.clientY, instanceId, dragState.placeholder);
@@ -209,9 +208,11 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
     }
 
     // Reset chip styling after reordering
+    chip.classList.remove('dragging-out');
     chip.style.position = '';
     chip.style.left = '';
     chip.style.top = '';
+    chip.style.transform = '';
     chip.style.zIndex = '';
     chip.style.opacity = '';
 
@@ -234,9 +235,11 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
     }
 
     // Reset chip styling
+    chip.classList.remove('dragging-out');
     chip.style.position = '';
     chip.style.left = '';
     chip.style.top = '';
+    chip.style.transform = '';
     chip.style.zIndex = '';
     chip.style.opacity = '';
 

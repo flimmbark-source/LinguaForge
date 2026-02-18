@@ -39,11 +39,13 @@
       </div>
 
       <div id="verseSpreadOverlay" class="verse-spread-overlay">
+        <button id="releaseParkedWordsBtn" type="button" class="work-mat-release-btn verse-release-btn" aria-label="Release words">↺</button>
         <div id="verseWordOrbit" class="verse-word-orbit" aria-label="Verse word orbit"></div>
         <div class="verse-center-stack">
           <div id="grammarNatural" class="verse-intent-line"></div>
-          <div id="grammarHebrewLine" class="letter-board verse-line" aria-label="Verse line"></div>
-          <div id="grammarScore" class="verse-meter-label">Grammar match: 0%</div>
+          <div class="verse-entry-container">
+            <div id="grammarHebrewLine" class="letter-board verse-line" aria-label="Verse line"></div>
+          </div>
           <div class="verse-meter-track" aria-hidden="true">
             <div id="verseMeterFill" class="verse-meter-fill"></div>
           </div>
@@ -51,8 +53,6 @@
           <div id="verseTranslationReveal" class="verse-translation-reveal"></div>
           <div class="row verse-footer-row">
             <button id="enscribeBtn" disabled>Enscribe</button>
-            <span class="pill">Lines completed: <span id="linesCompleted">0</span></span>
-            <button id="releaseParkedWordsBtn" type="button" class="work-mat-release-btn" title="Release parked words">↺</button>
           </div>
         </div>
       </div>

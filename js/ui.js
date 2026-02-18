@@ -491,9 +491,6 @@ export function updateGrammarUI(force = false) {
   if (elements.grammarNaturalDiv) {
     elements.grammarNaturalDiv.textContent = gameState.currentLine.english;
   }
-  if (elements.grammarScoreDiv) {
-    elements.grammarScoreDiv.textContent = 'Grammar match: ' + Math.round(score * 100) + '%';
-  }
   if (elements.verseMeterFill) {
     const prev = gameState.verseLastScore || 0;
     elements.verseMeterFill.style.width = Math.round(score * 100) + '%';
@@ -810,6 +807,7 @@ function renderVerseWordOrbit() {
         if (!orbitDragState || orbitDragState.wordId !== word.id) return;
         chip.releasePointerCapture(e.pointerId);
         chip.classList.remove('dragging');
+        chip.style.visibility = 'hidden';
         chip.style.position = '';
         chip.style.left = '';
         chip.style.top = '';
@@ -841,6 +839,7 @@ function renderVerseWordOrbit() {
           orbitSnapshotKey = '';
           updateUI();
         } else {
+          chip.style.visibility = '';
           openWordInfo(word.text, e.clientX, e.clientY);
         }
         orbitDragState = null;
@@ -902,7 +901,6 @@ export function updateUI() {
   renderScribeBlocks();
   updateGrammarUI();
   updateEnscribeButton();
-  updateLinesCompletedDisplay();
   setupWordInfoHandlers();
   renderVerseWordOrbit();
 }
