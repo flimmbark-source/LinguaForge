@@ -874,7 +874,7 @@ function renderVerseWordOrbit() {
   if (elements.verseWorkMatLeft) elements.verseWorkMatLeft.classList.toggle('active', matActive);
   if (elements.verseWorkMatRight) elements.verseWorkMatRight.classList.toggle('active', matActive);
   }
-}
+
 
 /**
  * Initialize versebook interactions
