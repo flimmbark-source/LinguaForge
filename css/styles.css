@@ -4785,33 +4785,151 @@ body.book-overlay-active .magic-book {
 
 
 /* Verse Book 5-state experience */
-.verse-page-content { position: relative; overflow: hidden; }
-.verse-intent-line { text-align: center; font-size: 14px; font-weight: 700; opacity: 0.9; margin: 4px 0 10px; }
-.verse-line { position: relative; min-height: 72px; align-items: center; justify-content: center; padding: 12px; border-style: solid; background: rgba(93,64,30,0.08); transition: all .25s ease; }
-.verse-line::before { content: ''; position: absolute; inset: 8px; border: 1px solid rgba(93,64,30,.18); border-radius: 8px; opacity: .35; pointer-events:none; }
-.verse-line.compose-active { border-color: rgba(59,130,246,.55); box-shadow: 0 0 0 2px rgba(59,130,246,.2) inset; }
-.verse-line.is-unstable::after { content:''; position:absolute; left:0; right:0; bottom:0; height:16px; background: radial-gradient(ellipse at center, rgba(148,163,184,.35), transparent 70%); pointer-events:none; }
-.verse-line.is-solved .line-word-chip { animation: verseLockLift .55s ease both; cursor: default; }
-@keyframes verseLockLift { from { transform: translateY(0); } to { transform: translateY(-4px); box-shadow: 0 0 12px rgba(245,158,11,.35);} }
+.verse-book-interior {
+  position: relative;
+}
 
-.verse-meter-label { margin-top: 8px; font-size: 11px; opacity: .8; }
-.verse-meter-track { height: 6px; width: 100%; border-radius: 999px; background: rgba(93,64,30,.15); overflow: hidden; margin-top: 4px; }
+.verse-page {
+  pointer-events: none;
+}
+
+.verse-page-content {
+  position: relative;
+  overflow: hidden;
+}
+
+.verse-spread-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.verse-center-stack {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  transform: translate(-50%, -50%);
+  width: min(360px, 86%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  pointer-events: auto;
+}
+
+.verse-intent-line {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.verse-line {
+  position: relative;
+  min-height: 66px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: rgba(93,64,30,0.25);
+  background: rgba(245, 230, 200, 0.5);
+  transition: all .25s ease;
+  box-shadow: inset 0 0 0 1px rgba(201, 181, 138, 0.45);
+}
+
+.verse-line::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border: 1px dashed rgba(93,64,30,.23);
+  border-radius: 8px;
+  opacity: .5;
+  pointer-events:none;
+}
+
+.verse-line.compose-active {
+  border-color: rgba(59,130,246,.55);
+  box-shadow: 0 0 0 2px rgba(59,130,246,.2) inset;
+}
+
+.verse-line.is-unstable::after {
+  content:'';
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:16px;
+  background: radial-gradient(ellipse at center, rgba(148,163,184,.30), transparent 70%);
+  pointer-events:none;
+}
+
+.verse-line.is-solved .line-word-chip {
+  animation: verseLockLift .55s ease both;
+  cursor: default;
+}
+
+@keyframes verseLockLift {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); box-shadow: 0 0 12px rgba(245,158,11,.35); }
+}
+
+.verse-meter-label { margin-top: 2px; font-size: 11px; opacity: .82; text-align: center; }
+.verse-meter-track { height: 6px; width: 100%; border-radius: 999px; background: rgba(93,64,30,.15); overflow: hidden; }
 .verse-meter-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#60a5fa,#fbbf24); transition: width .2s ease; }
 .verse-meter-fill.pulse { animation: verseMeterPulse .25s ease; }
 @keyframes verseMeterPulse { from { filter: brightness(1.6);} to { filter: brightness(1);} }
 
-.verse-hint { min-height: 18px; margin-top: 6px; font-size: 11px; color: #6b7280; font-style: italic; }
-.verse-translation-reveal { min-height: 20px; margin-top: 4px; opacity: 0; transition: opacity .35s ease; text-align:center; font-weight: 600; }
+.verse-hint { min-height: 18px; font-size: 11px; color: #6b7280; font-style: italic; text-align: center; }
+.verse-translation-reveal { min-height: 20px; opacity: 0; transition: opacity .35s ease; text-align:center; font-weight: 600; }
 .verse-translation-reveal.visible { opacity: .95; }
-.verse-footer-row { margin-top: 10px; justify-content: center; gap: 8px; }
+.verse-footer-row { margin-top: 2px; justify-content: center; gap: 8px; }
+.verse-footer-row #enscribeBtn,
+.verse-footer-row .pill,
+.verse-footer-row .work-mat-release-btn { pointer-events: auto; }
 
-.verse-word-orbit { position: absolute; inset: 0; }
-.verse-orbit-chip { position: absolute; transform: translate(-50%, -50%); background: #e8d5b0; border-color: #c9b58a; color:#2d1f0e; animation: orbitFloat 4s ease-in-out infinite; }
-.verse-orbit-chip.dragging { box-shadow: 0 8px 20px rgba(0,0,0,.2); z-index: 20; animation: none; }
+.verse-word-orbit {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.verse-orbit-chip {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: #e8d5b0;
+  border-color: #c9b58a;
+  color:#2d1f0e;
+  animation: orbitFloat 4s ease-in-out infinite;
+  z-index: 3;
+}
+
+.verse-orbit-chip.dragging {
+  box-shadow: 0 8px 20px rgba(0,0,0,.2);
+  z-index: 30;
+  animation: none;
+}
+
 .verse-orbit-chip.is-parked { animation: none; }
 @keyframes orbitFloat { 0%,100% { translate: -50% -50%; } 50% { translate: -50% calc(-50% - 4px);} }
 
-.verse-work-mat { position: absolute; left: 12%; right: 12%; bottom: 10%; min-height: 56px; border: 1px dashed rgba(93,64,30,.2); border-radius: 10px; display:none; align-items:center; justify-content:space-between; padding: 6px 10px; font-size: 11px; color:#6b4b26; }
+.verse-work-mat {
+  position: absolute;
+  min-height: 72px;
+  border: 1px dashed rgba(93,64,30,.28);
+  border-radius: 10px;
+  display:none;
+  align-items:flex-start;
+  justify-content:flex-start;
+  padding: 8px;
+  font-size: 11px;
+  color:#6b4b26;
+  background: rgba(245,230,200,.35);
+}
+
+#verseWorkMatLeft { left: 8%; right: 56%; bottom: 10%; }
+#verseWorkMatRight { left: 56%; right: 8%; bottom: 10%; justify-content: flex-end; }
 .verse-work-mat.active { display:flex; }
 .work-mat-release-btn { border: 1px solid rgba(93,64,30,.35); background: rgba(245,230,200,.8); border-radius: 999px; width: 24px; height: 24px; }
 

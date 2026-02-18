@@ -47,6 +47,7 @@ export const gameState = {
   parkedWordIds: [],
   verseFailedAttempts: 0,
   verseLastScore: 0,
+  verseLastTriedSignature: '',
 
   // Legacy selector/book state
   wordSelectorIndex: 0,

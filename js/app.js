@@ -1470,6 +1470,7 @@ function setupEventHandlers() {
       const completed = completeVerse();
       if (completed) {
         gameState.verseFailedAttempts = 0;
+        gameState.verseLastTriedSignature = '';
         (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
         spawnVerseEchoWords(solvedWords);
         const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');

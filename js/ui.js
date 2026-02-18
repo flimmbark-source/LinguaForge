@@ -45,7 +45,8 @@ export function initializeElements() {
   elements.verseHint = document.getElementById('verseHint');
   elements.verseTranslationReveal = document.getElementById('verseTranslationReveal');
   elements.verseWordOrbit = document.getElementById('verseWordOrbit');
-  elements.verseWorkMat = document.getElementById('verseWorkMat');
+  elements.verseWorkMatLeft = document.getElementById('verseWorkMatLeft');
+  elements.verseWorkMatRight = document.getElementById('verseWorkMatRight');
   elements.releaseParkedWordsBtn = document.getElementById('releaseParkedWordsBtn');
   elements.wordInfoSheet = document.getElementById('wordInfoSheet');
   elements.wordInfoCloseBtn = document.getElementById('wordInfoCloseBtn');
@@ -480,8 +481,16 @@ export function updateGrammarUI(force = false) {
     elements.grammarHebrewLineDiv.classList.remove('is-unstable');
   }
 
+  if (!solved && gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length) {
+    const signature = gameState.verseWords.map((w) => w.hebrew).join(' ');
+    if (gameState.verseLastTriedSignature !== signature) {
+      gameState.verseFailedAttempts = (gameState.verseFailedAttempts || 0) + 1;
+      gameState.verseLastTriedSignature = signature;
+    }
+  }
+
   if (elements.verseHint) {
-    const showHint = !solved && gameState.verseFailedAttempts >= 3;
+    const showHint = !solved && gameState.verseFailedAttempts >= 2;
     elements.verseHint.textContent = showHint ? 'Something about “of” placement feels off…' : '';
   }
 }
@@ -530,8 +539,7 @@ export function turnGlossarySpread(direction) {
   const next = Math.max(0, Math.min(totalSpreads - 1, gameState.glossarySpreadIndex + direction));
   if (next !== gameState.glossarySpreadIndex) {
     gameState.glossarySpreadIndex = next;
-    renderGlossary();
-  }
+    }
 }
 
 function handleGlossaryWordSelect(wordText, entryEl) {
@@ -619,17 +627,6 @@ export function renderGlossary() {
   }
 }
 
-/**
- * Initialize versebook interactions
- */
-export function initWordSelector() {
-  const prevPageBtn = document.getElementById('bookPrevPageBtn');
-  const nextPageBtn = document.getElementById('bookNextPageBtn');
-
-  if (prevPageBtn) prevPageBtn.addEventListener('click', (e) => { e.stopPropagation(); turnGlossarySpread(-1); });
-  if (nextPageBtn) nextPageBtn.addEventListener('click', (e) => { e.stopPropagation(); turnGlossarySpread(1); });
-}
-
 
 let orbitDragState = null;
 
@@ -637,14 +634,14 @@ function wordOrbitPosition(index, total, parked) {
   if (parked) {
     const row = Math.floor(index / 3);
     const col = index % 3;
-    return { left: 18 + col * 30, top: 54 + row * 22, parked: true };
+    return { left: 20 + col * 28, top: 72 + row * 12, parked: true };
   }
   const perimeter = Math.max(total, 1);
   const t = index / perimeter;
-  if (t < 0.25) return { left: 8 + t / 0.25 * 84, top: 6 };
-  if (t < 0.5) return { left: 92, top: 6 + (t - 0.25) / 0.25 * 86 };
-  if (t < 0.75) return { left: 92 - (t - 0.5) / 0.25 * 84, top: 92 };
-  return { left: 8, top: 92 - (t - 0.75) / 0.25 * 86 };
+  if (t < 0.25) return { left: 5 + t / 0.25 * 90, top: 8 };
+  if (t < 0.5) return { left: 95, top: 8 + (t - 0.25) / 0.25 * 84 };
+  if (t < 0.75) return { left: 95 - (t - 0.5) / 0.25 * 90, top: 92 };
+  return { left: 5, top: 92 - (t - 0.75) / 0.25 * 84 };
 }
 
 function openWordInfo(wordText) {
@@ -705,21 +702,28 @@ function renderVerseWordOrbit() {
       elements.grammarHebrewLineDiv?.classList.add('compose-active');
       chip.setPointerCapture(e.pointerId);
     });
+
     chip.addEventListener('pointermove', (e) => {
       if (!orbitDragState || orbitDragState.wordId !== word.id) return;
       moved = true;
       chip.style.left = `calc(${(e.clientX / window.innerWidth) * 100}% - 20px)`;
       chip.style.top = `calc(${(e.clientY / window.innerHeight) * 100}% - 12px)`;
     });
+
     chip.addEventListener('pointerup', (e) => {
       if (!orbitDragState || orbitDragState.wordId !== word.id) return;
       chip.releasePointerCapture(e.pointerId);
       chip.classList.remove('dragging');
       elements.grammarHebrewLineDiv?.classList.remove('compose-active');
+
       const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
-      const matRect = elements.verseWorkMat?.getBoundingClientRect();
+      const matRectLeft = elements.verseWorkMatLeft?.getBoundingClientRect();
+      const matRectRight = elements.verseWorkMatRight?.getBoundingClientRect();
       const inLine = lineRect && e.clientX >= lineRect.left && e.clientX <= lineRect.right && e.clientY >= lineRect.top && e.clientY <= lineRect.bottom;
-      const inMat = matRect && e.clientX >= matRect.left && e.clientX <= matRect.right && e.clientY >= matRect.top && e.clientY <= matRect.bottom;
+      const inMatLeft = matRectLeft && e.clientX >= matRectLeft.left && e.clientX <= matRectLeft.right && e.clientY >= matRectLeft.top && e.clientY <= matRectLeft.bottom;
+      const inMatRight = matRectRight && e.clientX >= matRectRight.left && e.clientX <= matRectRight.right && e.clientY >= matRectRight.top && e.clientY <= matRectRight.bottom;
+      const inMat = inMatLeft || inMatRight;
+
       if (inLine) {
         placeWordInVerse(word.id, gameState.verseWords.length);
         gameState.parkedWordIds = (gameState.parkedWordIds || []).filter(id => id !== word.id);
@@ -738,12 +742,19 @@ function renderVerseWordOrbit() {
     elements.verseWordOrbit.appendChild(chip);
   });
 
-  if (elements.verseWorkMat) {
-    elements.verseWorkMat.classList.toggle('active', (gameState.parkedWordIds || []).length > 0 || words.length > 3);
-  }
+  const matActive = (gameState.parkedWordIds || []).length > 0 || words.length > 3;
+  if (elements.verseWorkMatLeft) elements.verseWorkMatLeft.classList.toggle('active', matActive);
+  if (elements.verseWorkMatRight) elements.verseWorkMatRight.classList.toggle('active', matActive);
   if (elements.releaseParkedWordsBtn) {
     elements.releaseParkedWordsBtn.onclick = () => { gameState.parkedWordIds = []; updateUI(); };
   }
+}
+
+/**
+ * Initialize versebook interactions
+ */
+export function initWordSelector() {
+  // Legacy glossary controls removed for Verse Book spread redesign.
 }
 
 /**
@@ -758,7 +769,6 @@ export function updateUI() {
   updateGrammarUI();
   updateEnscribeButton();
   updateLinesCompletedDisplay();
-  renderGlossary();
   setupWordInfoHandlers();
   renderVerseWordOrbit();
 }

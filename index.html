@@ -23,21 +23,24 @@
       </div>
     </div>
     <!-- Book interior (shown when open) -->
-    <div class="book-interior">
+    <div class="book-interior verse-book-interior">
       <div class="book-spine"></div>
 
       <div class="book-page book-page-left verse-page" id="versePageLeft">
         <div class="book-page-content verse-page-content">
-          <div id="verseWordOrbit" class="verse-word-orbit" aria-label="Verse word orbit"></div>
-          <div id="verseWorkMat" class="verse-work-mat" aria-hidden="true">
-            <span>Work Mat</span>
-            <button id="releaseParkedWordsBtn" type="button" class="work-mat-release-btn" title="Release parked words">↺</button>
-          </div>
+          <div id="verseWorkMatLeft" class="verse-work-mat" aria-hidden="true"><span>Work Mat</span></div>
         </div>
       </div>
 
       <div class="book-page book-page-right verse-page" id="versePageRight">
         <div class="book-page-content verse-page-content">
+          <div id="verseWorkMatRight" class="verse-work-mat" aria-hidden="true"><span>Work Mat</span></div>
+        </div>
+      </div>
+
+      <div id="verseSpreadOverlay" class="verse-spread-overlay">
+        <div id="verseWordOrbit" class="verse-word-orbit" aria-label="Verse word orbit"></div>
+        <div class="verse-center-stack">
           <div id="grammarNatural" class="verse-intent-line"></div>
           <div id="grammarHebrewLine" class="letter-board verse-line" aria-label="Verse line"></div>
           <div id="grammarScore" class="verse-meter-label">Grammar match: 0%</div>
@@ -46,10 +49,10 @@
           </div>
           <div id="verseHint" class="verse-hint" aria-live="polite"></div>
           <div id="verseTranslationReveal" class="verse-translation-reveal"></div>
-
           <div class="row verse-footer-row">
             <button id="enscribeBtn" disabled>Enscribe</button>
             <span class="pill">Lines completed: <span id="linesCompleted">0</span></span>
+            <button id="releaseParkedWordsBtn" type="button" class="work-mat-release-btn" title="Release parked words">↺</button>
           </div>
         </div>
       </div>
