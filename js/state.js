@@ -48,6 +48,13 @@ export const gameState = {
   // Word selector index for verse page
   wordSelectorIndex: 0,
 
+  // Verse book interaction state
+  verseSelectedWordId: null,
+  versePlacedWordIds: [],
+  verseParkedWords: [],
+  verseHintFailures: 0,
+  reduceMotion: false,
+
   // Enscribe mode (started by clicking anvil glyph)
   enscribeModeActive: false,
   enscribeSelectedWords: [],

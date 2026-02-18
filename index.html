@@ -43,16 +43,42 @@
         <button id="bookNextPageBtn" class="page-corner page-corner-right" title="Next pages"></button>
         <div class="book-page-header">Assembly</div>
         <div class="book-page-content">
-          <div style="font-size:12px; opacity:0.8;">Verse</div>
-          <div id="grammarNatural" style="font-size:14px; font-weight:600; min-height:20px;"></div>
-          <div id="grammarScore" style="font-size:11px; opacity:0.7; margin-top:4px;"></div>
-          <div id="grammarHebrewLine" class="letter-board"></div>
+          <div class="verse-intent-label">Verse intent</div>
+          <div id="grammarNatural" class="verse-intent-text"></div>
+          <div class="verse-meter-wrap">
+            <div class="verse-meter-label">Grammar match</div>
+            <div id="verseMeter" class="verse-meter-bar"><span id="verseMeterFill"></span></div>
+          </div>
+          <div id="grammarScore" class="verse-score-text"></div>
+
+          <div id="verseSpread" class="verse-spread">
+            <div id="verseWordOrbit" class="verse-word-orbit" aria-label="Floating discovered words"></div>
+            <div id="verseWorkMatLeft" class="verse-work-mat verse-work-mat-left"></div>
+            <div id="verseWorkMatRight" class="verse-work-mat verse-work-mat-right"></div>
+            <div id="grammarHebrewLine" class="letter-board"></div>
+            <div id="verseHint" class="verse-hint" aria-live="polite"></div>
+            <button id="verseReleaseParked" class="verse-release-btn" type="button" title="Release parked words">↺</button>
+          </div>
 
           <div class="row" style="margin-top:10px;">
             <button id="enscribeBtn" disabled>Click the anvil glyph to enscribe</button>
             <span class="pill">Lines completed: <span id="linesCompleted">0</span></span>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="wordInfoSheet" class="word-info-sheet" aria-hidden="true">
+    <div class="word-info-card">
+      <button id="wordInfoClose" class="word-info-close" type="button" aria-label="Close word info">✕</button>
+      <div id="wordInfoHebrew" class="word-info-hebrew"></div>
+      <div id="wordInfoTranslit" class="word-info-translit"></div>
+      <div id="wordInfoMeaning" class="word-info-meaning"></div>
+      <div id="wordInfoExample" class="word-info-example"></div>
+      <div id="wordInfoAttach" class="word-info-attach"></div>
+      <div class="word-info-actions">
+        <button id="wordInfoSelect" type="button">Select for tap-to-place</button>
       </div>
     </div>
   </div>

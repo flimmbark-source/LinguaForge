@@ -19,14 +19,14 @@ export const VERSE_COMPLETION_REWARD = 100;
 
 // Hebrew grammar lexicon
 export const GRAMMAR_LEXICON = {
-  'אש':      { translit: 'esh',      gloss: 'fire' },
-  'היא':     { translit: 'hi',       gloss: 'is' },
-  'ה':       { translit: 'ha',       gloss: 'the' },
-  'ראשונה':  { translit: 'rishona',  gloss: 'first' },
-  'שנייה':  { translit: 'shemniya',  gloss: 'second' },
-  'נשמת':    { translit: 'nishmat',  gloss: 'breath of' },
-  'של':      { translit: 'shel',     gloss: 'of' },
-  'כוח':     { translit: 'koach',    gloss: 'power' },
+  'אש':      { translit: 'esh',      gloss: 'fire', meaning: 'fire', example: 'אש בוערת · fire burns' },
+  'היא':     { translit: 'hi',       gloss: 'is', meaning: 'is / she is', example: 'היא אור · she is light' },
+  'ה':       { translit: 'ha',       gloss: 'the', meaning: 'the (prefix)', example: 'ה + אש → האש', type: 'morpheme', attachesTo: 'nouns' },
+  'ראשונה':  { translit: 'rishona',  gloss: 'first', meaning: 'first', example: 'הראשונה · the first' },
+  'שנייה':  { translit: 'shniya',    gloss: 'second', meaning: 'second', example: 'השנייה · the second' },
+  'נשמת':    { translit: 'nishmat',  gloss: 'breath of', meaning: 'breath of', example: 'נשמת כוח · breath of power' },
+  'של':      { translit: 'shel',     gloss: 'of', meaning: 'of / belonging to', example: 'של אש · of fire' },
+  'כוח':     { translit: 'koach',    gloss: 'power', meaning: 'power', example: 'כוח קדום · ancient power' },
 };
 
 // Current line/verse configuration
