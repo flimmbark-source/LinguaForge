@@ -428,6 +428,17 @@ function isPointInsideRect(x, y, rect) {
   return !!rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
 
+function clampPercent(value) {
+  return Math.max(2, Math.min(98, value));
+}
+
+function setWordContainerPosition(wordId, clientX, clientY) {
+  const left = clampPercent((clientX / window.innerWidth) * 100);
+  const top = clampPercent((clientY / window.innerHeight) * 100);
+  gameState.wordContainerPositions = gameState.wordContainerPositions || {};
+  gameState.wordContainerPositions[wordId] = { left, top };
+}
+
 function moveVerseWordBackToOrbit(instanceId, clientX, clientY) {
   const removed = removeVerseWord(instanceId);
   if (!removed) return;
@@ -442,6 +453,8 @@ function moveVerseWordBackToOrbit(instanceId, clientX, clientY) {
     power: 0,
     heated: true,
   });
+
+  setWordContainerPosition(newWordId, clientX, clientY);
 
   const leftMat = elements.verseWorkMatLeft?.getBoundingClientRect();
   const rightMat = elements.verseWorkMatRight?.getBoundingClientRect();
@@ -745,7 +758,11 @@ function renderVerseWordOrbit() {
   if (!elements.verseWordOrbit) return;
   const words = gameState.words.slice();
   const parkedSet = new Set(gameState.parkedWordIds || []);
-  const snapshotKey = words.map((w) => `${w.id}:${parkedSet.has(w.id) ? 1 : 0}`).join('|');
+  const snapshotKey = words.map((w) => {
+    const pos = gameState.wordContainerPositions?.[w.id];
+    const posKey = pos ? `${Math.round(pos.left*10)/10},${Math.round(pos.top*10)/10}` : 'auto';
+    return `${w.id}:${parkedSet.has(w.id) ? 1 : 0}:${posKey}`;
+  }).join('|');
 
   // Prevent chips from blinking/rebuilding while dragging.
   if (!orbitDragState && snapshotKey !== orbitSnapshotKey) {
@@ -758,11 +775,14 @@ function renderVerseWordOrbit() {
       chip.className = 'line-word-chip verse-orbit-chip';
       chip.textContent = word.text;
       chip.dataset.wordId = String(word.id);
-      const pos = wordOrbitPosition(i, words.length, parkedSet.has(word.id));
+      const savedPos = gameState.wordContainerPositions?.[word.id];
+      const pos = savedPos || wordOrbitPosition(i, words.length, parkedSet.has(word.id));
       chip.style.left = pos.left + '%';
       chip.style.top = pos.top + '%';
-      if (!pos.parked) chip.style.animationDelay = `${(i % 7) * 0.3}s`;
-      if (pos.parked) chip.classList.add('is-parked');
+      if (!savedPos && !pos.parked) chip.style.animationDelay = `${(i % 7) * 0.3}s`;
+      if (parkedSet.has(word.id)) chip.classList.add('is-parked');
+      gameState.wordContainerPositions = gameState.wordContainerPositions || {};
+      if (!savedPos) gameState.wordContainerPositions[word.id] = { left: pos.left, top: pos.top };
 
       let moved = false;
       chip.addEventListener('pointerdown', (e) => {
@@ -808,17 +828,20 @@ function renderVerseWordOrbit() {
         if (inLine) {
           placeWordInVerse(word.id, gameState.verseWords.length);
           gameState.parkedWordIds = (gameState.parkedWordIds || []).filter(id => id !== word.id);
+          if (gameState.wordContainerPositions) delete gameState.wordContainerPositions[word.id];
           orbitSnapshotKey = '';
           updateUI();
-        } else if (inMat) {
-          if (!parkedSet.has(word.id)) gameState.parkedWordIds = [...(gameState.parkedWordIds || []), word.id];
+        } else if (inMat || moved) {
+          setWordContainerPosition(word.id, e.clientX, e.clientY);
+          if (inMat) {
+            if (!parkedSet.has(word.id)) gameState.parkedWordIds = [...(gameState.parkedWordIds || []), word.id];
+          } else {
+            gameState.parkedWordIds = (gameState.parkedWordIds || []).filter(id => id !== word.id);
+          }
           orbitSnapshotKey = '';
           updateUI();
-        } else if (!moved) {
-          openWordInfo(word.text, e.clientX, e.clientY);
         } else {
-          orbitSnapshotKey = '';
-          updateUI();
+          openWordInfo(word.text, e.clientX, e.clientY);
         }
         orbitDragState = null;
       });
@@ -833,7 +856,7 @@ function renderVerseWordOrbit() {
   if (elements.releaseParkedWordsBtn) {
     elements.releaseParkedWordsBtn.onclick = () => {
       const verseWords = [...gameState.verseWords];
-      verseWords.forEach((vw) => {
+      verseWords.forEach((vw, idx) => {
         const nextId = getNextWordId();
         const lex = GRAMMAR_LEXICON[vw.hebrew];
         addWord({
@@ -844,9 +867,16 @@ function renderVerseWordOrbit() {
           power: 0,
           heated: true,
         });
+        const cx = window.innerWidth * (0.45 + (idx % 4) * 0.03);
+        const cy = window.innerHeight * (0.55 + Math.floor(idx / 4) * 0.04);
+        setWordContainerPosition(nextId, cx, cy);
       });
       clearVerseWords();
       gameState.parkedWordIds = [];
+      const validIds = new Set(gameState.words.map((w) => w.id));
+      Object.keys(gameState.wordContainerPositions || {}).forEach((id) => {
+        if (!validIds.has(Number(id))) delete gameState.wordContainerPositions[id];
+      });
       lastRenderedVerseWords = [];
       orbitSnapshotKey = '';
       updateUI();

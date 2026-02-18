@@ -45,6 +45,7 @@ export const gameState = {
   // Word history and Verse Book workspace state
   forgedWordsHistory: [],
   parkedWordIds: [],
+  wordContainerPositions: {},
   verseFailedAttempts: 0,
   verseLastScore: 0,
   verseLastTriedSignature: '',
