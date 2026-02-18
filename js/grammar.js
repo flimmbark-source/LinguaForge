@@ -10,6 +10,7 @@ import {
   removeWord,
   addVerseWord,
   reorderVerseWord,
+  removeVerseWord,
   clearVerseWords,
   addInk,
   incrementLinesCompleted,
@@ -77,6 +78,18 @@ export function placeWordInVerse(wordId, insertIndex) {
   const instanceId = 'vw-' + Date.now() + '-' + Math.random();
   addVerseWord({ instanceId, hebrew: word.text }, insertIndex);
   removeWord(wordId);
+  return true;
+}
+
+
+/**
+ * Remove a placed verse word by instance id and return it to inventory.
+ * @param {string} instanceId
+ * @returns {boolean}
+ */
+export function removeVerseWordByInstanceId(instanceId) {
+  const removed = removeVerseWord(instanceId);
+  if (!removed) return false;
   return true;
 }
 

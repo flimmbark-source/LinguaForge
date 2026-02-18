@@ -7,7 +7,7 @@ import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON, SOLUTION_HEBREW_
 import { gameState } from './state.js?v=9';
 import { setupWordChipDrag, sellWord, renderMoldsInViewport } from './molds.js?v=9';
 import { toggleScribePaused } from './scribes.js?v=9';
-import { evaluateVerse, setupVerseWordChipDrag } from './grammar.js?v=9';
+import { evaluateVerse, setupVerseWordChipDrag, placeWordInVerse } from './grammar.js?v=9';
 import { updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 
 // DOM element cache
@@ -41,6 +41,19 @@ export function initializeElements() {
   elements.grammarLiteralDiv = document.getElementById('grammarLiteral');
   elements.grammarNaturalDiv = document.getElementById('grammarNatural');
   elements.grammarScoreDiv = document.getElementById('grammarScore');
+  elements.verseMeterFill = document.getElementById('verseMeterFill');
+  elements.verseSpread = document.getElementById('verseSpread');
+  elements.verseWordOrbit = document.getElementById('verseWordOrbit');
+  elements.verseHint = document.getElementById('verseHint');
+  elements.verseReleaseParkedBtn = document.getElementById('verseReleaseParked');
+  elements.wordInfoSheet = document.getElementById('wordInfoSheet');
+  elements.wordInfoHebrew = document.getElementById('wordInfoHebrew');
+  elements.wordInfoTranslit = document.getElementById('wordInfoTranslit');
+  elements.wordInfoMeaning = document.getElementById('wordInfoMeaning');
+  elements.wordInfoExample = document.getElementById('wordInfoExample');
+  elements.wordInfoAttach = document.getElementById('wordInfoAttach');
+  elements.wordInfoClose = document.getElementById('wordInfoClose');
+  elements.wordInfoSelect = document.getElementById('wordInfoSelect');
   elements.pestle = document.getElementById('selectPestle');
   elements.shovel = document.getElementById('selectShovel');
 }
@@ -359,6 +372,109 @@ function renderScribeGhosts(block, scribe) {
   });
 }
 
+
+function getVerseWordsInPlay() {
+  const placed = gameState.verseWords.map(w => w.hebrew);
+  const parked = (gameState.verseParkedWords || []).map(w => w.text);
+  return new Set([...placed, ...parked]);
+}
+
+function openWordInfo(word, fromOrbit = true) {
+  if (!word || !elements.wordInfoSheet) return;
+  const lex = GRAMMAR_LEXICON[word.text] || {};
+  elements.wordInfoHebrew.textContent = word.text;
+  elements.wordInfoTranslit.textContent = lex.translit ? `Transliteration: ${lex.translit}` : '';
+  elements.wordInfoMeaning.textContent = lex.meaning ? `Meaning: ${lex.meaning}` : '';
+  elements.wordInfoExample.textContent = lex.example ? `Example: ${lex.example}` : '';
+  elements.wordInfoAttach.textContent = lex.type === 'morpheme'
+    ? `Attaches to: ${lex.attachesTo || 'nearby words'} (grammar rune)`
+    : '';
+  elements.wordInfoSheet.classList.add('open');
+  elements.wordInfoSheet.setAttribute('aria-hidden', 'false');
+  if (elements.wordInfoSelect) {
+    elements.wordInfoSelect.onclick = () => {
+      gameState.verseSelectedWordId = word.id;
+      elements.wordInfoSheet.classList.remove('open');
+      if (fromOrbit) updateGrammarUI(true);
+    };
+  }
+}
+
+function closeWordInfo() {
+  if (!elements.wordInfoSheet) return;
+  elements.wordInfoSheet.classList.remove('open');
+  elements.wordInfoSheet.setAttribute('aria-hidden', 'true');
+}
+
+function renderVerseOrbitWords() {
+  if (!elements.verseWordOrbit) return;
+  const used = getVerseWordsInPlay();
+  elements.verseWordOrbit.innerHTML = '';
+  const available = gameState.words.filter(w => !used.has(w.text));
+
+  available.forEach((word, index) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'line-word-chip verse-orbit-chip';
+    chip.textContent = word.text;
+    chip.dataset.wordId = String(word.id);
+    chip.style.setProperty('--orbit-index', String(index));
+    if (gameState.verseSelectedWordId === word.id) chip.classList.add('is-selected');
+
+    chip.addEventListener('click', e => {
+      e.stopPropagation();
+      openWordInfo(word);
+    });
+
+    chip.addEventListener('pointerdown', e => {
+      chip.dataset.dragStartX = String(e.clientX);
+      chip.dataset.dragStartY = String(e.clientY);
+      elements.verseSpread?.classList.add('compose-active');
+    });
+
+    chip.addEventListener('pointerup', e => {
+      const sx = Number(chip.dataset.dragStartX || e.clientX);
+      const sy = Number(chip.dataset.dragStartY || e.clientY);
+      const moved = Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10;
+      if (moved) {
+        const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
+        if (lineRect && e.clientX >= lineRect.left - 24 && e.clientX <= lineRect.right + 24 && e.clientY >= lineRect.top - 24 && e.clientY <= lineRect.bottom + 24) {
+          const insertIndex = gameState.verseWords.length;
+          const success = placeWordInVerse(word.id, insertIndex);
+          if (success) {
+            gameState.verseSelectedWordId = null;
+            updateGrammarUI(true);
+          }
+        } else {
+          const spreadRect = elements.verseSpread?.getBoundingClientRect();
+          if (spreadRect && e.clientX > spreadRect.left && e.clientX < spreadRect.right && e.clientY > spreadRect.top && e.clientY < spreadRect.bottom) {
+            gameState.verseParkedWords = gameState.verseParkedWords || [];
+            gameState.verseParkedWords.push({ id: word.id, text: word.text, x: e.clientX - spreadRect.left, y: e.clientY - spreadRect.top });
+          }
+        }
+      }
+      elements.verseSpread?.classList.remove('compose-active');
+    });
+
+    elements.verseWordOrbit.appendChild(chip);
+  });
+
+  (gameState.verseParkedWords || []).forEach(parked => {
+    const parkedChip = document.createElement('button');
+    parkedChip.type = 'button';
+    parkedChip.className = 'line-word-chip verse-orbit-chip is-parked';
+    parkedChip.textContent = parked.text;
+    parkedChip.style.left = `${parked.x}px`;
+    parkedChip.style.top = `${parked.y}px`;
+    parkedChip.style.position = 'absolute';
+    parkedChip.addEventListener('click', () => {
+      const word = gameState.words.find(w => w.id === parked.id);
+      if (word) openWordInfo(word, false);
+    });
+    elements.verseWordOrbit.appendChild(parkedChip);
+  });
+}
+
 /**
  * Check if verse words have changed since last render
  * @returns {boolean} True if verse words changed
@@ -393,6 +509,14 @@ function renderVerseChips(force = false) {
     chip.textContent = wordInstance.hebrew;
     chip.dataset.instanceId = wordInstance.instanceId;
     setupVerseWordChipDrag(chip, wordInstance.instanceId, () => updateGrammarUI(true));
+    chip.addEventListener('click', () => {
+      if (!gameState.verseSelectedWordId) {
+        gameState.verseHintFailures += 1;
+        if (elements.verseHint && gameState.verseHintFailures > 2) {
+          elements.verseHint.textContent = "Something about 'of' placement feels off…";
+        }
+      }
+    });
 
     // Allow dragover for inventory words to be dropped between existing chips
     // This makes chips valid drop targets so position detection works correctly
@@ -414,13 +538,12 @@ function renderVerseChips(force = false) {
 export function updateGrammarUI(force = false) {
   if (!elements.grammarHebrewLineDiv) return;
 
-  // Only recreate chips when needed (or forced after drag)
   renderVerseChips(force);
+  renderVerseOrbitWords();
 
-  // Always evaluate and update text (this is cheap)
   const { translit, literal, score } = evaluateVerse(gameState.verseWords);
+  const solved = score === 1 && gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length;
 
-  // Keep hidden elements updated for internal use
   if (elements.grammarTranslitDiv) {
     elements.grammarTranslitDiv.textContent = translit || '';
   }
@@ -431,7 +554,18 @@ export function updateGrammarUI(force = false) {
     elements.grammarNaturalDiv.textContent = gameState.currentLine.english;
   }
   if (elements.grammarScoreDiv) {
-    elements.grammarScoreDiv.textContent = 'Grammar match: ' + Math.round(score * 100) + '%';
+    elements.grammarScoreDiv.textContent = `Grammar match: ${Math.round(score * 100)}%`;
+  }
+  if (elements.verseMeterFill) {
+    elements.verseMeterFill.style.width = `${Math.round(score * 100)}%`;
+  }
+  if (elements.verseSpread) {
+    elements.verseSpread.classList.toggle('lock-in', solved);
+    elements.verseSpread.classList.toggle('browse-state', gameState.verseWords.length === 0);
+  }
+  if (elements.enscribeBtn) {
+    elements.enscribeBtn.disabled = !solved;
+    elements.enscribeBtn.textContent = solved ? 'Enscribe Verse' : 'Arrange words to enscribe';
   }
 }
 
@@ -439,11 +573,10 @@ export function updateGrammarUI(force = false) {
  * Update enscribe button state
  */
 export function updateEnscribeButton() {
-  if (elements.enscribeBtn) {
-    elements.enscribeBtn.disabled = true;
-    elements.enscribeBtn.textContent = gameState.enscribeModeActive
-      ? `Selecting words (${gameState.enscribeSelectedWords.length}/${SOLUTION_HEBREW_ORDER.length})`
-      : 'Click the anvil glyph to enscribe';
+  if (!elements.enscribeBtn) return;
+  if (gameState.enscribeModeActive) {
+    elements.enscribeBtn.textContent = `Selecting words (${gameState.enscribeSelectedWords.length}/${SOLUTION_HEBREW_ORDER.length})`;
+    return;
   }
 }
 
@@ -578,6 +711,31 @@ export function initWordSelector() {
 
   if (prevPageBtn) prevPageBtn.addEventListener('click', (e) => { e.stopPropagation(); turnGlossarySpread(-1); });
   if (nextPageBtn) nextPageBtn.addEventListener('click', (e) => { e.stopPropagation(); turnGlossarySpread(1); });
+
+  if (elements.wordInfoClose) {
+    elements.wordInfoClose.addEventListener('click', closeWordInfo);
+  }
+  if (elements.wordInfoSheet) {
+    elements.wordInfoSheet.addEventListener('click', (e) => {
+      if (e.target === elements.wordInfoSheet) closeWordInfo();
+    });
+  }
+  if (elements.grammarHebrewLineDiv) {
+    elements.grammarHebrewLineDiv.addEventListener('click', () => {
+      if (!gameState.verseSelectedWordId) return;
+      const success = placeWordInVerse(gameState.verseSelectedWordId, gameState.verseWords.length);
+      if (success) {
+        gameState.verseSelectedWordId = null;
+        updateGrammarUI(true);
+      }
+    });
+  }
+  if (elements.verseReleaseParkedBtn) {
+    elements.verseReleaseParkedBtn.addEventListener('click', () => {
+      gameState.verseParkedWords = [];
+      updateGrammarUI(true);
+    });
+  }
 }
 
 /**

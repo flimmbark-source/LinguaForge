@@ -4783,3 +4783,198 @@ body.book-overlay-active .magic-book {
 }
 
 
+
+/* ===============================================
+   VERSE BOOK 5-STATE EXPERIENCE
+   =============================================== */
+.verse-intent-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+.verse-intent-text {
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  margin: 2px 0 6px;
+}
+
+.verse-meter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.verse-meter-label {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.verse-meter-bar {
+  height: 6px;
+  flex: 1;
+  border-radius: 999px;
+  background: rgba(90, 61, 26, 0.2);
+  overflow: hidden;
+}
+
+.verse-meter-bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #b68a44, #f4d88b);
+  transition: width 0.25s ease;
+}
+
+.verse-score-text {
+  font-size: 11px;
+  opacity: 0.75;
+  margin-bottom: 4px;
+}
+
+.verse-spread {
+  position: relative;
+  min-height: 220px;
+  border-radius: 10px;
+  background: radial-gradient(circle at center, rgba(248, 230, 190, 0.26), rgba(93, 64, 30, 0.03));
+  overflow: hidden;
+}
+
+.verse-word-orbit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.verse-orbit-chip {
+  position: absolute;
+  pointer-events: auto;
+  animation: verseDrift 9s ease-in-out infinite;
+  animation-delay: calc(var(--orbit-index, 0) * -0.6s);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.22);
+}
+
+.verse-orbit-chip:nth-child(4n+1) { left: 6%; top: 12%; }
+.verse-orbit-chip:nth-child(4n+2) { right: 6%; top: 16%; }
+.verse-orbit-chip:nth-child(4n+3) { left: 10%; bottom: 14%; }
+.verse-orbit-chip:nth-child(4n+4) { right: 8%; bottom: 11%; }
+
+.verse-orbit-chip.is-selected {
+  outline: 2px solid #f4d88b;
+  transform: translateY(-2px);
+}
+
+.verse-work-mat {
+  position: absolute;
+  inset: 40px 10px 22px;
+  border-radius: 10px;
+  border: 1px dashed transparent;
+  pointer-events: none;
+}
+
+.verse-spread.compose-active .verse-work-mat {
+  border-color: rgba(93, 64, 30, 0.2);
+}
+
+.book-page-content #grammarHebrewLine {
+  position: relative;
+  z-index: 2;
+  margin: 84px 28px 0;
+  min-height: 54px;
+  align-items: center;
+  justify-content: flex-start;
+  background: rgba(255,255,255,0.2);
+}
+
+.verse-spread.compose-active #grammarHebrewLine {
+  border-color: rgba(126, 85, 43, 0.7);
+  box-shadow: 0 0 0 2px rgba(126, 85, 43, 0.15) inset;
+}
+
+.verse-spread.lock-in #grammarHebrewLine .line-word-chip {
+  background: transparent;
+  border-color: transparent;
+  color: #5a2e8a;
+  text-shadow: 0 0 10px rgba(136, 72, 199, 0.35);
+  animation: wordLift 0.55s ease both;
+}
+
+.verse-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  opacity: 0.7;
+  min-height: 14px;
+}
+
+.verse-release-btn {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  padding: 0;
+}
+
+.word-info-sheet {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.4);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 500;
+}
+
+.word-info-sheet.open {
+  display: flex;
+}
+
+.word-info-card {
+  width: min(540px, 100%);
+  background: #f6e6c7;
+  color: #2d1f0e;
+  border-radius: 14px 14px 0 0;
+  padding: 12px 14px 16px;
+  position: relative;
+}
+
+.word-info-close {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.word-info-hebrew {
+  font-size: 34px;
+  font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+  direction: rtl;
+  margin-bottom: 8px;
+}
+
+.word-info-translit,
+.word-info-meaning,
+.word-info-example,
+.word-info-attach {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+@keyframes verseDrift {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes wordLift {
+  from { transform: translateY(0); opacity: 0.95; }
+  to { transform: translateY(-6px); opacity: 1; }
+}
