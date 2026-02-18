@@ -4959,7 +4959,7 @@ body.book-overlay-active .magic-book {
   box-shadow: 0 10px 24px rgba(0,0,0,.22);
   pointer-events: none;
 }
-.word-info-hebrew { font-size: 26px; direction: rtl; font-weight: 700; margin-bottom: 4px; }
+.word-info-hebrew { font-size: 26px; direction: rtl; text-align: left; font-weight: 700; margin-bottom: 4px; }
 .word-info-translit,.word-info-meaning,.word-info-example { font-size: 13px; margin-top: 2px; color:#2b2113; }
 
 .verse-line .line-word-chip {

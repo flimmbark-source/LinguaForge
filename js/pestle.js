@@ -21,6 +21,21 @@ function setBackgroundDragLocked(locked) {
   }
 }
 
+
+function isPointerBlockedByVerseBook(eventLike) {
+  const book = document.getElementById('magicBook');
+  if (!book) return false;
+  const style = getComputedStyle(book);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+  const target = eventLike?.target;
+  if (target?.closest && target.closest('#magicBook')) return true;
+
+  const client = eventLike?.touches?.[0] || eventLike;
+  if (!client || typeof client.clientX !== 'number' || typeof client.clientY !== 'number') return false;
+  const rect = book.getBoundingClientRect();
+  return client.clientX >= rect.left && client.clientX <= rect.right && client.clientY >= rect.top && client.clientY <= rect.bottom;
+}
 export class PestleSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -298,6 +313,7 @@ export class PestleSystem {
 
   onPointerDown(e) {
     if (!this.isRunning) return;
+    if (isPointerBlockedByVerseBook(e)) return;
     // Refresh cached rect on pointer down
     this._cachedCanvasRect = this.canvas.getBoundingClientRect();
     this._canvasRectAge = 0;

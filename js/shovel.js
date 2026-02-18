@@ -47,6 +47,21 @@ function getLetterFromTile(tile) {
   return '';
 }
 
+
+function isPointerBlockedByVerseBook(eventLike) {
+  const book = document.getElementById('magicBook');
+  if (!book) return false;
+  const style = getComputedStyle(book);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+  const target = eventLike?.target;
+  if (target?.closest && target.closest('#magicBook')) return true;
+
+  const client = eventLike?.touches?.[0] || eventLike;
+  if (!client || typeof client.clientX !== 'number' || typeof client.clientY !== 'number') return false;
+  const rect = book.getBoundingClientRect();
+  return client.clientX >= rect.left && client.clientX <= rect.right && client.clientY >= rect.top && client.clientY <= rect.bottom;
+}
 export class ShovelSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -151,6 +166,7 @@ resize() {
 
   onPointerDown(e) {
     if (!this.isRunning) return;
+    if (isPointerBlockedByVerseBook(e)) return;
     const rect = this.canvas.getBoundingClientRect();
     const client = e.touches ? e.touches[0] : e;
 

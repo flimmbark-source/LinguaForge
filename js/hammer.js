@@ -82,6 +82,21 @@ function segmentIntersectsRect(x1, y1, x2, y2, left, top, right, bottom) {
   return true;
 }
 
+
+function isPointerBlockedByVerseBook(eventLike) {
+  const book = document.getElementById('magicBook');
+  if (!book) return false;
+  const style = getComputedStyle(book);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+  const target = eventLike?.target;
+  if (target?.closest && target.closest('#magicBook')) return true;
+
+  const client = eventLike?.touches?.[0] || eventLike;
+  if (!client || typeof client.clientX !== 'number' || typeof client.clientY !== 'number') return false;
+  const rect = book.getBoundingClientRect();
+  return client.clientX >= rect.left && client.clientX <= rect.right && client.clientY >= rect.top && client.clientY <= rect.bottom;
+}
 export class HammerSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -605,6 +620,7 @@ export class HammerSystem {
    */
 onPointerDown(e) {
   if (!this.isRunning) return;
+  if (isPointerBlockedByVerseBook(e)) return;
   if (window.PointerEvent && (e.type === 'mousedown' || e.type === 'touchstart')) return;
   // Refresh cached rect on pointer down
   this._cachedCanvasRect = this.canvas.getBoundingClientRect();
