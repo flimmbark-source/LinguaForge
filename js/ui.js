@@ -854,10 +854,12 @@ function renderVerseWordOrbit() {
         const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
         const matRectLeft = elements.verseWorkMatLeft?.getBoundingClientRect();
         const matRectRight = elements.verseWorkMatRight?.getBoundingClientRect();
+        const orbitRect = elements.verseWordOrbit?.getBoundingClientRect();
         const inLine = lineRect && dropX >= lineRect.left && dropX <= lineRect.right && dropY >= lineRect.top && dropY <= lineRect.bottom;
         const inMatLeft = matRectLeft && dropX >= matRectLeft.left && dropX <= matRectLeft.right && dropY >= matRectLeft.top && dropY <= matRectLeft.bottom;
         const inMatRight = matRectRight && dropX >= matRectRight.left && dropX <= matRectRight.right && dropY >= matRectRight.top && dropY <= matRectRight.bottom;
         const inMat = inMatLeft || inMatRight;
+        const inOrbit = isPointInsideRect(dropX, dropY, orbitRect);
 
         if (inLine) {
           placeWordInVerse(word.id, gameState.verseWords.length);
@@ -865,7 +867,7 @@ function renderVerseWordOrbit() {
           if (gameState.wordContainerPositions) delete gameState.wordContainerPositions[word.id];
           orbitSnapshotKey = '';
           updateUI();
-        } else if (inMat || moved) {
+        } else if (inMat || (moved && inOrbit)) {
           setWordContainerPosition(word.id, dropX, dropY);
           if (inMat) {
             if (!parkedSet.has(word.id)) gameState.parkedWordIds = [...(gameState.parkedWordIds || []), word.id];
@@ -874,6 +876,9 @@ function renderVerseWordOrbit() {
           }
           orbitSnapshotKey = '';
           updateUI();
+        } else if (moved) {
+          // If dropped outside the verse spread, keep the chip in its prior slot.
+          chip.style.visibility = '';
         } else {
           chip.style.visibility = '';
           openWordInfo(word.text, dropX, dropY);
