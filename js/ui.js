@@ -866,6 +866,7 @@ function renderVerseWordOrbit() {
           gameState.parkedWordIds = (gameState.parkedWordIds || []).filter(id => id !== word.id);
           if (gameState.wordContainerPositions) delete gameState.wordContainerPositions[word.id];
           orbitSnapshotKey = '';
+          orbitDragState = null;
           updateUI();
         } else if (inMat || (moved && inOrbit)) {
           setWordContainerPosition(word.id, dropX, dropY);
@@ -875,6 +876,7 @@ function renderVerseWordOrbit() {
             gameState.parkedWordIds = (gameState.parkedWordIds || []).filter(id => id !== word.id);
           }
           orbitSnapshotKey = '';
+          orbitDragState = null;
           updateUI();
         } else if (moved) {
           // If dropped outside the verse spread, keep the chip in its prior slot.
