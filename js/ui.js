@@ -432,9 +432,25 @@ function clampPercent(value) {
   return Math.max(2, Math.min(98, value));
 }
 
+function getOrbitRelativePercent(clientX, clientY) {
+  const orbitRect = elements.verseWordOrbit?.getBoundingClientRect();
+  if (orbitRect && orbitRect.width > 0 && orbitRect.height > 0) {
+    const localX = clientX - orbitRect.left;
+    const localY = clientY - orbitRect.top;
+    return {
+      left: clampPercent((localX / orbitRect.width) * 100),
+      top: clampPercent((localY / orbitRect.height) * 100),
+    };
+  }
+
+  return {
+    left: clampPercent((clientX / window.innerWidth) * 100),
+    top: clampPercent((clientY / window.innerHeight) * 100),
+  };
+}
+
 function setWordContainerPosition(wordId, clientX, clientY) {
-  const left = clampPercent((clientX / window.innerWidth) * 100);
-  const top = clampPercent((clientY / window.innerHeight) * 100);
+  const { left, top } = getOrbitRelativePercent(clientX, clientY);
   gameState.wordContainerPositions = gameState.wordContainerPositions || {};
   gameState.wordContainerPositions[wordId] = { left, top };
 }
