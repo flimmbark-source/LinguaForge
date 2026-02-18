@@ -8,8 +8,8 @@ import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, compute
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
 import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
-import { setupVerseAreaDrop } from './grammar.js?v=9';
-import { initializeElements, updateUI, initWordSelector, clearEnscribeSelection } from './ui.js?v=9';
+import { setupVerseAreaDrop, completeVerse, isVerseSolved } from './grammar.js?v=9';
+import { initializeElements, updateUI, initWordSelector } from './ui.js?v=9';
 import { gameState } from './state.js?v=9';
 import { addLetters } from './state.js?v=9';
 import { HammerSystem } from './hammer.js?v=9';
@@ -864,8 +864,6 @@ function initializeGame() {
   initializeElements();
 
   // Reset enscribe mode state on fresh game start
-  gameState.enscribeModeActive = false;
-  clearEnscribeSelection();
 
   // Initialize mold slots
   initializeMoldSlots();
@@ -1463,40 +1461,31 @@ function setupEventHandlers() {
   if (enscribeBtn) {
     enscribeBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      if (!isVerseSolved()) {
+        gameState.verseFailedAttempts = (gameState.verseFailedAttempts || 0) + 1;
+        updateUI();
+        return;
+      }
+      const solvedWords = gameState.verseWords.map((w) => w.hebrew);
+      const completed = completeVerse();
+      if (completed) {
+        gameState.verseFailedAttempts = 0;
+        (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
+        spawnVerseEchoWords(solvedWords);
+        const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
+        if (grammarHebrewLineDiv) {
+          const rect = grammarHebrewLineDiv.getBoundingClientRect();
+          spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
+        }
+      }
+      updateUI();
     });
   }
 
   const anvilGlyph = document.getElementById('anvilGlyph');
   if (anvilGlyph) {
-    anvilGlyph.style.cursor = 'pointer';
-    anvilGlyph.addEventListener('click', () => {
-      gameState.enscribeModeActive = true;
-      clearEnscribeSelection();
-    });
+    anvilGlyph.style.cursor = 'default';
   }
-
-  document.addEventListener('enscribe-attempt', (event) => {
-    const selectedWords = event?.detail?.words || [];
-    const isCorrect = selectedWords.length === SOLUTION_HEBREW_ORDER.length
-      && SOLUTION_HEBREW_ORDER.every((word, idx) => word === selectedWords[idx]);
-
-    gameState.enscribeModeActive = false;
-
-    if (isCorrect) {
-      addInk(VERSE_COMPLETION_REWARD);
-      gameState.linesCompleted += 1;
-      (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
-      spawnVerseEchoWords(selectedWords);
-      const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
-      if (grammarHebrewLineDiv) {
-        const rect = grammarHebrewLineDiv.getBoundingClientRect();
-        spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
-      }
-    }
-
-    clearEnscribeSelection();
-    updateUI();
-  });
 
   // Upgrades button
   const upgradesBtn = document.getElementById('upgradesBtn');

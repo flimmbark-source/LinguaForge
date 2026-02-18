@@ -9,7 +9,7 @@
 </head>
 <body>
   
-<!-- MAGIC BOOK: GLOSSARY & VERSE (draggable, toggleable) -->
+<!-- MAGIC BOOK: VERSE EXPERIENCE (draggable, toggleable) -->
   <div id="magicBook" class="magic-book open" style="display:none;">
     <button id="bookToggleBtn" class="book-toggle-btn" title="Open/Close Book">📖</button>
     <button id="bookCloseBtn" class="book-close-btn" title="Close Book">✕</button>
@@ -26,34 +26,48 @@
     <div class="book-interior">
       <div class="book-spine"></div>
 
-      <!-- GLOSSARY PAGE (left page) -->
-      <div class="book-page book-page-left" id="glossaryPage">
-        <button id="bookPrevPageBtn" class="page-corner page-corner-left" title="Previous pages"></button>
-        <div class="book-page-header">Glossary</div>
-        <div class="book-page-content">
-          <div id="glossaryEntries" class="glossary-entries">
-            <div class="glossary-empty" style="opacity:0.6; font-size:12px;">No words forged yet.</div>
+      <div class="book-page book-page-left verse-page" id="versePageLeft">
+        <div class="book-page-content verse-page-content">
+          <div id="verseWordOrbit" class="verse-word-orbit" aria-label="Verse word orbit"></div>
+          <div id="verseWorkMat" class="verse-work-mat" aria-hidden="true">
+            <span>Work Mat</span>
+            <button id="releaseParkedWordsBtn" type="button" class="work-mat-release-btn" title="Release parked words">↺</button>
           </div>
-          <div id="glossaryPageIndicator" class="glossary-page-indicator">Pages 1-1</div>
         </div>
       </div>
 
-      <!-- VERSE PAGE (right page) -->
-      <div class="book-page book-page-right" id="versePage">
-        <button id="bookNextPageBtn" class="page-corner page-corner-right" title="Next pages"></button>
-        <div class="book-page-header">Assembly</div>
-        <div class="book-page-content">
-          <div style="font-size:12px; opacity:0.8;">Verse</div>
-          <div id="grammarNatural" style="font-size:14px; font-weight:600; min-height:20px;"></div>
-          <div id="grammarScore" style="font-size:11px; opacity:0.7; margin-top:4px;"></div>
-          <div id="grammarHebrewLine" class="letter-board"></div>
+      <div class="book-page book-page-right verse-page" id="versePageRight">
+        <div class="book-page-content verse-page-content">
+          <div id="grammarNatural" class="verse-intent-line"></div>
+          <div id="grammarHebrewLine" class="letter-board verse-line" aria-label="Verse line"></div>
+          <div id="grammarScore" class="verse-meter-label">Grammar match: 0%</div>
+          <div class="verse-meter-track" aria-hidden="true">
+            <div id="verseMeterFill" class="verse-meter-fill"></div>
+          </div>
+          <div id="verseHint" class="verse-hint" aria-live="polite"></div>
+          <div id="verseTranslationReveal" class="verse-translation-reveal"></div>
 
-          <div class="row" style="margin-top:10px;">
-            <button id="enscribeBtn" disabled>Click the anvil glyph to enscribe</button>
+          <div class="row verse-footer-row">
+            <button id="enscribeBtn" disabled>Enscribe</button>
             <span class="pill">Lines completed: <span id="linesCompleted">0</span></span>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div id="wordInfoSheet" class="word-info-sheet" aria-hidden="true">
+    <div class="word-info-sheet-card">
+      <button id="wordInfoCloseBtn" class="word-info-close-btn" type="button">✕</button>
+      <div id="wordInfoHebrew" class="word-info-hebrew"></div>
+      <label class="word-info-toggle-row">
+        <input id="wordInfoTranslitToggle" type="checkbox" checked />
+        <span>Show transliteration</span>
+      </label>
+      <div id="wordInfoTranslit" class="word-info-translit"></div>
+      <div id="wordInfoMeaning" class="word-info-meaning"></div>
+      <div id="wordInfoExample" class="word-info-example"></div>
+      <div id="wordInfoAttach" class="word-info-attach"></div>
     </div>
   </div>
 

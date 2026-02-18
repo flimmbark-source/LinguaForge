@@ -42,18 +42,18 @@ export const gameState = {
   // Completed lines counter
   linesCompleted: 0,
 
-  // Glossary: all unique words ever forged (for glossary pages)
+  // Word history and Verse Book workspace state
   forgedWordsHistory: [],
+  parkedWordIds: [],
+  verseFailedAttempts: 0,
+  verseLastScore: 0,
 
-  // Word selector index for verse page
+  // Legacy selector/book state
   wordSelectorIndex: 0,
-
-  // Enscribe mode (started by clicking anvil glyph)
   enscribeModeActive: false,
   enscribeSelectedWords: [],
-
-  // Book glossary spread paging
   glossarySpreadIndex: 0,
+
 
   // Upgrades
   upgrades: {},
