@@ -133,8 +133,9 @@ export function completeSelectedVerse(selectedWords) {
  * @param {HTMLElement} chip - Word chip element
  * @param {string} instanceId - Instance ID of the verse word
  * @param {Function} onUpdate - Callback when verse is updated
+ * @param {Function} onExtract - Callback when chip is dropped outside verse line
  */
-export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
+export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
   let dragState = null;
 
   chip.addEventListener('pointerdown', e => {
@@ -155,8 +156,8 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
       chip,
       instanceId,
       pointerId: e.pointerId,
-      offsetX: e.clientX - rect.left,
-      offsetY: e.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
       startX: e.clientX,
       startY: e.clientY,
       placeholder,
@@ -167,8 +168,8 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
 
     // Make chip draggable
     chip.style.position = 'fixed';
-    chip.style.left = rect.left + 'px';
-    chip.style.top = rect.top + 'px';
+    chip.style.left = (e.clientX - rect.width / 2) + 'px';
+    chip.style.top = (e.clientY - rect.height / 2) + 'px';
     chip.style.zIndex = '1000';
     chip.style.opacity = '0.8';
     chip.setPointerCapture(e.pointerId);
@@ -179,8 +180,8 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
   chip.addEventListener('pointermove', e => {
     if (!dragState || dragState.chip !== chip) return;
     e.preventDefault();
-    const x = e.clientX - dragState.offsetX;
-    const y = e.clientY - dragState.offsetY;
+    const x = e.clientX - dragState.width / 2;
+    const y = e.clientY - dragState.height / 2;
     chip.style.left = x + 'px';
     chip.style.top = y + 'px';
 
@@ -196,9 +197,10 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     const moved = Math.abs(e.clientX - dragState.startX) > 5 || Math.abs(e.clientY - dragState.startY) > 5;
 
     if (moved) {
-      // Calculate insertion index BEFORE resetting styling
-      // This ensures we query chip positions while the dragged chip is still out of flow
-      handleVerseWordDrop(e.clientX, e.clientY, instanceId, onUpdate);
+      const droppedInLine = handleVerseWordDrop(e.clientX, e.clientY, instanceId, onUpdate);
+      if (!droppedInLine && onExtract) {
+        onExtract(instanceId, e.clientX, e.clientY);
+      }
     }
 
     // Remove placeholder
@@ -313,7 +315,11 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
  */
 export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
   const verseArea = document.getElementById('grammarHebrewLine');
-  if (!verseArea) return;
+  if (!verseArea) return false;
+
+  const lineRect = verseArea.getBoundingClientRect();
+  const isOverLine = clientX >= lineRect.left && clientX <= lineRect.right && clientY >= lineRect.top && clientY <= lineRect.bottom;
+  if (!isOverLine) return false;
 
   const isRTL = getComputedStyle(verseArea).direction === 'rtl';
   const chips = Array.from(verseArea.children).filter(el =>
@@ -366,6 +372,7 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
 
   reorderWord(instanceId, stateIndex);
   if (onUpdate) onUpdate();
+  return true;
 }
 
 /**

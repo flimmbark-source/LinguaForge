@@ -4,7 +4,7 @@
  */
 
 import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON, SOLUTION_HEBREW_ORDER } from './config.js?v=9';
-import { gameState } from './state.js?v=9';
+import { gameState, addWord, removeVerseWord, getNextWordId, clearVerseWords } from './state.js?v=9';
 import { setupWordChipDrag, sellWord, renderMoldsInViewport } from './molds.js?v=9';
 import { toggleScribePaused } from './scribes.js?v=9';
 import { evaluateVerse, setupVerseWordChipDrag, placeWordInVerse } from './grammar.js?v=9';
@@ -407,7 +407,9 @@ function renderVerseChips(force = false) {
     chip.style.direction = 'rtl';
     chip.textContent = wordInstance.hebrew;
     chip.dataset.instanceId = wordInstance.instanceId;
-    setupVerseWordChipDrag(chip, wordInstance.instanceId, () => updateGrammarUI(true));
+    setupVerseWordChipDrag(chip, wordInstance.instanceId, () => updateGrammarUI(true), (instanceId, clientX, clientY) => {
+      moveVerseWordBackToOrbit(instanceId, clientX, clientY);
+    });
 
     // Allow dragover for inventory words to be dropped between existing chips
     // This makes chips valid drop targets so position detection works correctly
@@ -420,6 +422,39 @@ function renderVerseChips(force = false) {
 
   // Update our tracking state
   lastRenderedVerseWords = gameState.verseWords.map(w => ({ instanceId: w.instanceId }));
+}
+
+
+
+function isPointInsideRect(x, y, rect) {
+  return !!rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+function moveVerseWordBackToOrbit(instanceId, clientX, clientY) {
+  const removed = removeVerseWord(instanceId);
+  if (!removed) return;
+
+  const newWordId = getNextWordId();
+  const lex = GRAMMAR_LEXICON[removed.hebrew];
+  addWord({
+    id: newWordId,
+    text: removed.hebrew,
+    english: lex?.gloss || removed.hebrew,
+    length: removed.hebrew.length,
+    power: 0,
+    heated: true,
+  });
+
+  const leftMat = elements.verseWorkMatLeft?.getBoundingClientRect();
+  const rightMat = elements.verseWorkMatRight?.getBoundingClientRect();
+  const inMat = isPointInsideRect(clientX, clientY, leftMat) || isPointInsideRect(clientX, clientY, rightMat);
+  if (inMat) {
+    gameState.parkedWordIds = [...new Set([...(gameState.parkedWordIds || []), newWordId])];
+  }
+
+  lastRenderedVerseWords = [];
+  orbitSnapshotKey = '';
+  updateUI();
 }
 
 /**
@@ -707,6 +742,8 @@ function renderVerseWordOrbit() {
         orbitDragState = { wordId: word.id, chip };
         chip.classList.add('dragging');
         elements.grammarHebrewLineDiv?.classList.add('compose-active');
+        chip.style.left = `${(e.clientX / window.innerWidth) * 100}%`;
+        chip.style.top = `${(e.clientY / window.innerHeight) * 100}%`;
         chip.setPointerCapture(e.pointerId);
       });
 
@@ -758,7 +795,22 @@ function renderVerseWordOrbit() {
   if (elements.verseWorkMatRight) elements.verseWorkMatRight.classList.toggle('active', matActive);
   if (elements.releaseParkedWordsBtn) {
     elements.releaseParkedWordsBtn.onclick = () => {
+      const verseWords = [...gameState.verseWords];
+      verseWords.forEach((vw) => {
+        const nextId = getNextWordId();
+        const lex = GRAMMAR_LEXICON[vw.hebrew];
+        addWord({
+          id: nextId,
+          text: vw.hebrew,
+          english: lex?.gloss || vw.hebrew,
+          length: vw.hebrew.length,
+          power: 0,
+          heated: true,
+        });
+      });
+      clearVerseWords();
       gameState.parkedWordIds = [];
+      lastRenderedVerseWords = [];
       orbitSnapshotKey = '';
       updateUI();
     };

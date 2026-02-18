@@ -4947,4 +4947,8 @@ body.book-overlay-active .magic-book {
 .word-info-toggle-row { display:flex; gap:6px; font-size:12px; margin-bottom: 6px; }
 .word-info-translit,.word-info-meaning,.word-info-example,.word-info-attach { font-size: 13px; margin-top: 4px; }
 
-.verse-line .line-word-chip { color: #120d07; }
+.verse-line .line-word-chip {
+  background: #eedcbc;
+  border-color: #b9975f;
+  color: #120d07;
+}
