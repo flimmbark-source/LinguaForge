@@ -4944,13 +4944,6 @@ body.book-overlay-active .magic-book {
 #verseWorkMatRight { left: 56%; right: 8%; bottom: 10%; justify-content: flex-end; }
 .verse-work-mat.active { display:flex; }
 .work-mat-release-btn { border: 1px solid rgba(93,64,30,.35); background: rgba(245,230,200,.8); border-radius: 999px; width: 24px; height: 24px; }
-.verse-release-btn {
-  position: absolute;
-  right: 10px;
-  top: 10px;
-  z-index: 10;
-  pointer-events: auto;
-}
 
 .wrong-order { animation: wrongWobble .32s ease; }
 @keyframes wrongWobble { 0%,100% { transform: translateX(0);} 25% { transform: translateX(-2px);} 75% { transform: translateX(2px);} }

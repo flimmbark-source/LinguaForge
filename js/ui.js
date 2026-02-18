@@ -47,7 +47,6 @@ export function initializeElements() {
   elements.verseWordOrbit = document.getElementById('verseWordOrbit');
   elements.verseWorkMatLeft = document.getElementById('verseWorkMatLeft');
   elements.verseWorkMatRight = document.getElementById('verseWorkMatRight');
-  elements.releaseParkedWordsBtn = document.getElementById('releaseParkedWordsBtn');
   elements.wordInfoSheet = document.getElementById('wordInfoSheet');
   elements.wordInfoCard = document.getElementById('wordInfoCard');
   elements.wordInfoHebrew = document.getElementById('wordInfoHebrew');
@@ -450,7 +449,9 @@ function getOrbitRelativePercent(clientX, clientY) {
 }
 
 function setWordContainerPosition(wordId, clientX, clientY) {
-  const { left, top } = getOrbitRelativePercent(clientX, clientY);
+  const safeX = Number.isFinite(clientX) ? clientX : window.innerWidth / 2;
+  const safeY = Number.isFinite(clientY) ? clientY : window.innerHeight / 2;
+  const { left, top } = getOrbitRelativePercent(safeX, safeY);
   gameState.wordContainerPositions = gameState.wordContainerPositions || {};
   gameState.wordContainerPositions[wordId] = { left, top };
 }
@@ -699,10 +700,10 @@ function wordOrbitPosition(index, total, parked) {
   }
   const perimeter = Math.max(total, 1);
   const t = index / perimeter;
-  if (t < 0.25) return { left: 18 + t / 0.25 * 64, top: 20 };
-  if (t < 0.5) return { left: 82, top: 20 + (t - 0.25) / 0.25 * 60 };
-  if (t < 0.75) return { left: 82 - (t - 0.5) / 0.25 * 64, top: 80 };
-  return { left: 18, top: 80 - (t - 0.75) / 0.25 * 60 };
+  if (t < 0.25) return { left: 10 + t / 0.25 * 80, top: 10 };
+  if (t < 0.5) return { left: 90, top: 10 + (t - 0.25) / 0.25 * 80 };
+  if (t < 0.75) return { left: 90 - (t - 0.5) / 0.25 * 80, top: 90 };
+  return { left: 10, top: 90 - (t - 0.75) / 0.25 * 80 };
 }
 
 let wordInfoDismissListenerActive = false;
@@ -801,7 +802,7 @@ function renderVerseWordOrbit() {
       chip.addEventListener('pointerdown', (e) => {
         moved = false;
         const rect = chip.getBoundingClientRect();
-        orbitDragState = { wordId: word.id, chip, width: rect.width, height: rect.height };
+        orbitDragState = { wordId: word.id, chip, width: rect.width, height: rect.height, lastClientX: e.clientX, lastClientY: e.clientY };
         chip.classList.add('dragging');
         elements.grammarHebrewLineDiv?.classList.add('compose-active');
         chip.style.position = 'fixed';
@@ -815,6 +816,8 @@ function renderVerseWordOrbit() {
       chip.addEventListener('pointermove', (e) => {
         if (!orbitDragState || orbitDragState.wordId !== word.id) return;
         moved = true;
+        orbitDragState.lastClientX = e.clientX;
+        orbitDragState.lastClientY = e.clientY;
         chip.style.left = (e.clientX - orbitDragState.width / 2) + 'px';
         chip.style.top = (e.clientY - orbitDragState.height / 2) + 'px';
       });
@@ -831,12 +834,14 @@ function renderVerseWordOrbit() {
         chip.style.zIndex = '';
         elements.grammarHebrewLineDiv?.classList.remove('compose-active');
 
+        const dropX = Number.isFinite(e.clientX) && e.clientX > 0 ? e.clientX : orbitDragState.lastClientX;
+        const dropY = Number.isFinite(e.clientY) && e.clientY > 0 ? e.clientY : orbitDragState.lastClientY;
         const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
         const matRectLeft = elements.verseWorkMatLeft?.getBoundingClientRect();
         const matRectRight = elements.verseWorkMatRight?.getBoundingClientRect();
-        const inLine = lineRect && e.clientX >= lineRect.left && e.clientX <= lineRect.right && e.clientY >= lineRect.top && e.clientY <= lineRect.bottom;
-        const inMatLeft = matRectLeft && e.clientX >= matRectLeft.left && e.clientX <= matRectLeft.right && e.clientY >= matRectLeft.top && e.clientY <= matRectLeft.bottom;
-        const inMatRight = matRectRight && e.clientX >= matRectRight.left && e.clientX <= matRectRight.right && e.clientY >= matRectRight.top && e.clientY <= matRectRight.bottom;
+        const inLine = lineRect && dropX >= lineRect.left && dropX <= lineRect.right && dropY >= lineRect.top && dropY <= lineRect.bottom;
+        const inMatLeft = matRectLeft && dropX >= matRectLeft.left && dropX <= matRectLeft.right && dropY >= matRectLeft.top && dropY <= matRectLeft.bottom;
+        const inMatRight = matRectRight && dropX >= matRectRight.left && dropX <= matRectRight.right && dropY >= matRectRight.top && dropY <= matRectRight.bottom;
         const inMat = inMatLeft || inMatRight;
 
         if (inLine) {
@@ -846,7 +851,7 @@ function renderVerseWordOrbit() {
           orbitSnapshotKey = '';
           updateUI();
         } else if (inMat || moved) {
-          setWordContainerPosition(word.id, e.clientX, e.clientY);
+          setWordContainerPosition(word.id, dropX, dropY);
           if (inMat) {
             if (!parkedSet.has(word.id)) gameState.parkedWordIds = [...(gameState.parkedWordIds || []), word.id];
           } else {
@@ -856,7 +861,7 @@ function renderVerseWordOrbit() {
           updateUI();
         } else {
           chip.style.visibility = '';
-          openWordInfo(word.text, e.clientX, e.clientY);
+          openWordInfo(word.text, dropX, dropY);
         }
         orbitDragState = null;
       });
@@ -868,34 +873,6 @@ function renderVerseWordOrbit() {
   const matActive = (gameState.parkedWordIds || []).length > 0 || words.length > 3;
   if (elements.verseWorkMatLeft) elements.verseWorkMatLeft.classList.toggle('active', matActive);
   if (elements.verseWorkMatRight) elements.verseWorkMatRight.classList.toggle('active', matActive);
-  if (elements.releaseParkedWordsBtn) {
-    elements.releaseParkedWordsBtn.onclick = () => {
-      const verseWords = [...gameState.verseWords];
-      verseWords.forEach((vw, idx) => {
-        const nextId = getNextWordId();
-        const lex = GRAMMAR_LEXICON[vw.hebrew];
-        addWord({
-          id: nextId,
-          text: vw.hebrew,
-          english: lex?.gloss || vw.hebrew,
-          length: vw.hebrew.length,
-          power: 0,
-          heated: true,
-        });
-        const cx = window.innerWidth * (0.45 + (idx % 4) * 0.03);
-        const cy = window.innerHeight * (0.55 + Math.floor(idx / 4) * 0.04);
-        setWordContainerPosition(nextId, cx, cy);
-      });
-      clearVerseWords();
-      gameState.parkedWordIds = [];
-      const validIds = new Set(gameState.words.map((w) => w.id));
-      Object.keys(gameState.wordContainerPositions || {}).forEach((id) => {
-        if (!validIds.has(Number(id))) delete gameState.wordContainerPositions[id];
-      });
-      lastRenderedVerseWords = [];
-      orbitSnapshotKey = '';
-      updateUI();
-    };
   }
 }
 

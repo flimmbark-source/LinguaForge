@@ -161,6 +161,8 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
       startX: e.clientX,
       startY: e.clientY,
       placeholder,
+      lastClientX: e.clientX,
+      lastClientY: e.clientY,
     };
 
     // Insert placeholder at current position
@@ -181,6 +183,8 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
   chip.addEventListener('pointermove', e => {
     if (!dragState || dragState.chip !== chip) return;
     e.preventDefault();
+    dragState.lastClientX = e.clientX;
+    dragState.lastClientY = e.clientY;
     chip.style.left = e.clientX + 'px';
     chip.style.top = e.clientY + 'px';
 
@@ -192,13 +196,17 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
     if (!dragState || dragState.chip !== chip) return;
     chip.releasePointerCapture(e.pointerId);
 
+    const dropX = Number.isFinite(e.clientX) && e.clientX > 0 ? e.clientX : dragState.lastClientX;
+    const dropY = Number.isFinite(e.clientY) && e.clientY > 0 ? e.clientY : dragState.lastClientY;
+
     // Check if we moved significantly (to distinguish from clicks)
-    const moved = Math.abs(e.clientX - dragState.startX) > 5 || Math.abs(e.clientY - dragState.startY) > 5;
+    const moved = Math.abs(dropX - dragState.startX) > 5 || Math.abs(dropY - dragState.startY) > 5;
 
     if (moved) {
-      const droppedInLine = handleVerseWordDrop(e.clientX, e.clientY, instanceId, onUpdate);
+      chip.style.visibility = 'hidden';
+      const droppedInLine = handleVerseWordDrop(dropX, dropY, instanceId, onUpdate);
       if (!droppedInLine && onExtract) {
-        onExtract(instanceId, e.clientX, e.clientY);
+        onExtract(instanceId, dropX, dropY);
       }
     }
 
@@ -217,6 +225,7 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
     chip.style.opacity = '';
 
     if (!moved) {
+      chip.style.visibility = '';
       // Just a click, not a drag - still update UI
       if (onUpdate) onUpdate();
     }
@@ -242,6 +251,7 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
     chip.style.transform = '';
     chip.style.zIndex = '';
     chip.style.opacity = '';
+    chip.style.visibility = '';
 
     gameState.draggedVerseInstanceId = null;
     dragState = null;
