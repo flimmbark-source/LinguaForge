@@ -1378,6 +1378,17 @@ button.secondary {
   opacity: 0.4;
 }
 
+.audio-controls-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: transparent;
+}
+
+.audio-controls-backdrop.hidden {
+  display: none;
+}
+
 .audio-controls-panel {
   position: fixed;
   top: 56px;

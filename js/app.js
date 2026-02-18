@@ -1337,6 +1337,7 @@ function setupEventHandlers() {
   // Audio controls
   const audioToggleBtn = document.getElementById('audioToggleBtn');
   const audioControls = document.getElementById('audioControls');
+  const audioControlsBackdrop = document.getElementById('audioControlsBackdrop');
   const musicVolumeSlider = document.getElementById('musicVolumeSlider');
   const sfxVolumeSlider = document.getElementById('sfxVolumeSlider');
   const musicVolumeValue = document.getElementById('musicVolumeValue');
@@ -1366,24 +1367,42 @@ function setupEventHandlers() {
 
     syncVolumeSliders();
 
+    const setAudioControlsOpen = (isOpen) => {
+      audioControls.classList.toggle('hidden', !isOpen);
+      if (audioControlsBackdrop) {
+        audioControlsBackdrop.classList.toggle('hidden', !isOpen);
+      }
+      if (isOpen) {
+        syncVolumeSliders();
+      }
+    };
+
     audioToggleBtn.addEventListener('pointerdown', stopAudioTogglePointer);
     audioToggleBtn.addEventListener('mousedown', stopAudioTogglePointer);
     audioToggleBtn.addEventListener('click', (event) => {
       event.stopPropagation();
-      audioControls.classList.toggle('hidden');
-      if (!audioControls.classList.contains('hidden')) {
-        syncVolumeSliders();
-      }
+      setAudioControlsOpen(audioControls.classList.contains('hidden'));
     });
 
     audioControls.addEventListener('pointerdown', stopAudioPanelPointer);
     audioControls.addEventListener('mousedown', stopAudioPanelPointer);
     audioControls.addEventListener('click', stopAudioPanelClick);
 
+    if (audioControlsBackdrop) {
+      audioControlsBackdrop.addEventListener('pointerdown', (event) => {
+        event.stopPropagation();
+        setAudioControlsOpen(false);
+      });
+      audioControlsBackdrop.addEventListener('click', (event) => {
+        event.stopPropagation();
+        setAudioControlsOpen(false);
+      });
+    }
+
     document.addEventListener('click', (event) => {
       if (audioControls.classList.contains('hidden')) return;
       if (!audioControls.contains(event.target) && !audioToggleBtn.contains(event.target)) {
-        audioControls.classList.add('hidden');
+        setAudioControlsOpen(false);
       }
     });
 
