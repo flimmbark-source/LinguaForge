@@ -3813,8 +3813,9 @@ body.book-overlay-active .magic-book {
 }
 
 .book-page-content button {
-  background: #5a3d1a;
-  color: #f5e6c8;
+  background: #ead6b0;
+  color: #1a1208;
+  border: 1px solid #a3834e;
 }
 
 .book-page-content button:disabled {
@@ -4823,6 +4824,7 @@ body.book-overlay-active .magic-book {
   font-weight: 700;
   opacity: 0.9;
   margin: 0;
+  color: #17120b;
 }
 
 .verse-line {
@@ -4875,16 +4877,17 @@ body.book-overlay-active .magic-book {
   to { transform: translateY(-4px); box-shadow: 0 0 12px rgba(245,158,11,.35); }
 }
 
-.verse-meter-label { margin-top: 2px; font-size: 11px; opacity: .82; text-align: center; }
+.verse-meter-label { margin-top: 2px; font-size: 11px; opacity: .82; text-align: center; color: #1d1710; }
 .verse-meter-track { height: 6px; width: 100%; border-radius: 999px; background: rgba(93,64,30,.15); overflow: hidden; }
 .verse-meter-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#60a5fa,#fbbf24); transition: width .2s ease; }
 .verse-meter-fill.pulse { animation: verseMeterPulse .25s ease; }
 @keyframes verseMeterPulse { from { filter: brightness(1.6);} to { filter: brightness(1);} }
 
-.verse-hint { min-height: 18px; font-size: 11px; color: #6b7280; font-style: italic; text-align: center; }
-.verse-translation-reveal { min-height: 20px; opacity: 0; transition: opacity .35s ease; text-align:center; font-weight: 600; }
+.verse-hint { min-height: 18px; font-size: 11px; color: #4b5563; font-style: italic; text-align: center; }
+.verse-translation-reveal { min-height: 20px; opacity: 0; transition: opacity .35s ease; text-align:center; font-weight: 600; color: #19130c; }
 .verse-translation-reveal.visible { opacity: .95; }
-.verse-footer-row { margin-top: 2px; justify-content: center; gap: 8px; }
+.verse-footer-row { margin-top: 2px; justify-content: center; gap: 8px; color: #1a1208; }
+.verse-footer-row #enscribeBtn { display: none; }
 .verse-footer-row #enscribeBtn,
 .verse-footer-row .pill,
 .verse-footer-row .work-mat-release-btn { pointer-events: auto; }
@@ -4898,9 +4901,9 @@ body.book-overlay-active .magic-book {
 .verse-orbit-chip {
   position: absolute;
   transform: translate(-50%, -50%);
-  background: #e8d5b0;
-  border-color: #c9b58a;
-  color:#2d1f0e;
+  background: #eedcbc;
+  border-color: #b9975f;
+  color:#120d07;
   animation: orbitFloat 4s ease-in-out infinite;
   z-index: 3;
 }
@@ -4943,3 +4946,5 @@ body.book-overlay-active .magic-book {
 .word-info-hebrew { font-size: 28px; direction: rtl; font-weight: 700; margin-bottom: 8px; }
 .word-info-toggle-row { display:flex; gap:6px; font-size:12px; margin-bottom: 6px; }
 .word-info-translit,.word-info-meaning,.word-info-example,.word-info-attach { font-size: 13px; margin-top: 4px; }
+
+.verse-line .line-word-chip { color: #120d07; }

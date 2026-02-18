@@ -503,7 +503,8 @@ export function updateEnscribeButton() {
   const solved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
     && gameState.verseWords.every((w, i) => w.hebrew === SOLUTION_HEBREW_ORDER[i]);
   elements.enscribeBtn.disabled = !solved;
-  elements.enscribeBtn.textContent = solved ? 'Enscribe' : 'Enscribe';
+  elements.enscribeBtn.style.display = solved ? 'inline-flex' : 'none';
+  elements.enscribeBtn.textContent = 'Enscribe';
 }
 
 /**
@@ -629,6 +630,7 @@ export function renderGlossary() {
 
 
 let orbitDragState = null;
+let orbitSnapshotKey = "";
 
 function wordOrbitPosition(index, total, parked) {
   if (parked) {
@@ -638,10 +640,10 @@ function wordOrbitPosition(index, total, parked) {
   }
   const perimeter = Math.max(total, 1);
   const t = index / perimeter;
-  if (t < 0.25) return { left: 5 + t / 0.25 * 90, top: 8 };
-  if (t < 0.5) return { left: 95, top: 8 + (t - 0.25) / 0.25 * 84 };
-  if (t < 0.75) return { left: 95 - (t - 0.5) / 0.25 * 90, top: 92 };
-  return { left: 5, top: 92 - (t - 0.75) / 0.25 * 84 };
+  if (t < 0.25) return { left: 18 + t / 0.25 * 64, top: 20 };
+  if (t < 0.5) return { left: 82, top: 20 + (t - 0.25) / 0.25 * 60 };
+  if (t < 0.75) return { left: 82 - (t - 0.5) / 0.25 * 64, top: 80 };
+  return { left: 18, top: 80 - (t - 0.75) / 0.25 * 60 };
 }
 
 function openWordInfo(wordText) {
@@ -679,74 +681,87 @@ function setupWordInfoHandlers() {
 function renderVerseWordOrbit() {
   if (!elements.verseWordOrbit) return;
   const words = gameState.words.slice();
-  elements.verseWordOrbit.innerHTML = '';
   const parkedSet = new Set(gameState.parkedWordIds || []);
+  const snapshotKey = words.map((w) => `${w.id}:${parkedSet.has(w.id) ? 1 : 0}`).join('|');
 
-  words.forEach((word, i) => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'line-word-chip verse-orbit-chip';
-    chip.textContent = word.text;
-    chip.dataset.wordId = String(word.id);
-    const pos = wordOrbitPosition(i, words.length, parkedSet.has(word.id));
-    chip.style.left = pos.left + '%';
-    chip.style.top = pos.top + '%';
-    if (!pos.parked) chip.style.animationDelay = `${(i % 7) * 0.3}s`;
-    if (pos.parked) chip.classList.add('is-parked');
+  // Prevent chips from blinking/rebuilding while dragging.
+  if (!orbitDragState && snapshotKey !== orbitSnapshotKey) {
+    elements.verseWordOrbit.innerHTML = '';
+    orbitSnapshotKey = snapshotKey;
 
-    let moved = false;
-    chip.addEventListener('pointerdown', (e) => {
-      moved = false;
-      orbitDragState = { wordId: word.id, chip };
-      chip.classList.add('dragging');
-      elements.grammarHebrewLineDiv?.classList.add('compose-active');
-      chip.setPointerCapture(e.pointerId);
+    words.forEach((word, i) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'line-word-chip verse-orbit-chip';
+      chip.textContent = word.text;
+      chip.dataset.wordId = String(word.id);
+      const pos = wordOrbitPosition(i, words.length, parkedSet.has(word.id));
+      chip.style.left = pos.left + '%';
+      chip.style.top = pos.top + '%';
+      if (!pos.parked) chip.style.animationDelay = `${(i % 7) * 0.3}s`;
+      if (pos.parked) chip.classList.add('is-parked');
+
+      let moved = false;
+      chip.addEventListener('pointerdown', (e) => {
+        moved = false;
+        orbitDragState = { wordId: word.id, chip };
+        chip.classList.add('dragging');
+        elements.grammarHebrewLineDiv?.classList.add('compose-active');
+        chip.setPointerCapture(e.pointerId);
+      });
+
+      chip.addEventListener('pointermove', (e) => {
+        if (!orbitDragState || orbitDragState.wordId !== word.id) return;
+        moved = true;
+        chip.style.left = `${(e.clientX / window.innerWidth) * 100}%`;
+        chip.style.top = `${(e.clientY / window.innerHeight) * 100}%`;
+      });
+
+      chip.addEventListener('pointerup', (e) => {
+        if (!orbitDragState || orbitDragState.wordId !== word.id) return;
+        chip.releasePointerCapture(e.pointerId);
+        chip.classList.remove('dragging');
+        elements.grammarHebrewLineDiv?.classList.remove('compose-active');
+
+        const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
+        const matRectLeft = elements.verseWorkMatLeft?.getBoundingClientRect();
+        const matRectRight = elements.verseWorkMatRight?.getBoundingClientRect();
+        const inLine = lineRect && e.clientX >= lineRect.left && e.clientX <= lineRect.right && e.clientY >= lineRect.top && e.clientY <= lineRect.bottom;
+        const inMatLeft = matRectLeft && e.clientX >= matRectLeft.left && e.clientX <= matRectLeft.right && e.clientY >= matRectLeft.top && e.clientY <= matRectLeft.bottom;
+        const inMatRight = matRectRight && e.clientX >= matRectRight.left && e.clientX <= matRectRight.right && e.clientY >= matRectRight.top && e.clientY <= matRectRight.bottom;
+        const inMat = inMatLeft || inMatRight;
+
+        if (inLine) {
+          placeWordInVerse(word.id, gameState.verseWords.length);
+          gameState.parkedWordIds = (gameState.parkedWordIds || []).filter(id => id !== word.id);
+          orbitSnapshotKey = '';
+          updateUI();
+        } else if (inMat) {
+          if (!parkedSet.has(word.id)) gameState.parkedWordIds = [...(gameState.parkedWordIds || []), word.id];
+          orbitSnapshotKey = '';
+          updateUI();
+        } else if (!moved) {
+          openWordInfo(word.text);
+        } else {
+          orbitSnapshotKey = '';
+          updateUI();
+        }
+        orbitDragState = null;
+      });
+
+      elements.verseWordOrbit.appendChild(chip);
     });
-
-    chip.addEventListener('pointermove', (e) => {
-      if (!orbitDragState || orbitDragState.wordId !== word.id) return;
-      moved = true;
-      chip.style.left = `calc(${(e.clientX / window.innerWidth) * 100}% - 20px)`;
-      chip.style.top = `calc(${(e.clientY / window.innerHeight) * 100}% - 12px)`;
-    });
-
-    chip.addEventListener('pointerup', (e) => {
-      if (!orbitDragState || orbitDragState.wordId !== word.id) return;
-      chip.releasePointerCapture(e.pointerId);
-      chip.classList.remove('dragging');
-      elements.grammarHebrewLineDiv?.classList.remove('compose-active');
-
-      const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
-      const matRectLeft = elements.verseWorkMatLeft?.getBoundingClientRect();
-      const matRectRight = elements.verseWorkMatRight?.getBoundingClientRect();
-      const inLine = lineRect && e.clientX >= lineRect.left && e.clientX <= lineRect.right && e.clientY >= lineRect.top && e.clientY <= lineRect.bottom;
-      const inMatLeft = matRectLeft && e.clientX >= matRectLeft.left && e.clientX <= matRectLeft.right && e.clientY >= matRectLeft.top && e.clientY <= matRectLeft.bottom;
-      const inMatRight = matRectRight && e.clientX >= matRectRight.left && e.clientX <= matRectRight.right && e.clientY >= matRectRight.top && e.clientY <= matRectRight.bottom;
-      const inMat = inMatLeft || inMatRight;
-
-      if (inLine) {
-        placeWordInVerse(word.id, gameState.verseWords.length);
-        gameState.parkedWordIds = (gameState.parkedWordIds || []).filter(id => id !== word.id);
-        updateUI();
-      } else if (inMat) {
-        if (!parkedSet.has(word.id)) gameState.parkedWordIds = [...(gameState.parkedWordIds || []), word.id];
-        updateUI();
-      } else if (!moved) {
-        openWordInfo(word.text);
-      } else {
-        updateUI();
-      }
-      orbitDragState = null;
-    });
-
-    elements.verseWordOrbit.appendChild(chip);
-  });
+  }
 
   const matActive = (gameState.parkedWordIds || []).length > 0 || words.length > 3;
   if (elements.verseWorkMatLeft) elements.verseWorkMatLeft.classList.toggle('active', matActive);
   if (elements.verseWorkMatRight) elements.verseWorkMatRight.classList.toggle('active', matActive);
   if (elements.releaseParkedWordsBtn) {
-    elements.releaseParkedWordsBtn.onclick = () => { gameState.parkedWordIds = []; updateUI(); };
+    elements.releaseParkedWordsBtn.onclick = () => {
+      gameState.parkedWordIds = [];
+      orbitSnapshotKey = '';
+      updateUI();
+    };
   }
 }
 
