@@ -775,8 +775,6 @@ let wordInfoDismissListenerActive = false;
 function positionWordInfoAtPoint(clientX, clientY) {
   if (!elements.wordInfoCard) return;
   const card = elements.wordInfoCard;
-  const centerX = window.innerWidth / 2;
-  const centerY = window.innerHeight / 2;
 
   card.style.left = '-9999px';
   card.style.top = '-9999px';
@@ -787,11 +785,38 @@ function positionWordInfoAtPoint(clientX, clientY) {
   const width = rect.width || 220;
   const height = rect.height || 120;
 
-  let left = clientX < centerX ? clientX : clientX - width;
-  let top = clientY < centerY ? clientY : clientY - height;
+  // In landscape mobile, the book is a full-screen overlay and the interior
+  // is a centred panel (min(70vw,500px)). Clamp the card within that panel
+  // so it doesn't land on the dark backdrop outside the book.
+  const bookInterior = document.querySelector('.book-interior');
+  const isLandscapeOverlay = bookInterior &&
+    window.matchMedia('(max-width: 768px) and (orientation: landscape)').matches;
 
-  left = Math.max(8, Math.min(window.innerWidth - width - 8, left));
-  top = Math.max(8, Math.min(window.innerHeight - height - 8, top));
+  let minX, maxX, minY, maxY;
+  if (isLandscapeOverlay) {
+    const interiorRect = bookInterior.getBoundingClientRect();
+    const pad = 6;
+    minX = interiorRect.left + pad;
+    maxX = interiorRect.right - pad;
+    minY = interiorRect.top + pad;
+    maxY = interiorRect.bottom - pad;
+  } else {
+    minX = 8;
+    maxX = window.innerWidth - 8;
+    minY = 8;
+    maxY = window.innerHeight - 8;
+  }
+
+  // Position card directly at the click point, preferring below-right,
+  // flipping above or left if it would overflow the bounds.
+  let left = clientX + 8;
+  let top = clientY + 8;
+
+  if (left + width > maxX) left = clientX - width - 8;
+  if (top + height > maxY) top = clientY - height - 8;
+
+  left = Math.max(minX, Math.min(maxX - width, left));
+  top = Math.max(minY, Math.min(maxY - height, top));
 
   card.style.left = `${left}px`;
   card.style.top = `${top}px`;
