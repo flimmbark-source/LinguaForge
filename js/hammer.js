@@ -565,6 +565,18 @@ export class HammerSystem {
     return safeMax;
   }
 
+  /**
+   * Handle length represented by the visible hammer sprite.
+   *
+   * The physics length can shrink/grow based on where the player grips, but the
+   * PNG remains a fixed-size hammer. Interaction should therefore target the
+   * visual haft span (butt-to-head), not only the current pivot-to-head segment.
+   */
+  getVisualHandleLength() {
+    const base = this.hammer.baseLength;
+    return Number.isFinite(base) && base > 0 ? base : 180;
+  }
+
 
   /**
    * Setup event listeners for hammer interaction
@@ -598,17 +610,27 @@ export class HammerSystem {
     const h = this.hammer;
     const isMobile = this.width <= MOBILE_BREAKPOINT;
     const adjustedPy = py;
-    const x1 = h.pivotX;
-    const y1 = h.pivotY;
-    const x2 = h.headX;
-    const y2 = h.headY;
-    const dx = x2 - x1;
-    const dy = y2 - y1;
+    const headX = h.headX;
+    const headY = h.headY;
+    const pivotDx = headX - h.pivotX;
+    const pivotDy = headY - h.pivotY;
+    const pivotLen = Math.hypot(pivotDx, pivotDy) || 1;
+    const axisX = pivotDx / pivotLen;
+    const axisY = pivotDy / pivotLen;
+
+    // Project against the full visible haft (butt->head), not just pivot->head.
+    // This keeps the butt end grabbable even after mid-haft grips or ripped hits.
+    const visibleLength = this.getVisualHandleLength();
+    const buttX = headX - axisX * visibleLength;
+    const buttY = headY - axisY * visibleLength;
+    const dx = headX - buttX;
+    const dy = headY - buttY;
     const lenSq = dx * dx + dy * dy || 1;
-    let t = ((px - x1) * dx + (adjustedPy - y1) * dy) / lenSq;
+
+    let t = ((px - buttX) * dx + (adjustedPy - buttY) * dy) / lenSq;
     t = Math.max(0, Math.min(1, t));
-    const cx = x1 + dx * t;
-    const cy = y1 + dy * t;
+    const cx = buttX + dx * t;
+    const cy = buttY + dy * t;
     const dist = Math.hypot(px - cx, adjustedPy - cy);
 
     // Keep grabbing valid anywhere along the haft (segment projection above),
@@ -1812,7 +1834,7 @@ updateFreeHammer(dt) {
 
         // Reset the haft to its full endpoint so the entire visible handle is
         // represented by the grab segment after a ripped hit.
-        const fullHaftLength = this.getMaxHandleLength();
+        const fullHaftLength = this.getVisualHandleLength();
         hammer.length = fullHaftLength;
         hammer.pivotX = hammer.headX - haftAxisX * fullHaftLength;
         hammer.pivotY = hammer.headY - haftAxisY * fullHaftLength;
