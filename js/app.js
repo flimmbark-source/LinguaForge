@@ -990,9 +990,20 @@ function initializeGame() {
           pestleSystem.pestle.prevHeadY = pestleSystem.pestle.headY;
         }
         if (toolName === 'shovel' && shovelSystem) {
+                    // Mirror hammer drag-out behavior so the shovel is immediately
+          // "in hand" the first time it is pulled from the sidebar.
+          if (!wasActiveTool) {
+            shovelSystem.input.isDown = true;
+            shovelSystem.shovel.isHeld = true;
+          }
+
+          shovelSystem.input.mouseX = canvasX;
+          shovelSystem.input.mouseY = canvasY;
           shovelSystem.shovel.pivotX = canvasX;
           shovelSystem.shovel.pivotY = canvasY;
           shovelSystem.shovel.headX = canvasX;
+          shovelSystem.prevHeadX = shovelSystem.shovel.headX;
+          shovelSystem.prevHeadY = shovelSystem.shovel.headY;
           shovelSystem.shovel.headY = canvasY + (shovelSystem.shovel.length || 120);
         }
         if (toolName === 'spyglass') {
@@ -1284,6 +1295,7 @@ function setupToolSelection() {
     shovelBtn.classList.add('active');
 
     if (shovelSystem) shovelSystem.start();
+    syncSharedToolCanvasClearing();
 
     // Update hint text
     if (craftingHint) {
