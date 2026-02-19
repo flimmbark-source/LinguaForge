@@ -45,6 +45,7 @@ export class PestleSystem {
     this.onInkProduced = null;
     this.onPutAway = null;
     this.overlayRenderer = null;
+    this.suppressCanvasClear = false;
 
     // Load pestle and mortar PNG images
     this._pestleImg = new Image();
@@ -1010,7 +1011,9 @@ export class PestleSystem {
   // ─── Render ───────────────────────────────────────────
 
   render() {
-    this.ctx.clearRect(0, 0, this.width, this.height);
+    if (!this.suppressCanvasClear) {
+      this.ctx.clearRect(0, 0, this.width, this.height);
+    }
 
     // Layer order: mortar back → pestle → mortar front rim → ink drops
     this.drawMortarBack(this.ctx, this.mortar);
@@ -1041,6 +1044,10 @@ export class PestleSystem {
 
   setOverlayRenderer(renderer) {
     this.overlayRenderer = renderer;
+  }
+
+  setSuppressCanvasClear(suppress) {
+    this.suppressCanvasClear = !!suppress;
   }
 
   start() {
