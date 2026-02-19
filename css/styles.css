@@ -2401,9 +2401,41 @@ button.secondary {
 
   .book-interior {
     width: min(70vw, 500px);
-    min-height: 50vh;
-    max-height: 85vh;
-    overflow-y: auto;
+    min-height: max(50vh, 260px);
+    max-height: 90vh;
+    overflow: hidden;
+  }
+
+  /* ─ Verse book: scale content for landscape ─ */
+  .verse-center-stack {
+    gap: 5px;
+  }
+
+  .verse-orbit-chip {
+    padding: 4px 8px;
+  }
+
+  .verse-entry-container {
+    min-height: 36px;
+    padding: 4px 8px;
+  }
+
+  .verse-line {
+    min-height: 36px;
+    padding: 4px 8px;
+  }
+
+  .verse-hint {
+    min-height: 14px;
+    font-size: 10px;
+  }
+
+  .verse-translation-reveal {
+    min-height: 16px;
+  }
+
+  .verse-intent-line {
+    font-size: 12px;
   }
 
   .book-page {
@@ -2690,6 +2722,7 @@ button.secondary {
   .tools-sidebar-content {
     background: rgba(15, 23, 42, 0.9);
     gap: 6px;
+    align-items: center;
   }
 
   .tool-slot {
@@ -2759,7 +2792,45 @@ button.secondary {
 
   .book-interior {
     width: min(55vw, 320px);
-    min-height: 140px;
+    min-height: 85vh;
+    overflow: hidden;
+  }
+
+  /* ─ Verse book: further compact for very small landscape ─ */
+  .verse-center-stack {
+    gap: 3px;
+  }
+
+  .verse-orbit-chip {
+    padding: 3px 6px;
+    font-size: 12px;
+  }
+
+  /* ─ Tool slots: smaller for very small landscape screens ─ */
+  .tool-slot {
+    width: 38px;
+    padding: 4px 3px;
+    gap: 2px;
+  }
+
+  .tool-slot-icon {
+    font-size: 15px;
+  }
+
+  .tool-slot-label {
+    font-size: 7px;
+  }
+
+  .tools-sidebar.open .tools-sidebar-content,
+  .tools-sidebar.pinned .tools-sidebar-content {
+    max-width: 60px;
+    padding: 6px 4px;
+  }
+
+  .tools-sidebar.open:hover .tools-sidebar-content,
+  .tools-sidebar.pinned:hover .tools-sidebar-content {
+    max-width: 60px;
+    padding: 6px 4px;
   }
 
   .mold-viewport-wrapper .mold-viewport {
