@@ -930,9 +930,20 @@ function renderVerseWordOrbit() {
           orbitDragState = null;
           updateUI();
         } else if (moved) {
-          // If dropped outside the verse spread, keep the chip in its prior slot.
+          // If dropped outside the verse spread, restore chip to its stored position.
+          const savedPos = gameState.wordContainerPositions?.[word.id];
+          if (savedPos) {
+            chip.style.left = savedPos.left + '%';
+            chip.style.top = savedPos.top + '%';
+          }
           chip.style.visibility = '';
         } else {
+          // Simple tap/click — restore position and show word info.
+          const savedPos = gameState.wordContainerPositions?.[word.id];
+          if (savedPos) {
+            chip.style.left = savedPos.left + '%';
+            chip.style.top = savedPos.top + '%';
+          }
           chip.style.visibility = '';
           openWordInfo(word.text, dropX, dropY);
         }

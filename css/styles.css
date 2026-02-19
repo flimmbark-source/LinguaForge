@@ -2384,6 +2384,11 @@ button.secondary {
     backdrop-filter: blur(4px);
   }
 
+  /* Word info popup must sit above the landscape book overlay */
+  .word-info-sheet {
+    z-index: 1200;
+  }
+
   .magic-book .book-toggle-btn {
     display: flex;
     left: 12px;
