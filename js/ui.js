@@ -456,6 +456,55 @@ function setWordContainerPosition(wordId, clientX, clientY) {
   gameState.wordContainerPositions[wordId] = { left, top };
 }
 
+function separateOverlappingWordContainers(wordIds) {
+  const orbitRect = elements.verseWordOrbit?.getBoundingClientRect();
+  const width = orbitRect?.width || window.innerWidth;
+  const height = orbitRect?.height || window.innerHeight;
+  if (width <= 0 || height <= 0) return;
+
+  gameState.wordContainerPositions = gameState.wordContainerPositions || {};
+
+  const horizontalGapPercent = (120 / width) * 100;
+  const verticalGapPercent = (42 / height) * 100;
+  const maxPasses = 8;
+
+  for (let pass = 0; pass < maxPasses; pass += 1) {
+    let moved = false;
+
+    for (let i = 0; i < wordIds.length; i += 1) {
+      const idA = wordIds[i];
+      const posA = gameState.wordContainerPositions[idA];
+      if (!posA) continue;
+
+      for (let j = i + 1; j < wordIds.length; j += 1) {
+        const idB = wordIds[j];
+        const posB = gameState.wordContainerPositions[idB];
+        if (!posB) continue;
+
+        const dx = posB.left - posA.left;
+        const dy = posB.top - posA.top;
+        const overlapX = horizontalGapPercent - Math.abs(dx);
+        const overlapY = verticalGapPercent - Math.abs(dy);
+        if (overlapX <= 0 || overlapY <= 0) continue;
+
+        moved = true;
+        const pushX = Math.max(0.6, overlapX / 2);
+        const pushY = Math.max(0.4, overlapY / 2);
+
+        const dirX = dx === 0 ? (i % 2 === 0 ? -1 : 1) : Math.sign(dx);
+        const dirY = dy === 0 ? (j % 2 === 0 ? -1 : 1) : Math.sign(dy);
+
+        posA.left = clampPercent(posA.left - dirX * pushX);
+        posB.left = clampPercent(posB.left + dirX * pushX);
+        posA.top = clampPercent(posA.top - dirY * pushY);
+        posB.top = clampPercent(posB.top + dirY * pushY);
+      }
+    }
+
+    if (!moved) break;
+  }
+}
+
 function moveVerseWordBackToOrbit(instanceId, clientX, clientY) {
   const removed = removeVerseWord(instanceId);
   if (!removed) return;
@@ -792,6 +841,8 @@ function renderVerseWordOrbit() {
     const posKey = pos ? `${Math.round(pos.left*10)/10},${Math.round(pos.top*10)/10}` : 'auto';
     return `${w.id}:${parkedSet.has(w.id) ? 1 : 0}:${posKey}`;
   }).join('|');
+
+  separateOverlappingWordContainers(words.map((w) => w.id));
 
   // Prevent chips from blinking/rebuilding while dragging.
   if (!orbitDragState && snapshotKey !== orbitSnapshotKey) {
