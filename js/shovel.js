@@ -96,6 +96,8 @@ export class ShovelSystem {
 
     this.lastTime = 0;
     this.isRunning = false;
+    this.suppressCanvasClear = false;
+    this.coordinatedCanvasClear = false;
 
     // internal
     this.prevHeadX = this.shovel.headX;
@@ -338,7 +340,7 @@ resize() {
     this.lastTime = timestamp;
 
     this.update(dt);
-    this.render();
+    this.render(timestamp);
 
     if (this.isRunning) requestAnimationFrame(this.loop);
   }
@@ -537,13 +539,30 @@ resize() {
     ctx.restore();
   }
 
-  render() {
-    this.ctx.clearRect(0, 0, this.width, this.height);
+  render(frameTime = null) {
+    if (this.coordinatedCanvasClear && frameTime != null) {
+      const canvas = this.canvas;
+      if (canvas.__linguaForgeLastClearFrame !== frameTime) {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        canvas.__linguaForgeLastClearFrame = frameTime;
+      }
+    } else if (!this.suppressCanvasClear) {
+      this.ctx.clearRect(0, 0, this.width, this.height);
+    }
+
     this.drawShovel(this.ctx);
 
     // Draw overlay content like word chips after the tool
     if (this.overlayRenderer) {
       this.overlayRenderer();
     }
+  }
+
+  setSuppressCanvasClear(suppress) {
+    this.suppressCanvasClear = !!suppress;
+  }
+
+  setCoordinatedCanvasClear(enabled) {
+    this.coordinatedCanvasClear = !!enabled;
   }
 }

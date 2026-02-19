@@ -143,25 +143,24 @@ function ensureShovelSystem(craftingCanvas, overlayRenderer) {
 }
 
 function syncSharedToolCanvasClearing() {
-  const hammerRunning = !!hammerSystem?.isRunning;
-  const pestleRunning = !!pestleSystem?.isRunning;
-  const shouldCoordinateClearing = hammerRunning && pestleRunning;
+  const runningTools = [hammerSystem, pestleSystem, shovelSystem].filter((tool) => !!tool?.isRunning);
+  const shouldCoordinateClearing = runningTools.length > 1;
 
-  if (hammerSystem && typeof hammerSystem.setSuppressCanvasClear === 'function') {
-    hammerSystem.setSuppressCanvasClear(false);
-  }
+  const syncTool = (tool) => {
+    if (!tool) return;
 
-  if (hammerSystem && typeof hammerSystem.setCoordinatedCanvasClear === 'function') {
-    hammerSystem.setCoordinatedCanvasClear(shouldCoordinateClearing);
-  }
+    if (typeof tool.setSuppressCanvasClear === 'function') {
+      tool.setSuppressCanvasClear(false);
+    }
 
-  if (pestleSystem && typeof pestleSystem.setSuppressCanvasClear === 'function') {
-    pestleSystem.setSuppressCanvasClear(false);
-  }
+    if (typeof tool.setCoordinatedCanvasClear === 'function') {
+      tool.setCoordinatedCanvasClear(shouldCoordinateClearing);
+    }
+  };
 
-  if (pestleSystem && typeof pestleSystem.setCoordinatedCanvasClear === 'function') {
-    pestleSystem.setCoordinatedCanvasClear(shouldCoordinateClearing);
-  }
+  syncTool(hammerSystem);
+  syncTool(pestleSystem);
+  syncTool(shovelSystem);
 }
 
 function makePutAwayHandler(toolName) {
