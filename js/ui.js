@@ -456,6 +456,55 @@ function setWordContainerPosition(wordId, clientX, clientY) {
   gameState.wordContainerPositions[wordId] = { left, top };
 }
 
+function separateOverlappingWordContainers(wordIds) {
+  const orbitRect = elements.verseWordOrbit?.getBoundingClientRect();
+  const width = orbitRect?.width || window.innerWidth;
+  const height = orbitRect?.height || window.innerHeight;
+  if (width <= 0 || height <= 0) return;
+
+  gameState.wordContainerPositions = gameState.wordContainerPositions || {};
+
+  const horizontalGapPercent = (50 / width) * 100;
+  const verticalGapPercent = (22 / height) * 100;
+  const maxPasses = 8;
+
+  for (let pass = 0; pass < maxPasses; pass += 1) {
+    let moved = false;
+
+    for (let i = 0; i < wordIds.length; i += 1) {
+      const idA = wordIds[i];
+      const posA = gameState.wordContainerPositions[idA];
+      if (!posA) continue;
+
+      for (let j = i + 1; j < wordIds.length; j += 1) {
+        const idB = wordIds[j];
+        const posB = gameState.wordContainerPositions[idB];
+        if (!posB) continue;
+
+        const dx = posB.left - posA.left;
+        const dy = posB.top - posA.top;
+        const overlapX = horizontalGapPercent - Math.abs(dx);
+        const overlapY = verticalGapPercent - Math.abs(dy);
+        if (overlapX <= 0 || overlapY <= 0) continue;
+
+        moved = true;
+        const pushX = Math.max(0.6, overlapX / 2);
+        const pushY = Math.max(0.4, overlapY / 2);
+
+        const dirX = dx === 0 ? (i % 2 === 0 ? -1 : 1) : Math.sign(dx);
+        const dirY = dy === 0 ? (j % 2 === 0 ? -1 : 1) : Math.sign(dy);
+
+        posA.left = clampPercent(posA.left - dirX * pushX);
+        posB.left = clampPercent(posB.left + dirX * pushX);
+        posA.top = clampPercent(posA.top - dirY * pushY);
+        posB.top = clampPercent(posB.top + dirY * pushY);
+      }
+    }
+
+    if (!moved) break;
+  }
+}
+
 function moveVerseWordBackToOrbit(instanceId, clientX, clientY) {
   const removed = removeVerseWord(instanceId);
   if (!removed) return;
@@ -793,6 +842,8 @@ function renderVerseWordOrbit() {
     return `${w.id}:${parkedSet.has(w.id) ? 1 : 0}:${posKey}`;
   }).join('|');
 
+  separateOverlappingWordContainers(words.map((w) => w.id));
+
   // Prevent chips from blinking/rebuilding while dragging.
   if (!orbitDragState && snapshotKey !== orbitSnapshotKey) {
     elements.verseWordOrbit.innerHTML = '';
@@ -817,16 +868,7 @@ function renderVerseWordOrbit() {
       chip.addEventListener('pointerdown', (e) => {
         moved = false;
         const rect = chip.getBoundingClientRect();
-        orbitDragState = {
-          wordId: word.id,
-          chip,
-          width: rect.width,
-          height: rect.height,
-          lastClientX: e.clientX,
-          lastClientY: e.clientY,
-          originalLeft: chip.style.left,
-          originalTop: chip.style.top,
-        };
+        orbitDragState = { wordId: word.id, chip, width: rect.width, height: rect.height, lastClientX: e.clientX, lastClientY: e.clientY };
         chip.classList.add('dragging');
         elements.grammarHebrewLineDiv?.classList.add('compose-active');
         chip.style.position = 'fixed';
@@ -889,12 +931,8 @@ function renderVerseWordOrbit() {
           updateUI();
         } else if (moved) {
           // If dropped outside the verse spread, keep the chip in its prior slot.
-          chip.style.left = orbitDragState.originalLeft;
-          chip.style.top = orbitDragState.originalTop;
           chip.style.visibility = '';
         } else {
-          chip.style.left = orbitDragState.originalLeft;
-          chip.style.top = orbitDragState.originalTop;
           chip.style.visibility = '';
           openWordInfo(word.text, dropX, dropY);
         }

@@ -4911,12 +4911,14 @@ body.book-overlay-active .magic-book {
 
 .verse-orbit-chip {
   position: absolute;
+  padding: 6px 12px;
   transform: translate(-50%, -50%);
   background: #eedcbc;
   border-color: #b9975f;
   color:#120d07;
   animation: none;
   z-index: 3;
+  box-shadow: 0 0 0 3px rgba(245, 230, 200, 0.55);
 }
 
 .verse-orbit-chip.dragging {
@@ -4927,20 +4929,6 @@ body.book-overlay-active .magic-book {
 
 .verse-orbit-chip.is-parked { animation: none; }
 @keyframes orbitFloat { 0%,100% { translate: -50% -50%; } 50% { translate: -50% calc(-50% - 4px);} }
-
-.verse-work-mat {
-  position: absolute;
-  min-height: 72px;
-  border: 1px dashed rgba(93,64,30,.28);
-  border-radius: 10px;
-  display:none;
-  align-items:flex-start;
-  justify-content:flex-start;
-  padding: 8px;
-  font-size: 11px;
-  color:#6b4b26;
-  background: rgba(245,230,200,.35);
-}
 
 #verseWorkMatLeft { left: 8%; right: 56%; bottom: 10%; }
 #verseWorkMatRight { left: 56%; right: 8%; bottom: 10%; justify-content: flex-end; }
