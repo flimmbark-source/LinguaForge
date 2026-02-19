@@ -817,7 +817,16 @@ function renderVerseWordOrbit() {
       chip.addEventListener('pointerdown', (e) => {
         moved = false;
         const rect = chip.getBoundingClientRect();
-        orbitDragState = { wordId: word.id, chip, width: rect.width, height: rect.height, lastClientX: e.clientX, lastClientY: e.clientY };
+        orbitDragState = {
+          wordId: word.id,
+          chip,
+          width: rect.width,
+          height: rect.height,
+          lastClientX: e.clientX,
+          lastClientY: e.clientY,
+          originalLeft: chip.style.left,
+          originalTop: chip.style.top,
+        };
         chip.classList.add('dragging');
         elements.grammarHebrewLineDiv?.classList.add('compose-active');
         chip.style.position = 'fixed';
@@ -880,8 +889,12 @@ function renderVerseWordOrbit() {
           updateUI();
         } else if (moved) {
           // If dropped outside the verse spread, keep the chip in its prior slot.
+          chip.style.left = orbitDragState.originalLeft;
+          chip.style.top = orbitDragState.originalTop;
           chip.style.visibility = '';
         } else {
+          chip.style.left = orbitDragState.originalLeft;
+          chip.style.top = orbitDragState.originalTop;
           chip.style.visibility = '';
           openWordInfo(word.text, dropX, dropY);
         }
