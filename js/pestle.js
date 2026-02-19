@@ -46,6 +46,7 @@ export class PestleSystem {
     this.onPutAway = null;
     this.overlayRenderer = null;
     this.suppressCanvasClear = false;
+    this.coordinatedCanvasClear = false;
 
     // Load pestle and mortar PNG images
     this._pestleImg = new Image();
@@ -1010,8 +1011,14 @@ export class PestleSystem {
 
   // ─── Render ───────────────────────────────────────────
 
-  render() {
-    if (!this.suppressCanvasClear) {
+  render(frameTime = null) {
+    if (this.coordinatedCanvasClear && frameTime != null) {
+      const canvas = this.canvas;
+      if (canvas.__linguaForgeLastClearFrame !== frameTime) {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        canvas.__linguaForgeLastClearFrame = frameTime;
+      }
+    } else if (!this.suppressCanvasClear) {
       this.ctx.clearRect(0, 0, this.width, this.height);
     }
 
@@ -1035,7 +1042,7 @@ export class PestleSystem {
     this.lastTime = timestamp;
 
     this.update(dt);
-    this.render();
+    this.render(timestamp);
 
     if (this.isRunning) {
       requestAnimationFrame(this.loop);
@@ -1048,6 +1055,10 @@ export class PestleSystem {
 
   setSuppressCanvasClear(suppress) {
     this.suppressCanvasClear = !!suppress;
+  }
+
+  setCoordinatedCanvasClear(enabled) {
+    this.coordinatedCanvasClear = !!enabled;
   }
 
   start() {

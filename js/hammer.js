@@ -127,6 +127,7 @@ export class HammerSystem {
     this.onForgeTriggered = null; // Called when hammer hits a forgeable mold
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
     this.suppressCanvasClear = false;
+    this.coordinatedCanvasClear = false;
 
     // World physics constants
     this.gravity = 3600; // px/s^2
@@ -2260,9 +2261,15 @@ drawHammer(ctx, hammer) {
   /**
    * Render frame
    */
-  render() {
+  render(frameTime = null) {
     // Clear canvas
-    if (!this.suppressCanvasClear) {
+    if (this.coordinatedCanvasClear && frameTime != null) {
+      const canvas = this.canvas;
+      if (canvas.__linguaForgeLastClearFrame !== frameTime) {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        canvas.__linguaForgeLastClearFrame = frameTime;
+      }
+    } else if (!this.suppressCanvasClear) {
       this.ctx.clearRect(0, 0, this.width, this.height);
     }
 
@@ -2297,7 +2304,7 @@ drawHammer(ctx, hammer) {
     this.lastTime = timestamp;
 
     this.update(dt);
-    this.render();
+    this.render(timestamp);
 
     if (this.isRunning) {
       requestAnimationFrame(this.loop);
@@ -2313,6 +2320,10 @@ drawHammer(ctx, hammer) {
 
   setSuppressCanvasClear(suppress) {
     this.suppressCanvasClear = !!suppress;
+  }
+
+  setCoordinatedCanvasClear(enabled) {
+    this.coordinatedCanvasClear = !!enabled;
   }
 
   /**
