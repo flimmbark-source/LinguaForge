@@ -927,8 +927,8 @@ function initializeGame() {
         pestle: document.getElementById('selectPestle'),
         shovel: document.getElementById('selectShovel'),
       };
-      const wasActiveTool = activeTool === toolName;
       const btn = btnMap[toolName];
+      const wasActiveTool = !!btn?.classList.contains('active');
       if (btn) btn.click();
 
       // Position the tool at the drop location (convert screen coords to canvas coords)
@@ -1205,22 +1205,12 @@ function setupToolSelection() {
   const craftingHint = document.getElementById('craftingHint');
   if (!hammerBtn || !spyglassBtn || !pestleBtn || !shovelBtn) return;
 
-  const allToolBtns = [hammerBtn, spyglassBtn, pestleBtn, shovelBtn];
-  function clearAllToolBtns(except) {
-    allToolBtns.forEach(b => { if (b !== except) b.classList.remove('active'); });
-  }
 
   hammerBtn.addEventListener('click', () => {
     if (activeTool === 'hammer') return;
 
     activeTool = 'hammer';
-    clearAllToolBtns(hammerBtn);
     hammerBtn.classList.add('active');
-
-    // Switch systems
-    if (shovelSystem) shovelSystem.stop();
-    if (pestleSystem) pestleSystem.stop();
-    spyglassSystem.stop();
 
     if (hammerSystem) hammerSystem.start();
 
@@ -1236,12 +1226,7 @@ function setupToolSelection() {
     if (activeTool === 'spyglass') return;
 
     activeTool = 'spyglass';
-    clearAllToolBtns(spyglassBtn);
     spyglassBtn.classList.add('active');
-
-    if (hammerSystem) hammerSystem.stop();
-    if (pestleSystem) pestleSystem.stop();
-    if (shovelSystem) shovelSystem.stop();
 
     spyglassSystem.startAt(window.innerWidth * 0.7, window.innerHeight * 0.35);
   });
@@ -1252,13 +1237,7 @@ function setupToolSelection() {
     if (!ensurePestleSystem(craftingCanvasRef, toolOverlayRenderer)) return;
 
     activeTool = 'pestle';
-    clearAllToolBtns(pestleBtn);
     pestleBtn.classList.add('active');
-
-    // Switch systems
-    if (hammerSystem) hammerSystem.stop();
-    if (shovelSystem) shovelSystem.stop();
-    spyglassSystem.stop();
 
     if (pestleSystem) pestleSystem.start();
 
@@ -1276,13 +1255,7 @@ function setupToolSelection() {
     if (!ensureShovelSystem(craftingCanvasRef, toolOverlayRenderer)) return;
 
     activeTool = 'shovel';
-    clearAllToolBtns(shovelBtn);
     shovelBtn.classList.add('active');
-
-    // Switch systems
-    if (hammerSystem) hammerSystem.stop();
-    if (pestleSystem) pestleSystem.stop();
-    spyglassSystem.stop();
 
     if (shovelSystem) shovelSystem.start();
 

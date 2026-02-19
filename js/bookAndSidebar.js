@@ -454,14 +454,10 @@ function activateTool(tool, e, onToolSelected) {
     if (onToolSelected) onToolSelected(tool, e.clientX, e.clientY);
 
     // Update active states on sidebar slots
-    const allSlots = document.querySelectorAll('.tool-slot[data-tool]');
-    allSlots.forEach(s => {
-      if (s.dataset.tool === tool && s.dataset.tool !== 'book') {
-        s.classList.add('active');
-      } else if (s.dataset.tool !== 'book') {
-        s.classList.remove('active');
-      }
-    });
+    const slot = document.querySelector(`.tool-slot[data-tool="${tool}"]`);
+    if (slot && slot.dataset.tool !== 'book') {
+      slot.classList.add('active');
+    }
   }
 }
 
