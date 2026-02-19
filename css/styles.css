@@ -4905,12 +4905,13 @@ body.book-overlay-active .magic-book {
 
 .verse-word-orbit {
   position: absolute;
-  inset: 0;
+  inset: 12px;
   pointer-events: auto;
 }
 
 .verse-orbit-chip {
   position: absolute;
+  padding: 6px 12px;
   transform: translate(-50%, -50%);
   background: #eedcbc;
   border-color: #b9975f;
