@@ -145,13 +145,22 @@ function ensureShovelSystem(craftingCanvas, overlayRenderer) {
 function syncSharedToolCanvasClearing() {
   const hammerRunning = !!hammerSystem?.isRunning;
   const pestleRunning = !!pestleSystem?.isRunning;
+  const shouldCoordinateClearing = hammerRunning && pestleRunning;
 
   if (hammerSystem && typeof hammerSystem.setSuppressCanvasClear === 'function') {
     hammerSystem.setSuppressCanvasClear(false);
   }
 
+  if (hammerSystem && typeof hammerSystem.setCoordinatedCanvasClear === 'function') {
+    hammerSystem.setCoordinatedCanvasClear(shouldCoordinateClearing);
+  }
+
   if (pestleSystem && typeof pestleSystem.setSuppressCanvasClear === 'function') {
-    pestleSystem.setSuppressCanvasClear(hammerRunning && pestleRunning);
+    pestleSystem.setSuppressCanvasClear(false);
+  }
+
+  if (pestleSystem && typeof pestleSystem.setCoordinatedCanvasClear === 'function') {
+    pestleSystem.setCoordinatedCanvasClear(shouldCoordinateClearing);
   }
 }
 
