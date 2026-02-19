@@ -4303,6 +4303,7 @@ body.book-overlay-active .magic-book {
 .glossary-entries {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
   overflow: hidden;
   max-height: 280px;
@@ -4311,7 +4312,8 @@ body.book-overlay-active .magic-book {
 
 .glossary-entry {
   display: flex;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   text-align: left;
   border: 1px solid rgba(93, 64, 30, 0.15);
   background: rgba(93, 64, 30, 0.06);
@@ -4959,7 +4961,9 @@ body.book-overlay-active .magic-book {
 .word-info-sheet.open { display:block; }
 .word-info-sheet-card {
   position: fixed;
-  width: min(280px, 72vw);
+  display: inline-block;
+  width: max-content;
+  max-width: min(280px, 72vw);
   background:#f5e6c8;
   color:#2d1f0e;
   border-radius:12px;

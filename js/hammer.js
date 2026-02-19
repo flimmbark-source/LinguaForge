@@ -97,6 +97,25 @@ function isPointerBlockedByVerseBook(eventLike) {
   const rect = book.getBoundingClientRect();
   return client.clientX >= rect.left && client.clientX <= rect.right && client.clientY >= rect.top && client.clientY <= rect.bottom;
 }
+
+function isPointerBlockedByAudioPanel(eventLike) {
+  const audioPanel = document.getElementById('audioControls');
+  if (!audioPanel || audioPanel.classList.contains('hidden')) return false;
+
+  const target = eventLike?.target;
+  if (target?.closest && target.closest('#audioControls, #audioControlsBackdrop')) {
+    return true;
+  }
+
+  const client = eventLike?.touches?.[0] || eventLike;
+  if (!client || typeof client.clientX !== 'number' || typeof client.clientY !== 'number') {
+    return false;
+  }
+
+  const rect = audioPanel.getBoundingClientRect();
+  return client.clientX >= rect.left && client.clientX <= rect.right && client.clientY >= rect.top && client.clientY <= rect.bottom;
+}
+
 export class HammerSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -621,6 +640,7 @@ export class HammerSystem {
 onPointerDown(e) {
   if (!this.isRunning) return;
   if (isPointerBlockedByVerseBook(e)) return;
+  if (isPointerBlockedByAudioPanel(e)) return;
   if (window.PointerEvent && (e.type === 'mousedown' || e.type === 'touchstart')) return;
   // Refresh cached rect on pointer down
   this._cachedCanvasRect = this.canvas.getBoundingClientRect();
