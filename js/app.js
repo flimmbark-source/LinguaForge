@@ -142,12 +142,26 @@ function ensureShovelSystem(craftingCanvas, overlayRenderer) {
   return shovelSystem;
 }
 
+function syncSharedToolCanvasClearing() {
+  const hammerRunning = !!hammerSystem?.isRunning;
+  const pestleRunning = !!pestleSystem?.isRunning;
+
+  if (hammerSystem && typeof hammerSystem.setSuppressCanvasClear === 'function') {
+    hammerSystem.setSuppressCanvasClear(false);
+  }
+
+  if (pestleSystem && typeof pestleSystem.setSuppressCanvasClear === 'function') {
+    pestleSystem.setSuppressCanvasClear(hammerRunning && pestleRunning);
+  }
+}
+
 function makePutAwayHandler(toolName) {
   return () => {
     if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
     if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
     if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
     if (toolName === 'spyglass') spyglassSystem.stop();
+    syncSharedToolCanvasClearing();
     if (activeTool === toolName) activeTool = null;
     // Update sidebar slot
     const slotId = toolName === 'hammer' ? 'toolSlotHammer' :
@@ -984,6 +998,7 @@ function initializeGame() {
       if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
       if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
       if (toolName === 'spyglass') spyglassSystem.stop();
+      syncSharedToolCanvasClearing();
 
       // Clear the active tool if we just put away the one that was active
       if (activeTool === toolName) {
@@ -1182,6 +1197,7 @@ function initializeCraftingSystems() {
   // Start with hammer active
   hammerSystem.setOverlayRenderer(renderPhysicsLetters);
   hammerSystem.start();
+  syncSharedToolCanvasClearing();
   // Create shovel lazily to improve mobile startup time.
   // It will initialize immediately when the user selects the shovel tool.
   shovelSystem = null;
@@ -1213,6 +1229,7 @@ function setupToolSelection() {
     hammerBtn.classList.add('active');
 
     if (hammerSystem) hammerSystem.start();
+    syncSharedToolCanvasClearing();
 
     // Update hint text
     if (craftingHint) {
@@ -1240,6 +1257,7 @@ function setupToolSelection() {
     pestleBtn.classList.add('active');
 
     if (pestleSystem) pestleSystem.start();
+    syncSharedToolCanvasClearing();
 
     // Update hint text
     if (craftingHint) {

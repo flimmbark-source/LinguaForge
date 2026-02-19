@@ -107,6 +107,7 @@ export class HammerSystem {
     this.onLetterLanded = null;
     this.onForgeTriggered = null; // Called when hammer hits a forgeable mold
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
+    this.suppressCanvasClear = false;
 
     // World physics constants
     this.gravity = 3600; // px/s^2
@@ -2241,7 +2242,9 @@ drawHammer(ctx, hammer) {
    */
   render() {
     // Clear canvas
-    this.ctx.clearRect(0, 0, this.width, this.height);
+    if (!this.suppressCanvasClear) {
+      this.ctx.clearRect(0, 0, this.width, this.height);
+    }
 
     // Draw anvil
     this.drawAnvil(this.ctx, this.anvil);
@@ -2286,6 +2289,10 @@ drawHammer(ctx, hammer) {
    */
   setOverlayRenderer(renderer) {
     this.overlayRenderer = renderer;
+  }
+
+  setSuppressCanvasClear(suppress) {
+    this.suppressCanvasClear = !!suppress;
   }
 
   /**
