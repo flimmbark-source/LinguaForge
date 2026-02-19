@@ -893,7 +893,7 @@ function renderVerseWordOrbit() {
       chip.addEventListener('pointerdown', (e) => {
         moved = false;
         const rect = chip.getBoundingClientRect();
-        orbitDragState = { wordId: word.id, chip, width: rect.width, height: rect.height, lastClientX: e.clientX, lastClientY: e.clientY };
+        orbitDragState = { wordId: word.id, chip, width: rect.width, height: rect.height, startX: e.clientX, startY: e.clientY, lastClientX: e.clientX, lastClientY: e.clientY };
         chip.classList.add('dragging');
         elements.grammarHebrewLineDiv?.classList.add('compose-active');
         chip.style.position = 'fixed';
@@ -906,6 +906,11 @@ function renderVerseWordOrbit() {
 
       chip.addEventListener('pointermove', (e) => {
         if (!orbitDragState || orbitDragState.wordId !== word.id) return;
+        const dx = e.clientX - orbitDragState.startX;
+        const dy = e.clientY - orbitDragState.startY;
+        // Only count as a drag once the pointer has moved more than 8px —
+        // this prevents touch jitter from suppressing the tap/info-popup path.
+        if (!moved && dx * dx + dy * dy < 64) return;
         moved = true;
         orbitDragState.lastClientX = e.clientX;
         orbitDragState.lastClientY = e.clientY;
