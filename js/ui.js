@@ -790,7 +790,8 @@ function positionWordInfoAtPoint(clientX, clientY) {
   // so it doesn't land on the dark backdrop outside the book.
   const bookInterior = document.querySelector('.book-interior');
   const isLandscapeOverlay = bookInterior &&
-    window.matchMedia('(max-width: 768px) and (orientation: landscape)').matches;
+    (window.matchMedia('(max-width: 768px) and (orientation: landscape)').matches ||
+     window.matchMedia('(max-height: 540px) and (orientation: landscape)').matches);
 
   let minX, maxX, minY, maxY;
   if (isLandscapeOverlay) {

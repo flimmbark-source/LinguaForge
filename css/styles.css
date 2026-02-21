@@ -2384,11 +2384,6 @@ button.secondary {
     backdrop-filter: blur(4px);
   }
 
-  /* Word info popup must sit above the landscape book overlay */
-  .word-info-sheet {
-    z-index: 1200;
-  }
-
   .magic-book .book-toggle-btn {
     display: flex;
     left: 12px;
@@ -5023,6 +5018,11 @@ body.book-overlay-active .magic-book {
   pointer-events: none;
 }
 .word-info-sheet.open { display:block; }
+/* Word info popup must sit above the landscape book overlay (z-index 1100) */
+@media (max-width: 768px) and (orientation: landscape),
+  (max-height: 540px) and (orientation: landscape) {
+  .word-info-sheet { z-index: 1200; }
+}
 .word-info-sheet-card {
   position: fixed;
   display: inline-block;
