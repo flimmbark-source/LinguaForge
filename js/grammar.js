@@ -133,8 +133,9 @@ export function completeSelectedVerse(selectedWords) {
  * @param {HTMLElement} chip - Word chip element
  * @param {string} instanceId - Instance ID of the verse word
  * @param {Function} onUpdate - Callback when verse is updated
+ * @param {Function} onExtract - Callback when chip is dropped outside verse line
  */
-export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
+export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
   let dragState = null;
 
   chip.addEventListener('pointerdown', e => {
@@ -155,22 +156,25 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
       chip,
       instanceId,
       pointerId: e.pointerId,
-      offsetX: e.clientX - rect.left,
-      offsetY: e.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
       startX: e.clientX,
       startY: e.clientY,
       placeholder,
+      lastClientX: e.clientX,
+      lastClientY: e.clientY,
     };
 
     // Insert placeholder at current position
     chip.parentElement.insertBefore(placeholder, chip);
 
     // Make chip draggable
+    chip.classList.add('dragging-out');
     chip.style.position = 'fixed';
-    chip.style.left = rect.left + 'px';
-    chip.style.top = rect.top + 'px';
-    chip.style.zIndex = '1000';
-    chip.style.opacity = '0.8';
+    chip.style.left = e.clientX + 'px';
+    chip.style.top = e.clientY + 'px';
+    chip.style.zIndex = '1300';
+    chip.style.opacity = '0.95';
     chip.setPointerCapture(e.pointerId);
 
     gameState.draggedVerseInstanceId = instanceId;
@@ -179,10 +183,10 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
   chip.addEventListener('pointermove', e => {
     if (!dragState || dragState.chip !== chip) return;
     e.preventDefault();
-    const x = e.clientX - dragState.offsetX;
-    const y = e.clientY - dragState.offsetY;
-    chip.style.left = x + 'px';
-    chip.style.top = y + 'px';
+    dragState.lastClientX = e.clientX;
+    dragState.lastClientY = e.clientY;
+    chip.style.left = e.clientX + 'px';
+    chip.style.top = e.clientY + 'px';
 
     // Update placeholder position based on where drop would occur
     updatePlaceholderPosition(e.clientX, e.clientY, instanceId, dragState.placeholder);
@@ -192,13 +196,18 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     if (!dragState || dragState.chip !== chip) return;
     chip.releasePointerCapture(e.pointerId);
 
+    const dropX = Number.isFinite(e.clientX) && e.clientX > 0 ? e.clientX : dragState.lastClientX;
+    const dropY = Number.isFinite(e.clientY) && e.clientY > 0 ? e.clientY : dragState.lastClientY;
+
     // Check if we moved significantly (to distinguish from clicks)
-    const moved = Math.abs(e.clientX - dragState.startX) > 5 || Math.abs(e.clientY - dragState.startY) > 5;
+    const moved = Math.abs(dropX - dragState.startX) > 5 || Math.abs(dropY - dragState.startY) > 5;
 
     if (moved) {
-      // Calculate insertion index BEFORE resetting styling
-      // This ensures we query chip positions while the dragged chip is still out of flow
-      handleVerseWordDrop(e.clientX, e.clientY, instanceId, onUpdate);
+      chip.style.visibility = 'hidden';
+      const droppedInLine = handleVerseWordDrop(dropX, dropY, instanceId, onUpdate);
+      if (!droppedInLine && onExtract) {
+        onExtract(instanceId, dropX, dropY);
+      }
     }
 
     // Remove placeholder
@@ -207,13 +216,16 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     }
 
     // Reset chip styling after reordering
+    chip.classList.remove('dragging-out');
     chip.style.position = '';
     chip.style.left = '';
     chip.style.top = '';
+    chip.style.transform = '';
     chip.style.zIndex = '';
     chip.style.opacity = '';
 
     if (!moved) {
+      chip.style.visibility = '';
       // Just a click, not a drag - still update UI
       if (onUpdate) onUpdate();
     }
@@ -232,11 +244,14 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     }
 
     // Reset chip styling
+    chip.classList.remove('dragging-out');
     chip.style.position = '';
     chip.style.left = '';
     chip.style.top = '';
+    chip.style.transform = '';
     chip.style.zIndex = '';
     chip.style.opacity = '';
+    chip.style.visibility = '';
 
     gameState.draggedVerseInstanceId = null;
     dragState = null;
@@ -313,7 +328,11 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
  */
 export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
   const verseArea = document.getElementById('grammarHebrewLine');
-  if (!verseArea) return;
+  if (!verseArea) return false;
+
+  const lineRect = verseArea.getBoundingClientRect();
+  const isOverLine = clientX >= lineRect.left && clientX <= lineRect.right && clientY >= lineRect.top && clientY <= lineRect.bottom;
+  if (!isOverLine) return false;
 
   const isRTL = getComputedStyle(verseArea).direction === 'rtl';
   const chips = Array.from(verseArea.children).filter(el =>
@@ -366,6 +385,7 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
 
   reorderWord(instanceId, stateIndex);
   if (onUpdate) onUpdate();
+  return true;
 }
 
 /**

@@ -2384,6 +2384,11 @@ button.secondary {
     backdrop-filter: blur(4px);
   }
 
+  /* Word info popup must sit above the landscape book overlay */
+  .word-info-sheet {
+    z-index: 1200;
+  }
+
   .magic-book .book-toggle-btn {
     display: flex;
     left: 12px;
@@ -2401,9 +2406,41 @@ button.secondary {
 
   .book-interior {
     width: min(70vw, 500px);
-    min-height: 50vh;
-    max-height: 85vh;
-    overflow-y: auto;
+    min-height: max(50vh, 260px);
+    max-height: 90vh;
+    overflow: hidden;
+  }
+
+  /* ─ Verse book: scale content for landscape ─ */
+  .verse-center-stack {
+    gap: 5px;
+  }
+
+  .verse-orbit-chip {
+    padding: 4px 8px;
+  }
+
+  .verse-entry-container {
+    min-height: 36px;
+    padding: 4px 8px;
+  }
+
+  .verse-line {
+    min-height: 36px;
+    padding: 4px 8px;
+  }
+
+  .verse-hint {
+    min-height: 14px;
+    font-size: 10px;
+  }
+
+  .verse-translation-reveal {
+    min-height: 16px;
+  }
+
+  .verse-intent-line {
+    font-size: 12px;
   }
 
   .book-page {
@@ -2690,6 +2727,7 @@ button.secondary {
   .tools-sidebar-content {
     background: rgba(15, 23, 42, 0.9);
     gap: 6px;
+    align-items: center;
   }
 
   .tool-slot {
@@ -2759,7 +2797,45 @@ button.secondary {
 
   .book-interior {
     width: min(55vw, 320px);
-    min-height: 140px;
+    min-height: 85vh;
+    overflow: hidden;
+  }
+
+  /* ─ Verse book: further compact for very small landscape ─ */
+  .verse-center-stack {
+    gap: 3px;
+  }
+
+  .verse-orbit-chip {
+    padding: 3px 6px;
+    font-size: 12px;
+  }
+
+  /* ─ Tool slots: smaller for very small landscape screens ─ */
+  .tool-slot {
+    width: 38px;
+    padding: 4px 3px;
+    gap: 2px;
+  }
+
+  .tool-slot-icon {
+    font-size: 15px;
+  }
+
+  .tool-slot-label {
+    font-size: 7px;
+  }
+
+  .tools-sidebar.open .tools-sidebar-content,
+  .tools-sidebar.pinned .tools-sidebar-content {
+    max-width: 60px;
+    padding: 6px 4px;
+  }
+
+  .tools-sidebar.open:hover .tools-sidebar-content,
+  .tools-sidebar.pinned:hover .tools-sidebar-content {
+    max-width: 60px;
+    padding: 6px 4px;
   }
 
   .mold-viewport-wrapper .mold-viewport {
@@ -3813,8 +3889,9 @@ body.book-overlay-active .magic-book {
 }
 
 .book-page-content button {
-  background: #5a3d1a;
-  color: #f5e6c8;
+  background: #ead6b0;
+  color: #1a1208;
+  border: 1px solid #a3834e;
 }
 
 .book-page-content button:disabled {
@@ -4302,6 +4379,7 @@ body.book-overlay-active .magic-book {
 .glossary-entries {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
   overflow: hidden;
   max-height: 280px;
@@ -4310,7 +4388,8 @@ body.book-overlay-active .magic-book {
 
 .glossary-entry {
   display: flex;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   text-align: left;
   border: 1px solid rgba(93, 64, 30, 0.15);
   background: rgba(93, 64, 30, 0.06);
@@ -4783,3 +4862,199 @@ body.book-overlay-active .magic-book {
 }
 
 
+
+/* Verse Book 5-state experience */
+.verse-book-interior {
+  position: relative;
+}
+
+.verse-page {
+  pointer-events: none;
+}
+
+.verse-page-content {
+  position: relative;
+  overflow: hidden;
+}
+
+.verse-spread-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.verse-center-stack {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  transform: translate(-50%, -50%);
+  width: min(360px, 86%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+  pointer-events: auto;
+}
+
+.verse-intent-line {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0.9;
+  margin: 0;
+  color: #17120b;
+}
+
+.verse-entry-container {
+  position: relative;
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(93,64,30,0.28);
+  background: rgba(245, 230, 200, 0.38);
+  box-shadow: inset 0 0 0 1px rgba(201, 181, 138, 0.34);
+  padding: 6px 10px;
+}
+
+.verse-line {
+  position: relative;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: rgba(93,64,30,0.2);
+  background: rgba(245, 230, 200, 0.34);
+  transition: all .25s ease;
+  box-shadow: inset 0 0 0 1px rgba(201, 181, 138, 0.3);
+}
+
+.verse-line::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border: 1px dashed rgba(93,64,30,.23);
+  border-radius: 8px;
+  opacity: .5;
+  pointer-events:none;
+}
+
+.verse-line.compose-active {
+  border-color: rgba(59,130,246,.55);
+  box-shadow: 0 0 0 2px rgba(59,130,246,.2) inset;
+}
+
+.verse-line.is-unstable::after {
+  content:'';
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:16px;
+  background: radial-gradient(ellipse at center, rgba(148,163,184,.30), transparent 70%);
+  pointer-events:none;
+}
+
+.verse-line.is-solved .line-word-chip {
+  animation: verseLockLift .55s ease both;
+  cursor: default;
+}
+
+@keyframes verseLockLift {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); box-shadow: 0 0 12px rgba(245,158,11,.35); }
+}
+
+.verse-meter-track { height: 6px; width: 100%; border-radius: 999px; background: rgba(93,64,30,.15); overflow: hidden; }
+.verse-meter-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#60a5fa,#fbbf24); transition: width .2s ease; }
+.verse-meter-fill.pulse { animation: verseMeterPulse .25s ease; }
+@keyframes verseMeterPulse { from { filter: brightness(1.6);} to { filter: brightness(1);} }
+
+.verse-hint { min-height: 18px; font-size: 11px; color: #4b5563; font-style: italic; text-align: center; }
+.verse-translation-reveal { min-height: 20px; opacity: 0; transition: opacity .35s ease; text-align:center; font-weight: 600; color: #19130c; }
+.verse-translation-reveal.visible { opacity: .95; }
+.verse-footer-row { margin-top: 2px; justify-content: center; gap: 8px; color: #1a1208; }
+.verse-footer-row #enscribeBtn { display: none; }
+.verse-footer-row #enscribeBtn,
+.verse-footer-row .pill,
+.verse-footer-row .work-mat-release-btn { pointer-events: auto; }
+
+.verse-word-orbit {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.verse-orbit-chip {
+  position: absolute;
+  padding: 6px 12px;
+  transform: translate(-50%, -50%);
+  background: #eedcbc;
+  border-color: #b9975f;
+  color:#120d07;
+  animation: none;
+  z-index: 3;
+  box-shadow: 0 0 0 3px rgba(245, 230, 200, 0.55);
+}
+
+.verse-orbit-chip.dragging {
+  box-shadow: 0 8px 20px rgba(0,0,0,.2);
+  z-index: 30;
+  animation: none;
+}
+
+.verse-orbit-chip.is-parked { animation: none; }
+@keyframes orbitFloat { 0%,100% { translate: -50% -50%; } 50% { translate: -50% calc(-50% - 4px);} }
+
+#verseWorkMatLeft { left: 8%; right: 56%; bottom: 10%; }
+#verseWorkMatRight { left: 56%; right: 8%; bottom: 10%; justify-content: flex-end; }
+.verse-work-mat.active { display:flex; }
+.work-mat-release-btn { border: 1px solid rgba(93,64,30,.35); background: rgba(245,230,200,.8); border-radius: 999px; width: 24px; height: 24px; }
+
+.wrong-order { animation: wrongWobble .32s ease; }
+@keyframes wrongWobble { 0%,100% { transform: translateX(0);} 25% { transform: translateX(-2px);} 75% { transform: translateX(2px);} }
+
+.word-info-sheet {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  display:none;
+  z-index: 720;
+  pointer-events: none;
+}
+.word-info-sheet.open { display:block; }
+.word-info-sheet-card {
+  position: fixed;
+  display: inline-block;
+  width: max-content;
+  max-width: min(280px, 72vw);
+  background:#f5e6c8;
+  color:#2d1f0e;
+  border-radius:12px;
+  padding:10px 12px;
+  border: 1px solid #c9b58a;
+  box-shadow: 0 10px 24px rgba(0,0,0,.22);
+  pointer-events: none;
+}
+.word-info-hebrew { font-size: 26px; direction: rtl; text-align: left; font-weight: 700; margin-bottom: 4px; }
+.word-info-translit,.word-info-meaning,.word-info-example { font-size: 13px; margin-top: 2px; color:#2b2113; }
+
+.verse-line .line-word-chip {
+  background: #eedcbc;
+  border-color: #b9975f;
+  color: #120d07;
+}
+
+.verse-line .line-word-chip.dragging-out {
+  position: fixed;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  z-index: 1300;
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+.verse-orbit-chip:hover {
+  transform: translate(-50%, -50%);
+  box-shadow: none;
+}

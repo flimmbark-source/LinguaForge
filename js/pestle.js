@@ -21,6 +21,21 @@ function setBackgroundDragLocked(locked) {
   }
 }
 
+
+function isPointerBlockedByVerseBook(eventLike) {
+  const book = document.getElementById('magicBook');
+  if (!book) return false;
+  const style = getComputedStyle(book);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+  const target = eventLike?.target;
+  if (target?.closest && target.closest('#magicBook')) return true;
+
+  const client = eventLike?.touches?.[0] || eventLike;
+  if (!client || typeof client.clientX !== 'number' || typeof client.clientY !== 'number') return false;
+  const rect = book.getBoundingClientRect();
+  return client.clientX >= rect.left && client.clientX <= rect.right && client.clientY >= rect.top && client.clientY <= rect.bottom;
+}
 export class PestleSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -30,6 +45,8 @@ export class PestleSystem {
     this.onInkProduced = null;
     this.onPutAway = null;
     this.overlayRenderer = null;
+    this.suppressCanvasClear = false;
+    this.coordinatedCanvasClear = false;
 
     // Load pestle and mortar PNG images
     this._pestleImg = new Image();
@@ -298,6 +315,7 @@ export class PestleSystem {
 
   onPointerDown(e) {
     if (!this.isRunning) return;
+    if (isPointerBlockedByVerseBook(e)) return;
     // Refresh cached rect on pointer down
     this._cachedCanvasRect = this.canvas.getBoundingClientRect();
     this._canvasRectAge = 0;
@@ -993,8 +1011,16 @@ export class PestleSystem {
 
   // ─── Render ───────────────────────────────────────────
 
-  render() {
-    this.ctx.clearRect(0, 0, this.width, this.height);
+  render(frameTime = null) {
+    if (this.coordinatedCanvasClear && frameTime != null) {
+      const canvas = this.canvas;
+      if (canvas.__linguaForgeLastClearFrame !== frameTime) {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        canvas.__linguaForgeLastClearFrame = frameTime;
+      }
+    } else if (!this.suppressCanvasClear) {
+      this.ctx.clearRect(0, 0, this.width, this.height);
+    }
 
     // Layer order: mortar back → pestle → mortar front rim → ink drops
     this.drawMortarBack(this.ctx, this.mortar);
@@ -1016,7 +1042,7 @@ export class PestleSystem {
     this.lastTime = timestamp;
 
     this.update(dt);
-    this.render();
+    this.render(timestamp);
 
     if (this.isRunning) {
       requestAnimationFrame(this.loop);
@@ -1025,6 +1051,14 @@ export class PestleSystem {
 
   setOverlayRenderer(renderer) {
     this.overlayRenderer = renderer;
+  }
+
+  setSuppressCanvasClear(suppress) {
+    this.suppressCanvasClear = !!suppress;
+  }
+
+  setCoordinatedCanvasClear(enabled) {
+    this.coordinatedCanvasClear = !!enabled;
   }
 
   start() {

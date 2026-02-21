@@ -47,6 +47,21 @@ function getLetterFromTile(tile) {
   return '';
 }
 
+
+function isPointerBlockedByVerseBook(eventLike) {
+  const book = document.getElementById('magicBook');
+  if (!book) return false;
+  const style = getComputedStyle(book);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+  const target = eventLike?.target;
+  if (target?.closest && target.closest('#magicBook')) return true;
+
+  const client = eventLike?.touches?.[0] || eventLike;
+  if (!client || typeof client.clientX !== 'number' || typeof client.clientY !== 'number') return false;
+  const rect = book.getBoundingClientRect();
+  return client.clientX >= rect.left && client.clientX <= rect.right && client.clientY >= rect.top && client.clientY <= rect.bottom;
+}
 export class ShovelSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -81,6 +96,8 @@ export class ShovelSystem {
 
     this.lastTime = 0;
     this.isRunning = false;
+    this.suppressCanvasClear = false;
+    this.coordinatedCanvasClear = false;
 
     // internal
     this.prevHeadX = this.shovel.headX;
@@ -120,6 +137,11 @@ resize() {
   this.width = rect.width;
   this.height = rect.height;
 
+  const isMobileLandscape = window.innerWidth <= MOBILE_BREAKPOINT && window.innerWidth > window.innerHeight;
+  const isMobile = this.width <= MOBILE_BREAKPOINT;
+  const shovelScale = isMobileLandscape ? 0.65 : (isMobile ? 0.8 : 1.0);
+  this._shovelScale = shovelScale;
+
   const s = this.shovel;
 
   // Try to align the shovel vertically relative to the letter pool,
@@ -134,14 +156,14 @@ resize() {
 
     s.pivotX = this.width * 0.18;
     // put the shovel so the head naturally passes through the pool area
-    s.pivotY = poolTopInCanvas - 140; // tweak 140 as needed
+    s.pivotY = poolTopInCanvas - Math.round(140 * shovelScale);
   } else {
     // fallback if pool not found
     s.pivotX = this.width * 0.18;
-    s.pivotY = this.height - 180;
+    s.pivotY = this.height - Math.round(180 * shovelScale);
   }
 
-  s.length = 120;
+  s.length = Math.round(120 * shovelScale);
   s.angle = Math.PI / 2;
   s.headX = s.pivotX - Math.sin(s.angle) * s.length;
   s.headY = s.pivotY + Math.cos(s.angle) * s.length;
@@ -151,6 +173,7 @@ resize() {
 
   onPointerDown(e) {
     if (!this.isRunning) return;
+    if (isPointerBlockedByVerseBook(e)) return;
     const rect = this.canvas.getBoundingClientRect();
     const client = e.touches ? e.touches[0] : e;
 
@@ -282,7 +305,7 @@ resize() {
       if (!this.hasCenteredOnStart) {
         this.hasCenteredOnStart = true;
         const s = this.shovel;
-        const headCenterOffset = s.length + 148 / 2 - 6;
+        const headCenterOffset = s.length + Math.round(148 * (this._shovelScale || 1)) / 2 - 6;
         s.pivotX = this.width / 2 + Math.sin(s.angle) * headCenterOffset;
         s.pivotY = this.height / 2 - Math.cos(s.angle) * headCenterOffset;
         s.headX = s.pivotX - Math.sin(s.angle) * s.length;
@@ -322,7 +345,7 @@ resize() {
     this.lastTime = timestamp;
 
     this.update(dt);
-    this.render();
+    this.render(timestamp);
 
     if (this.isRunning) requestAnimationFrame(this.loop);
   }
@@ -330,8 +353,9 @@ resize() {
   // simple helper to check proximity to letter tiles and pick them up
   computeHeadGeometry() {
 
-    const headWidth = 48;
-    const headHeight = 148;
+    const scale = this._shovelScale || 1;
+    const headWidth = Math.round(48 * scale);
+    const headHeight = Math.round(148 * scale);
     const halfHeadW = headWidth / 2;
     const halfHeadH = headHeight / 2;
     const canvasRect = this.canvas.getBoundingClientRect();
@@ -485,7 +509,7 @@ resize() {
     ctx.rotate(s.angle);
 
     const handleL = s.length;
-    const headH = 148;
+    const headH = Math.round(148 * (this._shovelScale || 1));
     const totalHeight = handleL + headH;
 
     // Draw shovel PNG image
@@ -521,13 +545,30 @@ resize() {
     ctx.restore();
   }
 
-  render() {
-    this.ctx.clearRect(0, 0, this.width, this.height);
+  render(frameTime = null) {
+    if (this.coordinatedCanvasClear && frameTime != null) {
+      const canvas = this.canvas;
+      if (canvas.__linguaForgeLastClearFrame !== frameTime) {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        canvas.__linguaForgeLastClearFrame = frameTime;
+      }
+    } else if (!this.suppressCanvasClear) {
+      this.ctx.clearRect(0, 0, this.width, this.height);
+    }
+
     this.drawShovel(this.ctx);
 
     // Draw overlay content like word chips after the tool
     if (this.overlayRenderer) {
       this.overlayRenderer();
     }
+  }
+
+  setSuppressCanvasClear(suppress) {
+    this.suppressCanvasClear = !!suppress;
+  }
+
+  setCoordinatedCanvasClear(enabled) {
+    this.coordinatedCanvasClear = !!enabled;
   }
 }

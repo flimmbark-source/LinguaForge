@@ -8,6 +8,21 @@ import { gameState, addLetters } from './state.js?v=9';
 import { placeWordInVerse } from './grammar.js?v=9';
 import { spawnResourceGain } from './resourceGainFeedback.js?v=9';
 
+
+function isPointerBlockedByVerseBook(eventLike) {
+  const book = document.getElementById('magicBook');
+  if (!book) return false;
+  const style = getComputedStyle(book);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+  const target = eventLike?.target;
+  if (target?.closest && target.closest('#magicBook')) return true;
+
+  const client = eventLike?.touches?.[0] || eventLike;
+  if (!client || typeof client.clientX !== 'number' || typeof client.clientY !== 'number') return false;
+  const rect = book.getBoundingClientRect();
+  return client.clientX >= rect.left && client.clientX <= rect.right && client.clientY >= rect.top && client.clientY <= rect.bottom;
+}
 export class ChipSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -345,6 +360,7 @@ export class ChipSystem {
    * Handle pointer down
    */
   onPointerDown(e) {
+    if (isPointerBlockedByVerseBook(e)) return;
     const rect = this.canvas.getBoundingClientRect();
     const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
     const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);

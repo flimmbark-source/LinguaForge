@@ -8,8 +8,8 @@ import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, compute
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
 import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
-import { setupVerseAreaDrop } from './grammar.js?v=9';
-import { initializeElements, updateUI, initWordSelector, clearEnscribeSelection } from './ui.js?v=9';
+import { setupVerseAreaDrop, completeVerse, isVerseSolved } from './grammar.js?v=9';
+import { initializeElements, updateUI, initWordSelector } from './ui.js?v=9';
 import { gameState } from './state.js?v=9';
 import { addLetters } from './state.js?v=9';
 import { HammerSystem } from './hammer.js?v=9';
@@ -142,12 +142,34 @@ function ensureShovelSystem(craftingCanvas, overlayRenderer) {
   return shovelSystem;
 }
 
+function syncSharedToolCanvasClearing() {
+  const runningTools = [hammerSystem, pestleSystem, shovelSystem].filter((tool) => !!tool?.isRunning);
+  const shouldCoordinateClearing = runningTools.length > 1;
+
+  const syncTool = (tool) => {
+    if (!tool) return;
+
+    if (typeof tool.setSuppressCanvasClear === 'function') {
+      tool.setSuppressCanvasClear(false);
+    }
+
+    if (typeof tool.setCoordinatedCanvasClear === 'function') {
+      tool.setCoordinatedCanvasClear(shouldCoordinateClearing);
+    }
+  };
+
+  syncTool(hammerSystem);
+  syncTool(pestleSystem);
+  syncTool(shovelSystem);
+}
+
 function makePutAwayHandler(toolName) {
   return () => {
     if (toolName === 'hammer' && hammerSystem) hammerSystem.stop();
     if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
     if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
     if (toolName === 'spyglass') spyglassSystem.stop();
+    syncSharedToolCanvasClearing();
     if (activeTool === toolName) activeTool = null;
     // Update sidebar slot
     const slotId = toolName === 'hammer' ? 'toolSlotHammer' :
@@ -864,8 +886,6 @@ function initializeGame() {
   initializeElements();
 
   // Reset enscribe mode state on fresh game start
-  gameState.enscribeModeActive = false;
-  clearEnscribeSelection();
 
   // Initialize mold slots
   initializeMoldSlots();
@@ -929,8 +949,8 @@ function initializeGame() {
         pestle: document.getElementById('selectPestle'),
         shovel: document.getElementById('selectShovel'),
       };
-      const wasActiveTool = activeTool === toolName;
       const btn = btnMap[toolName];
+      const wasActiveTool = !!btn?.classList.contains('active');
       if (btn) btn.click();
 
       // Position the tool at the drop location (convert screen coords to canvas coords)
@@ -970,9 +990,20 @@ function initializeGame() {
           pestleSystem.pestle.prevHeadY = pestleSystem.pestle.headY;
         }
         if (toolName === 'shovel' && shovelSystem) {
+                    // Mirror hammer drag-out behavior so the shovel is immediately
+          // "in hand" the first time it is pulled from the sidebar.
+          if (!wasActiveTool) {
+            shovelSystem.input.isDown = true;
+            shovelSystem.shovel.isHeld = true;
+          }
+
+          shovelSystem.input.mouseX = canvasX;
+          shovelSystem.input.mouseY = canvasY;
           shovelSystem.shovel.pivotX = canvasX;
           shovelSystem.shovel.pivotY = canvasY;
           shovelSystem.shovel.headX = canvasX;
+          shovelSystem.prevHeadX = shovelSystem.shovel.headX;
+          shovelSystem.prevHeadY = shovelSystem.shovel.headY;
           shovelSystem.shovel.headY = canvasY + (shovelSystem.shovel.length || 120);
         }
         if (toolName === 'spyglass') {
@@ -986,6 +1017,7 @@ function initializeGame() {
       if (toolName === 'pestle' && pestleSystem) pestleSystem.stop();
       if (toolName === 'shovel' && shovelSystem) shovelSystem.stop();
       if (toolName === 'spyglass') spyglassSystem.stop();
+      syncSharedToolCanvasClearing();
 
       // Clear the active tool if we just put away the one that was active
       if (activeTool === toolName) {
@@ -1184,6 +1216,7 @@ function initializeCraftingSystems() {
   // Start with hammer active
   hammerSystem.setOverlayRenderer(renderPhysicsLetters);
   hammerSystem.start();
+  syncSharedToolCanvasClearing();
   // Create shovel lazily to improve mobile startup time.
   // It will initialize immediately when the user selects the shovel tool.
   shovelSystem = null;
@@ -1207,24 +1240,15 @@ function setupToolSelection() {
   const craftingHint = document.getElementById('craftingHint');
   if (!hammerBtn || !spyglassBtn || !pestleBtn || !shovelBtn) return;
 
-  const allToolBtns = [hammerBtn, spyglassBtn, pestleBtn, shovelBtn];
-  function clearAllToolBtns(except) {
-    allToolBtns.forEach(b => { if (b !== except) b.classList.remove('active'); });
-  }
 
   hammerBtn.addEventListener('click', () => {
     if (activeTool === 'hammer') return;
 
     activeTool = 'hammer';
-    clearAllToolBtns(hammerBtn);
     hammerBtn.classList.add('active');
 
-    // Switch systems
-    if (shovelSystem) shovelSystem.stop();
-    if (pestleSystem) pestleSystem.stop();
-    spyglassSystem.stop();
-
     if (hammerSystem) hammerSystem.start();
+    syncSharedToolCanvasClearing();
 
     // Update hint text
     if (craftingHint) {
@@ -1238,12 +1262,7 @@ function setupToolSelection() {
     if (activeTool === 'spyglass') return;
 
     activeTool = 'spyglass';
-    clearAllToolBtns(spyglassBtn);
     spyglassBtn.classList.add('active');
-
-    if (hammerSystem) hammerSystem.stop();
-    if (pestleSystem) pestleSystem.stop();
-    if (shovelSystem) shovelSystem.stop();
 
     spyglassSystem.startAt(window.innerWidth * 0.7, window.innerHeight * 0.35);
   });
@@ -1254,15 +1273,10 @@ function setupToolSelection() {
     if (!ensurePestleSystem(craftingCanvasRef, toolOverlayRenderer)) return;
 
     activeTool = 'pestle';
-    clearAllToolBtns(pestleBtn);
     pestleBtn.classList.add('active');
 
-    // Switch systems
-    if (hammerSystem) hammerSystem.stop();
-    if (shovelSystem) shovelSystem.stop();
-    spyglassSystem.stop();
-
     if (pestleSystem) pestleSystem.start();
+    syncSharedToolCanvasClearing();
 
     // Update hint text
     if (craftingHint) {
@@ -1278,15 +1292,10 @@ function setupToolSelection() {
     if (!ensureShovelSystem(craftingCanvasRef, toolOverlayRenderer)) return;
 
     activeTool = 'shovel';
-    clearAllToolBtns(shovelBtn);
     shovelBtn.classList.add('active');
 
-    // Switch systems
-    if (hammerSystem) hammerSystem.stop();
-    if (pestleSystem) pestleSystem.stop();
-    spyglassSystem.stop();
-
     if (shovelSystem) shovelSystem.start();
+    syncSharedToolCanvasClearing();
 
     // Update hint text
     if (craftingHint) {
@@ -1463,40 +1472,32 @@ function setupEventHandlers() {
   if (enscribeBtn) {
     enscribeBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      if (!isVerseSolved()) {
+        gameState.verseFailedAttempts = (gameState.verseFailedAttempts || 0) + 1;
+        updateUI();
+        return;
+      }
+      const solvedWords = gameState.verseWords.map((w) => w.hebrew);
+      const completed = completeVerse();
+      if (completed) {
+        gameState.verseFailedAttempts = 0;
+        gameState.verseLastTriedSignature = '';
+        (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
+        spawnVerseEchoWords(solvedWords);
+        const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
+        if (grammarHebrewLineDiv) {
+          const rect = grammarHebrewLineDiv.getBoundingClientRect();
+          spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
+        }
+      }
+      updateUI();
     });
   }
 
   const anvilGlyph = document.getElementById('anvilGlyph');
   if (anvilGlyph) {
-    anvilGlyph.style.cursor = 'pointer';
-    anvilGlyph.addEventListener('click', () => {
-      gameState.enscribeModeActive = true;
-      clearEnscribeSelection();
-    });
+    anvilGlyph.style.cursor = 'default';
   }
-
-  document.addEventListener('enscribe-attempt', (event) => {
-    const selectedWords = event?.detail?.words || [];
-    const isCorrect = selectedWords.length === SOLUTION_HEBREW_ORDER.length
-      && SOLUTION_HEBREW_ORDER.every((word, idx) => word === selectedWords[idx]);
-
-    gameState.enscribeModeActive = false;
-
-    if (isCorrect) {
-      addInk(VERSE_COMPLETION_REWARD);
-      gameState.linesCompleted += 1;
-      (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
-      spawnVerseEchoWords(selectedWords);
-      const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
-      if (grammarHebrewLineDiv) {
-        const rect = grammarHebrewLineDiv.getBoundingClientRect();
-        spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
-      }
-    }
-
-    clearEnscribeSelection();
-    updateUI();
-  });
 
   // Upgrades button
   const upgradesBtn = document.getElementById('upgradesBtn');

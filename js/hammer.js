@@ -82,6 +82,40 @@ function segmentIntersectsRect(x1, y1, x2, y2, left, top, right, bottom) {
   return true;
 }
 
+
+function isPointerBlockedByVerseBook(eventLike) {
+  const book = document.getElementById('magicBook');
+  if (!book) return false;
+  const style = getComputedStyle(book);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+  const target = eventLike?.target;
+  if (target?.closest && target.closest('#magicBook')) return true;
+
+  const client = eventLike?.touches?.[0] || eventLike;
+  if (!client || typeof client.clientX !== 'number' || typeof client.clientY !== 'number') return false;
+  const rect = book.getBoundingClientRect();
+  return client.clientX >= rect.left && client.clientX <= rect.right && client.clientY >= rect.top && client.clientY <= rect.bottom;
+}
+
+function isPointerBlockedByAudioPanel(eventLike) {
+  const audioPanel = document.getElementById('audioControls');
+  if (!audioPanel || audioPanel.classList.contains('hidden')) return false;
+
+  const target = eventLike?.target;
+  if (target?.closest && target.closest('#audioControls, #audioControlsBackdrop')) {
+    return true;
+  }
+
+  const client = eventLike?.touches?.[0] || eventLike;
+  if (!client || typeof client.clientX !== 'number' || typeof client.clientY !== 'number') {
+    return false;
+  }
+
+  const rect = audioPanel.getBoundingClientRect();
+  return client.clientX >= rect.left && client.clientX <= rect.right && client.clientY >= rect.top && client.clientY <= rect.bottom;
+}
+
 export class HammerSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -92,6 +126,8 @@ export class HammerSystem {
     this.onLetterLanded = null;
     this.onForgeTriggered = null; // Called when hammer hits a forgeable mold
     this.overlayRenderer = null; // Optional renderer (e.g., word chips) drawn after the tool
+    this.suppressCanvasClear = false;
+    this.coordinatedCanvasClear = false;
 
     // World physics constants
     this.gravity = 3600; // px/s^2
@@ -529,6 +565,18 @@ export class HammerSystem {
     return safeMax;
   }
 
+  /**
+   * Handle length represented by the visible hammer sprite.
+   *
+   * The physics length can shrink/grow based on where the player grips, but the
+   * PNG remains a fixed-size hammer. Interaction should therefore target the
+   * visual haft span (butt-to-head), not only the current pivot-to-head segment.
+   */
+  getVisualHandleLength() {
+    const base = this.hammer.baseLength;
+    return Number.isFinite(base) && base > 0 ? base : 180;
+  }
+
 
   /**
    * Setup event listeners for hammer interaction
@@ -562,17 +610,27 @@ export class HammerSystem {
     const h = this.hammer;
     const isMobile = this.width <= MOBILE_BREAKPOINT;
     const adjustedPy = py;
-    const x1 = h.pivotX;
-    const y1 = h.pivotY;
-    const x2 = h.headX;
-    const y2 = h.headY;
-    const dx = x2 - x1;
-    const dy = y2 - y1;
+    const headX = h.headX;
+    const headY = h.headY;
+    const pivotDx = headX - h.pivotX;
+    const pivotDy = headY - h.pivotY;
+    const pivotLen = Math.hypot(pivotDx, pivotDy) || 1;
+    const axisX = pivotDx / pivotLen;
+    const axisY = pivotDy / pivotLen;
+
+    // Project against the full visible haft (butt->head), not just pivot->head.
+    // This keeps the butt end grabbable even after mid-haft grips or ripped hits.
+    const visibleLength = this.getVisualHandleLength();
+    const buttX = headX - axisX * visibleLength;
+    const buttY = headY - axisY * visibleLength;
+    const dx = headX - buttX;
+    const dy = headY - buttY;
     const lenSq = dx * dx + dy * dy || 1;
-    let t = ((px - x1) * dx + (adjustedPy - y1) * dy) / lenSq;
+
+    let t = ((px - buttX) * dx + (adjustedPy - buttY) * dy) / lenSq;
     t = Math.max(0, Math.min(1, t));
-    const cx = x1 + dx * t;
-    const cy = y1 + dy * t;
+    const cx = buttX + dx * t;
+    const cy = buttY + dy * t;
     const dist = Math.hypot(px - cx, adjustedPy - cy);
 
     // Keep grabbing valid anywhere along the haft (segment projection above),
@@ -605,6 +663,8 @@ export class HammerSystem {
    */
 onPointerDown(e) {
   if (!this.isRunning) return;
+  if (isPointerBlockedByVerseBook(e)) return;
+  if (isPointerBlockedByAudioPanel(e)) return;
   if (window.PointerEvent && (e.type === 'mousedown' || e.type === 'touchstart')) return;
   // Refresh cached rect on pointer down
   this._cachedCanvasRect = this.canvas.getBoundingClientRect();
@@ -1774,7 +1834,7 @@ updateFreeHammer(dt) {
 
         // Reset the haft to its full endpoint so the entire visible handle is
         // represented by the grab segment after a ripped hit.
-        const fullHaftLength = this.getMaxHandleLength();
+        const fullHaftLength = this.getVisualHandleLength();
         hammer.length = fullHaftLength;
         hammer.pivotX = hammer.headX - haftAxisX * fullHaftLength;
         hammer.pivotY = hammer.headY - haftAxisY * fullHaftLength;
@@ -2223,9 +2283,17 @@ drawHammer(ctx, hammer) {
   /**
    * Render frame
    */
-  render() {
+  render(frameTime = null) {
     // Clear canvas
-    this.ctx.clearRect(0, 0, this.width, this.height);
+    if (this.coordinatedCanvasClear && frameTime != null) {
+      const canvas = this.canvas;
+      if (canvas.__linguaForgeLastClearFrame !== frameTime) {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        canvas.__linguaForgeLastClearFrame = frameTime;
+      }
+    } else if (!this.suppressCanvasClear) {
+      this.ctx.clearRect(0, 0, this.width, this.height);
+    }
 
     // Draw anvil
     this.drawAnvil(this.ctx, this.anvil);
@@ -2258,7 +2326,7 @@ drawHammer(ctx, hammer) {
     this.lastTime = timestamp;
 
     this.update(dt);
-    this.render();
+    this.render(timestamp);
 
     if (this.isRunning) {
       requestAnimationFrame(this.loop);
@@ -2270,6 +2338,14 @@ drawHammer(ctx, hammer) {
    */
   setOverlayRenderer(renderer) {
     this.overlayRenderer = renderer;
+  }
+
+  setSuppressCanvasClear(suppress) {
+    this.suppressCanvasClear = !!suppress;
+  }
+
+  setCoordinatedCanvasClear(enabled) {
+    this.coordinatedCanvasClear = !!enabled;
   }
 
   /**
