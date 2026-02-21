@@ -129,6 +129,28 @@ export function completeSelectedVerse(selectedWords) {
 }
 
 /**
+ * Get the viewport origin of the containing block for position:fixed elements
+ * inside the magic book. Normally fixed positioning is relative to the viewport,
+ * but CSS `transform` (portrait: translateX(-50%)) and `backdrop-filter`
+ * (landscape) on .magic-book create a new containing block. We subtract this
+ * offset so that `left = e.clientX - origin.x` maps back to the correct
+ * on-screen position.
+ * @returns {{ x: number, y: number }}
+ */
+function getFixedContainingBlockOrigin() {
+  const book = document.getElementById('magicBook');
+  if (!book) return { x: 0, y: 0 };
+  const style = getComputedStyle(book);
+  const hasTransform = style.transform !== 'none';
+  const hasBackdropFilter = style.backdropFilter && style.backdropFilter !== 'none';
+  if (hasTransform || hasBackdropFilter) {
+    const rect = book.getBoundingClientRect();
+    return { x: rect.left, y: rect.top };
+  }
+  return { x: 0, y: 0 };
+}
+
+/**
  * Setup pointer-based drag for verse word chips (more reliable than HTML5 drag-and-drop)
  * @param {HTMLElement} chip - Word chip element
  * @param {string} instanceId - Instance ID of the verse word
@@ -152,6 +174,12 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
     placeholder.style.background = 'transparent';
     placeholder.style.boxSizing = 'border-box';
 
+    // Snapshot the containing-block origin at drag start. .magic-book has
+    // transform: translateX(-50%) in portrait and backdrop-filter in landscape,
+    // both of which make it the containing block for position:fixed children.
+    // We subtract that origin so the chip tracks the pointer in viewport space.
+    const origin = getFixedContainingBlockOrigin();
+
     dragState = {
       chip,
       instanceId,
@@ -163,16 +191,18 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
       placeholder,
       lastClientX: e.clientX,
       lastClientY: e.clientY,
+      origin,
     };
 
     // Insert placeholder at current position
     chip.parentElement.insertBefore(placeholder, chip);
 
-    // Make chip draggable
+    // Make chip draggable — position in containing-block coordinates so the
+    // chip appears directly under the pointer (combined with CSS translate(-50%,-50%)).
     chip.classList.add('dragging-out');
     chip.style.position = 'fixed';
-    chip.style.left = e.clientX + 'px';
-    chip.style.top = e.clientY + 'px';
+    chip.style.left = (e.clientX - origin.x) + 'px';
+    chip.style.top = (e.clientY - origin.y) + 'px';
     chip.style.zIndex = '1300';
     chip.style.opacity = '0.95';
     chip.setPointerCapture(e.pointerId);
@@ -185,8 +215,9 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
     e.preventDefault();
     dragState.lastClientX = e.clientX;
     dragState.lastClientY = e.clientY;
-    chip.style.left = e.clientX + 'px';
-    chip.style.top = e.clientY + 'px';
+    const { origin } = dragState;
+    chip.style.left = (e.clientX - origin.x) + 'px';
+    chip.style.top = (e.clientY - origin.y) + 'px';
 
     // Update placeholder position based on where drop would occur
     updatePlaceholderPosition(e.clientX, e.clientY, instanceId, dragState.placeholder);

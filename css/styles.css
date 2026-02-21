@@ -5049,6 +5049,7 @@ body.book-overlay-active .magic-book {
   position: fixed;
   margin: 0;
   transform: translate(-50%, -50%);
+  transition: none;
   z-index: 1300;
   opacity: 0.95;
   pointer-events: none;
