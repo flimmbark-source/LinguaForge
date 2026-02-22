@@ -5059,3 +5059,350 @@ body.book-overlay-active .magic-book {
   transform: translate(-50%, -50%);
   box-shadow: none;
 }
+
+/* ===============================================
+   CHIP CATEGORY VISUAL SYSTEM
+   Shape language + border style per grammar type
+   =============================================== */
+
+/* --- Noun: rounded pill (default, widened) --- */
+.chip-cat-noun {
+  border-radius: 999px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #b9975f;
+  min-width: 52px;
+}
+.verse-orbit-chip.chip-cat-noun,
+.verse-line .line-word-chip.chip-cat-noun {
+  border-color: #b9975f;
+  box-shadow: 0 0 0 2px rgba(185, 151, 95, 0.18);
+}
+
+/* --- Verb: slightly angular pill --- */
+.chip-cat-verb {
+  border-radius: 8px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #8b7040;
+  min-width: 44px;
+}
+.verse-orbit-chip.chip-cat-verb,
+.verse-line .line-word-chip.chip-cat-verb {
+  border-color: #8b7040;
+  border-left-width: 3px;
+  border-right-width: 3px;
+  box-shadow: inset 0 0 0 1px rgba(139, 112, 64, 0.12);
+}
+
+/* --- Particle / function word: smaller capsule --- */
+.chip-cat-particle {
+  border-radius: 999px;
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: #a08860;
+  padding-left: 6px;
+  padding-right: 6px;
+  font-size: 12px;
+  min-width: 28px;
+}
+.verse-orbit-chip.chip-cat-particle {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* --- Attacher / construct: hooked edge implies binding --- */
+.chip-cat-attacher {
+  border-radius: 999px 8px 8px 999px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #9a7a4a;
+  border-right-width: 3px;
+  border-right-style: double;
+  min-width: 48px;
+}
+.verse-orbit-chip.chip-cat-attacher {
+  border-radius: 999px 8px 8px 999px;
+  border-right-width: 3px;
+  border-right-style: double;
+}
+
+/* Category indicator dot (subtle, inside chip) */
+.chip-cat-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  margin-right: 3px;
+  vertical-align: middle;
+  opacity: 0.55;
+}
+.chip-cat-noun .chip-cat-dot { background: #c9a050; }
+.chip-cat-verb .chip-cat-dot { background: #7a8b40; }
+.chip-cat-particle .chip-cat-dot { background: #808090; }
+.chip-cat-attacher .chip-cat-dot { background: #9a6a4a; }
+
+/* ===============================================
+   CHIP VISUAL STATES
+   idle, hovered, selected, dragging, placed, correct, incorrect
+   =============================================== */
+
+/* Idle / unplaced (orbit chips default) */
+.verse-orbit-chip.chip-state-idle {
+  opacity: 1;
+  transition: box-shadow 0.25s ease, transform 0.2s ease, opacity 0.25s ease;
+}
+
+/* Hovered */
+.verse-orbit-chip.chip-state-idle:hover {
+  box-shadow: 0 0 8px rgba(245, 230, 200, 0.5);
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+/* Selected (tap to show info) */
+.verse-orbit-chip.chip-state-selected {
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.45), 0 0 0 2px rgba(251, 191, 36, 0.35);
+  z-index: 10;
+}
+
+/* Same-category pulse when a chip is selected */
+.verse-orbit-chip.chip-cat-pulse {
+  animation: catPulse 0.8s ease-in-out 2;
+}
+@keyframes catPulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(245, 230, 200, 0.4); }
+  50% { box-shadow: 0 0 10px rgba(251, 191, 36, 0.3), 0 0 0 3px rgba(251, 191, 36, 0.25); }
+}
+
+/* Dragging */
+.verse-orbit-chip.chip-state-dragging {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 30;
+  opacity: 0.92;
+}
+
+/* Placed on line (in verse) */
+.verse-line .line-word-chip.chip-state-placed {
+  background: #eedcbc;
+  border-color: #b9975f;
+  transition: box-shadow 0.3s ease, background 0.3s ease;
+}
+
+/* Correct / locked after check */
+.verse-line .line-word-chip.chip-state-locked {
+  background: linear-gradient(135deg, #f0ddb8, #e8d0a0);
+  border-color: #c9a050;
+  box-shadow: 0 0 8px rgba(201, 160, 80, 0.3), inset 0 0 4px rgba(245, 230, 200, 0.3);
+  cursor: default;
+  pointer-events: none;
+  position: relative;
+}
+.verse-line .line-word-chip.chip-state-locked::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 1px solid rgba(201, 160, 80, 0.4);
+  pointer-events: none;
+  animation: lockedShimmer 3s ease-in-out infinite;
+}
+@keyframes lockedShimmer {
+  0%, 100% { box-shadow: 0 0 4px rgba(245, 200, 80, 0.15); }
+  50% { box-shadow: 0 0 10px rgba(245, 200, 80, 0.3); }
+}
+
+/* Incorrect (being tossed back) */
+.verse-orbit-chip.chip-state-incorrect {
+  animation: incorrectReturn 0.5s ease-out forwards;
+}
+@keyframes incorrectReturn {
+  0% { opacity: 0.4; transform: translate(-50%, -50%) scale(0.7); }
+  40% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.08); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ===============================================
+   VERSE LINE - MAGICAL INSCRIPTION CHANNEL
+   =============================================== */
+
+/* Override the default verse line with a rune-track aesthetic */
+.verse-line {
+  position: relative;
+  background:
+    linear-gradient(to right, rgba(93,64,30,0.04), rgba(93,64,30,0.12), rgba(93,64,30,0.04)),
+    rgba(245, 230, 200, 0.34);
+  border: 1px solid rgba(93,64,30,0.25);
+  border-radius: 12px;
+  box-shadow:
+    inset 0 1px 6px rgba(93,64,30,0.1),
+    inset 0 0 0 1px rgba(201, 181, 138, 0.2),
+    0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* Inscription guide lines */
+.verse-line::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed rgba(93,64,30,0.18);
+  border-radius: 8px;
+  opacity: 0.6;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 18px,
+      rgba(93,64,30,0.04) 18px,
+      rgba(93,64,30,0.04) 19px
+    );
+}
+
+/* Active drop target glow */
+.verse-line.compose-active {
+  border-color: rgba(201, 160, 80, 0.6);
+  box-shadow:
+    0 0 0 2px rgba(201, 160, 80, 0.2),
+    inset 0 0 12px rgba(245, 200, 80, 0.08);
+}
+
+/* ===============================================
+   VERSE METER - enhanced segment fill
+   =============================================== */
+
+.verse-meter-track {
+  height: 6px;
+  width: 100%;
+  border-radius: 999px;
+  background: rgba(93,64,30,.12);
+  overflow: hidden;
+  border: 1px solid rgba(93,64,30,0.15);
+}
+
+.verse-meter-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, rgba(201,160,80,0.4), #c9a050, #fbbf24);
+  transition: width 0.3s ease;
+  border-radius: 999px;
+  box-shadow: 0 0 4px rgba(251,191,36,0.3);
+}
+
+/* ===============================================
+   GAP PLACEHOLDERS (after verse check)
+   =============================================== */
+
+.verse-gap-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  border: 2px dashed rgba(93,64,30,0.3);
+  background: rgba(245, 230, 200, 0.18);
+  box-sizing: border-box;
+  min-height: 28px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+/* Category-shaped gap hints */
+.verse-gap-placeholder.gap-noun {
+  border-radius: 999px;
+  min-width: 52px;
+  padding: 3px 10px;
+}
+.verse-gap-placeholder.gap-verb {
+  border-radius: 8px;
+  min-width: 44px;
+  padding: 3px 8px;
+}
+.verse-gap-placeholder.gap-particle {
+  border-radius: 999px;
+  min-width: 28px;
+  padding: 3px 6px;
+  font-size: 11px;
+}
+.verse-gap-placeholder.gap-attacher {
+  border-radius: 999px 8px 8px 999px;
+  min-width: 48px;
+  padding: 3px 10px;
+  border-right-style: double;
+  border-right-width: 3px;
+}
+
+/* Subtle question mark inside gap */
+.verse-gap-placeholder::after {
+  content: '?';
+  font-size: 11px;
+  color: rgba(93,64,30,0.25);
+  font-style: italic;
+}
+
+/* Gap glow when dragging a chip near */
+.verse-line.compose-active .verse-gap-placeholder {
+  border-color: rgba(201, 160, 80, 0.5);
+  background: rgba(245, 230, 200, 0.3);
+}
+
+/* ===============================================
+   CHECK VERSE BUTTON
+   =============================================== */
+
+.check-verse-btn {
+  background: linear-gradient(135deg, #5a3d1a, #7a5a2e);
+  color: #fcd34d;
+  border: 1px solid #8b6914;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.check-verse-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7a5a2e, #8b6914);
+  box-shadow: 0 2px 8px rgba(139, 105, 20, 0.4);
+}
+.check-verse-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.verse-footer-row .check-verse-btn {
+  pointer-events: auto;
+}
+
+/* ===============================================
+   CATEGORY CLUSTERING HINTS (orbit positioning)
+   =============================================== */
+
+/* Content words cluster upper area */
+.verse-orbit-chip.cluster-content {
+  /* Positioned via JS, but these define animation/transition */
+}
+
+/* Function words cluster lower area */
+.verse-orbit-chip.cluster-function {
+  /* Positioned via JS */
+}
+
+/* Word info popup category label */
+.word-info-category {
+  display: inline-block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-top: 4px;
+  margin-bottom: 2px;
+  opacity: 0.7;
+}
+.word-info-category.cat-noun { background: rgba(201,160,80,0.2); color: #8b6914; }
+.word-info-category.cat-verb { background: rgba(122,139,64,0.2); color: #5a6b30; }
+.word-info-category.cat-particle { background: rgba(128,128,144,0.2); color: #5a5a6a; }
+.word-info-category.cat-attacher { background: rgba(154,106,74,0.2); color: #7a4a2a; }

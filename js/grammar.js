@@ -3,7 +3,7 @@
  * Handles verse assembly, grammar checking, and line completion
  */
 
-import { GRAMMAR_LEXICON, SOLUTION_HEBREW_ORDER, VERSE_COMPLETION_REWARD } from './config.js?v=9';
+import { GRAMMAR_LEXICON, GRAMMAR_CATEGORIES, SOLUTION_HEBREW_ORDER, VERSE_COMPLETION_REWARD } from './config.js?v=9';
 import {
   gameState,
   findWord,
@@ -126,6 +126,110 @@ export function completeSelectedVerse(selectedWords) {
   incrementLinesCompleted();
   clearVerseWords();
   return true;
+}
+
+/**
+ * Check the current verse submission.
+ * Returns { correctSlots, incorrectInstanceIds, isSolved }
+ * - correctSlots: array of length SOLUTION_HEBREW_ORDER.length, each { hebrew, instanceId } or null
+ * - incorrectInstanceIds: instanceIds of words that don't match their position
+ * - isSolved: true if all positions match
+ */
+export function checkVerseSubmission() {
+  const solution = SOLUTION_HEBREW_ORDER;
+  const placed = gameState.verseWords;
+  const correctSlots = new Array(solution.length).fill(null);
+  const incorrectInstanceIds = [];
+
+  for (let i = 0; i < solution.length; i++) {
+    if (placed[i] && placed[i].hebrew === solution[i]) {
+      correctSlots[i] = { hebrew: placed[i].hebrew, instanceId: placed[i].instanceId };
+    } else if (placed[i]) {
+      incorrectInstanceIds.push(placed[i].instanceId);
+    }
+  }
+
+  // Also mark any extra words beyond solution length as incorrect
+  for (let i = solution.length; i < placed.length; i++) {
+    if (placed[i]) {
+      incorrectInstanceIds.push(placed[i].instanceId);
+    }
+  }
+
+  const isSolved = correctSlots.every(s => s !== null);
+
+  // Update state
+  gameState.verseLockedSlots = correctSlots;
+  gameState.verseHasChecked = true;
+  gameState.verseIncorrectIds = incorrectInstanceIds;
+
+  // Rebuild verseWords as a sparse array matching solution positions.
+  // Correct words stay at their positions, incorrect ones are removed.
+  const newVerseWords = [];
+  for (let i = 0; i < solution.length; i++) {
+    if (correctSlots[i]) {
+      newVerseWords.push(placed[i]);
+    }
+    // Incorrect/missing positions are simply not included.
+    // New words will be placed via placeWordInVerseGap.
+  }
+  gameState.verseWords = newVerseWords;
+
+  return { correctSlots, incorrectInstanceIds, isSolved };
+}
+
+/**
+ * Place a word into the next available gap in the verse after a check.
+ * Returns the gap index used, or -1 if no gap available.
+ */
+export function placeWordInVerseGap(wordId) {
+  const word = findWord(wordId);
+  if (!word) return -1;
+
+  const lockedSlots = gameState.verseLockedSlots;
+  if (!lockedSlots || lockedSlots.length === 0) {
+    // No check has happened - use normal placement
+    return placeWordInVerse(wordId, gameState.verseWords.length) ? gameState.verseWords.length - 1 : -1;
+  }
+
+  // Find the first unlocked gap position
+  const currentHebrew = gameState.verseWords.map(w => w.hebrew);
+  for (let i = 0; i < SOLUTION_HEBREW_ORDER.length; i++) {
+    if (!lockedSlots[i]) {
+      // This position is a gap - check if already filled by an unlocked word
+      // Count how many words we have up to this position
+      const lockedBefore = lockedSlots.slice(0, i).filter(s => s).length;
+      const totalBefore = lockedBefore; // Only locked words occupy positions
+
+      // Place word at this logical position
+      const instanceId = 'vw-' + Date.now() + '-' + Math.random();
+      addVerseWord({ instanceId, hebrew: word.text }, gameState.verseWords.length);
+      removeWord(wordId);
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Get the grammar category for a Hebrew word
+ * @param {string} hebrew - Hebrew text
+ * @returns {string} Category key (noun, verb, particle, attacher) or 'noun' as default
+ */
+export function getWordCategory(hebrew) {
+  const entry = GRAMMAR_LEXICON[hebrew];
+  return entry?.category || 'noun';
+}
+
+/**
+ * Get the expected category for a gap slot at a given solution index
+ * @param {number} index - Index in SOLUTION_HEBREW_ORDER
+ * @returns {string} Category key
+ */
+export function getSlotExpectedCategory(index) {
+  const hebrew = SOLUTION_HEBREW_ORDER[index];
+  return getWordCategory(hebrew);
 }
 
 /**

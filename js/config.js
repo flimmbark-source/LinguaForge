@@ -17,16 +17,24 @@ export const INK_PER_LETTER = 1;
 export const INK_PER_WORD_LETTER = 5;
 export const VERSE_COMPLETION_REWARD = 100;
 
+// Grammar categories for visual grouping of chips
+export const GRAMMAR_CATEGORIES = {
+  noun:      { label: 'Noun',      shape: 'pill' },
+  verb:      { label: 'Verb',      shape: 'angular' },
+  particle:  { label: 'Particle',  shape: 'capsule' },
+  attacher:  { label: 'Attacher',  shape: 'hook' },
+};
+
 // Hebrew grammar lexicon
 export const GRAMMAR_LEXICON = {
-  'אש':      { translit: 'esh',      gloss: 'fire' },
-  'היא':     { translit: 'hi',       gloss: 'is' },
-  'ה':       { translit: 'ha',       gloss: 'the' },
-  'ראשונה':  { translit: 'rishona',  gloss: 'first' },
-  'שנייה':  { translit: 'shemniya',  gloss: 'second' },
-  'נשמת':    { translit: 'nishmat',  gloss: 'breath of' },
-  'של':      { translit: 'shel',     gloss: 'of' },
-  'כוח':     { translit: 'koach',    gloss: 'power' },
+  'אש':      { translit: 'esh',      gloss: 'fire',      category: 'noun' },
+  'היא':     { translit: 'hi',       gloss: 'is',        category: 'verb' },
+  'ה':       { translit: 'ha',       gloss: 'the',       category: 'particle' },
+  'ראשונה':  { translit: 'rishona',  gloss: 'first',     category: 'noun' },
+  'שנייה':  { translit: 'shemniya',  gloss: 'second',    category: 'noun' },
+  'נשמת':    { translit: 'nishmat',  gloss: 'breath of', category: 'attacher' },
+  'של':      { translit: 'shel',     gloss: 'of',        category: 'particle' },
+  'כוח':     { translit: 'koach',    gloss: 'power',     category: 'noun' },
 };
 
 // Current line/verse configuration

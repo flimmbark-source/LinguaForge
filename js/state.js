@@ -50,6 +50,11 @@ export const gameState = {
   verseLastScore: 0,
   verseLastTriedSignature: '',
 
+  // Verse submission / check state
+  verseLockedSlots: [],    // Array of { hebrew, instanceId } or null for each solution position
+  verseHasChecked: false,  // Whether the player has submitted at least once
+  verseIncorrectIds: [],   // instanceIds of chips being animated back (transient)
+
   // Legacy selector/book state
   wordSelectorIndex: 0,
   enscribeModeActive: false,
@@ -236,6 +241,9 @@ export function reorderVerseWord(instanceId, newIndex) {
  */
 export function clearVerseWords() {
   gameState.verseWords = [];
+  gameState.verseLockedSlots = [];
+  gameState.verseHasChecked = false;
+  gameState.verseIncorrectIds = [];
 }
 
 /**

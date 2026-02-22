@@ -3,11 +3,11 @@
  * Handles all UI updates and rendering logic
  */
 
-import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON, SOLUTION_HEBREW_ORDER } from './config.js?v=9';
+import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON, GRAMMAR_CATEGORIES, SOLUTION_HEBREW_ORDER } from './config.js?v=9';
 import { gameState, addWord, removeVerseWord, getNextWordId, clearVerseWords } from './state.js?v=9';
 import { setupWordChipDrag, sellWord, renderMoldsInViewport } from './molds.js?v=9';
 import { toggleScribePaused } from './scribes.js?v=9';
-import { evaluateVerse, setupVerseWordChipDrag, placeWordInVerse } from './grammar.js?v=9';
+import { evaluateVerse, setupVerseWordChipDrag, placeWordInVerse, placeWordInVerseGap, checkVerseSubmission, getWordCategory, getSlotExpectedCategory } from './grammar.js?v=9';
 import { updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 
 // DOM element cache
@@ -55,6 +55,7 @@ export function initializeElements() {
   elements.wordInfoExample = document.getElementById('wordInfoExample');
   elements.pestle = document.getElementById('selectPestle');
   elements.shovel = document.getElementById('selectShovel');
+  elements.checkVerseBtn = document.getElementById('checkVerseBtn');
 }
 
 /**
@@ -397,10 +398,27 @@ function renderVerseChips(force = false) {
 
   elements.grammarHebrewLineDiv.innerHTML = '';
 
-  // Render verse word chips
+  // If we have locked slots from a check, render the full slot layout
+  const hasLockedSlots = gameState.verseHasChecked && gameState.verseLockedSlots && gameState.verseLockedSlots.length > 0;
+
+  if (hasLockedSlots) {
+    renderVerseWithGaps();
+  } else {
+    renderVerseFreeform();
+  }
+
+  // Update our tracking state
+  lastRenderedVerseWords = gameState.verseWords.map(w => ({ instanceId: w.instanceId }));
+}
+
+/**
+ * Render verse line in free-form mode (before any check)
+ */
+function renderVerseFreeform() {
   gameState.verseWords.forEach(wordInstance => {
     const chip = document.createElement('div');
-    chip.className = 'line-word-chip';
+    const category = getWordCategory(wordInstance.hebrew);
+    chip.className = `line-word-chip chip-cat-${category} chip-state-placed`;
     chip.style.direction = 'rtl';
     chip.textContent = wordInstance.hebrew;
     chip.dataset.instanceId = wordInstance.instanceId;
@@ -408,17 +426,65 @@ function renderVerseChips(force = false) {
       moveVerseWordBackToOrbit(instanceId, clientX, clientY);
     });
 
-    // Allow dragover for inventory words to be dropped between existing chips
-    // This makes chips valid drop targets so position detection works correctly
     chip.addEventListener('dragover', e => {
       e.preventDefault();
     });
 
     elements.grammarHebrewLineDiv.appendChild(chip);
   });
+}
 
-  // Update our tracking state
-  lastRenderedVerseWords = gameState.verseWords.map(w => ({ instanceId: w.instanceId }));
+/**
+ * Render verse line with locked chips and gap placeholders after a check
+ */
+function renderVerseWithGaps() {
+  const lockedSlots = gameState.verseLockedSlots;
+  const lockedInstanceIds = new Set(lockedSlots.filter(s => s).map(s => s.instanceId));
+
+  // Build the slot layout: one element per solution position
+  for (let i = 0; i < SOLUTION_HEBREW_ORDER.length; i++) {
+    const slot = lockedSlots[i];
+
+    if (slot) {
+      // Locked correct chip
+      const chip = document.createElement('div');
+      const category = getWordCategory(slot.hebrew);
+      chip.className = `line-word-chip chip-cat-${category} chip-state-locked`;
+      chip.style.direction = 'rtl';
+      chip.textContent = slot.hebrew;
+      chip.dataset.instanceId = slot.instanceId;
+      chip.dataset.slotIndex = String(i);
+      elements.grammarHebrewLineDiv.appendChild(chip);
+    } else {
+      // Gap placeholder - show expected category shape hint
+      const category = getSlotExpectedCategory(i);
+      const gap = document.createElement('div');
+      gap.className = `verse-gap-placeholder gap-${category}`;
+      gap.dataset.slotIndex = String(i);
+      gap.dataset.expectedCategory = category;
+
+      // Allow drops on gaps
+      gap.addEventListener('dragover', e => e.preventDefault());
+
+      elements.grammarHebrewLineDiv.appendChild(gap);
+    }
+  }
+
+  // Also render any non-locked placed words (words placed after a check but not yet re-checked)
+  const unlockedWords = gameState.verseWords.filter(w => !lockedInstanceIds.has(w.instanceId));
+  unlockedWords.forEach(wordInstance => {
+    const chip = document.createElement('div');
+    const category = getWordCategory(wordInstance.hebrew);
+    chip.className = `line-word-chip chip-cat-${category} chip-state-placed`;
+    chip.style.direction = 'rtl';
+    chip.textContent = wordInstance.hebrew;
+    chip.dataset.instanceId = wordInstance.instanceId;
+    setupVerseWordChipDrag(chip, wordInstance.instanceId, () => updateGrammarUI(true), (instanceId, clientX, clientY) => {
+      moveVerseWordBackToOrbit(instanceId, clientX, clientY);
+    });
+    chip.addEventListener('dragover', e => e.preventDefault());
+    elements.grammarHebrewLineDiv.appendChild(chip);
+  });
 }
 
 
@@ -602,6 +668,9 @@ export function updateGrammarUI(force = false) {
     const showHint = !solved && gameState.verseFailedAttempts >= 2;
     elements.verseHint.textContent = showHint ? 'Something about “of” placement feels off…' : '';
   }
+
+  // Update check button visibility
+  updateCheckButton();
 }
 
 /**
@@ -614,6 +683,86 @@ export function updateEnscribeButton() {
   elements.enscribeBtn.disabled = !solved;
   elements.enscribeBtn.style.display = solved ? 'inline-flex' : 'none';
   elements.enscribeBtn.textContent = 'Enscribe';
+}
+
+/**
+ * Update check button visibility
+ * Show when there are placed words, hide when solved
+ */
+function updateCheckButton() {
+  if (!elements.checkVerseBtn) return;
+  const hasWords = gameState.verseWords.length > 0;
+  const solved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
+    && gameState.verseWords.every((w, i) => w.hebrew === SOLUTION_HEBREW_ORDER[i]);
+
+  // Show check button when there are words placed but verse isn't solved
+  elements.checkVerseBtn.disabled = !hasWords || solved;
+  elements.checkVerseBtn.style.display = (hasWords && !solved) ? 'inline-flex' : 'none';
+}
+
+/**
+ * Handle the "Check" button press.
+ * Evaluates each placed chip, locks correct ones, returns incorrect to orbit.
+ */
+export function handleVerseCheck() {
+  if (gameState.verseWords.length === 0) return;
+
+  const { correctSlots, incorrectInstanceIds, isSolved } = checkVerseSubmission();
+
+  if (isSolved) {
+    // All correct - the Enscribe button will handle completion
+    lastRenderedVerseWords = [];
+    orbitSnapshotKey = '';
+    updateUI();
+    return;
+  }
+
+  // Return incorrect chips to orbit with animation
+  incorrectInstanceIds.forEach((instanceId, index) => {
+    // Find the removed word's hebrew text from the pre-check state
+    // (they've already been removed from verseWords by checkVerseSubmission)
+    // We need to re-create them as orbit words
+    const hebrewText = findHebrewForRemovedChip(instanceId);
+    if (!hebrewText) return;
+
+    const lex = GRAMMAR_LEXICON[hebrewText];
+    const newWordId = getNextWordId();
+    addWord({
+      id: newWordId,
+      text: hebrewText,
+      english: lex?.gloss || hebrewText,
+      length: hebrewText.length,
+      power: 0,
+      heated: true,
+      returnedFromCheck: true, // Flag for animation
+    });
+
+    // Assign a position for the returned chip
+    const category = getWordCategory(hebrewText);
+    const clusterPos = getCategoryClusterPosition(category, index);
+    gameState.wordContainerPositions = gameState.wordContainerPositions || {};
+    gameState.wordContainerPositions[newWordId] = clusterPos;
+  });
+
+  // Force full re-render
+  lastRenderedVerseWords = [];
+  orbitSnapshotKey = '';
+  updateUI();
+}
+
+// Track removed chip hebrew text for re-creation after check
+let _preCheckVerseWords = [];
+
+/**
+ * Snapshot verse words before a check so we can look up removed chips' hebrew text
+ */
+export function snapshotPreCheckVerseWords() {
+  _preCheckVerseWords = gameState.verseWords.map(w => ({ instanceId: w.instanceId, hebrew: w.hebrew }));
+}
+
+function findHebrewForRemovedChip(instanceId) {
+  const entry = _preCheckVerseWords.find(w => w.instanceId === instanceId);
+  return entry?.hebrew || null;
 }
 
 /**
@@ -741,11 +890,41 @@ export function renderGlossary() {
 let orbitDragState = null;
 let orbitSnapshotKey = "";
 
-function wordOrbitPosition(index, total, parked) {
+/**
+ * Category cluster zones for soft grouping.
+ * Content words (nouns, verbs) cluster in the upper-left area.
+ * Function words (particles, attachers) cluster in the lower-right area.
+ */
+const CATEGORY_CLUSTER_ZONES = {
+  noun:     { leftMin: 10, leftMax: 45, topMin: 66, topMax: 80 },
+  verb:     { leftMin: 48, leftMax: 70, topMin: 66, topMax: 78 },
+  particle: { leftMin: 55, leftMax: 88, topMin: 78, topMax: 92 },
+  attacher: { leftMin: 20, leftMax: 55, topMin: 80, topMax: 94 },
+};
+
+/**
+ * Get a position within a category's cluster zone
+ */
+function getCategoryClusterPosition(category, indexInCategory) {
+  const zone = CATEGORY_CLUSTER_ZONES[category] || CATEGORY_CLUSTER_ZONES.noun;
+  const jitterX = (Math.random() - 0.5) * 8;
+  const jitterY = (Math.random() - 0.5) * 4;
+  return {
+    left: Math.max(5, Math.min(95, zone.leftMin + (indexInCategory * 14 % (zone.leftMax - zone.leftMin)) + jitterX)),
+    top: Math.max(60, Math.min(96, zone.topMin + (indexInCategory * 6 % (zone.topMax - zone.topMin)) + jitterY)),
+  };
+}
+
+function wordOrbitPosition(index, total, parked, category) {
   if (parked) {
     const row = Math.floor(index / 3);
     const col = index % 3;
     return { left: 20 + col * 28, top: 72 + row * 12, parked: true };
+  }
+
+  // Use category clustering if category is provided
+  if (category && CATEGORY_CLUSTER_ZONES[category]) {
+    return getCategoryClusterPosition(category, index);
   }
 
   const orbitRect = elements.verseWordOrbit?.getBoundingClientRect();
@@ -827,12 +1006,25 @@ function positionWordInfoAtPoint(clientX, clientY) {
 function openWordInfo(wordText, clientX, clientY) {
   if (!elements.wordInfoSheet) return;
   const lex = GRAMMAR_LEXICON[wordText] || {};
+  const category = lex.category || 'noun';
+  const catInfo = GRAMMAR_CATEGORIES[category] || { label: category };
   elements.wordInfoHebrew.textContent = wordText;
   elements.wordInfoTranslit.textContent = lex.translit || '';
   elements.wordInfoMeaning.textContent = lex.gloss || '';
-  elements.wordInfoExample.textContent = lex.gloss ? `${wordText} (${lex.gloss})` : wordText;
+
+  // Show category label + example
+  const categoryLabel = catInfo.label;
+  elements.wordInfoExample.innerHTML = '';
+  const catBadge = document.createElement('span');
+  catBadge.className = `word-info-category cat-${category}`;
+  catBadge.textContent = categoryLabel;
+  elements.wordInfoExample.appendChild(catBadge);
+
   elements.wordInfoSheet.setAttribute('aria-hidden', 'false');
   positionWordInfoAtPoint(clientX ?? window.innerWidth / 2, clientY ?? window.innerHeight / 2);
+
+  // Pulse same-category chips in orbit
+  pulseSameCategoryChips(category);
 
   if (!wordInfoDismissListenerActive) {
     wordInfoDismissListenerActive = true;
@@ -858,6 +1050,19 @@ function setupWordInfoHandlers() {
   setupWordInfoHandlers._done = true;
 }
 
+/**
+ * Pulse same-category chips when a word info popup is opened
+ */
+function pulseSameCategoryChips(category) {
+  if (!elements.verseWordOrbit) return;
+  const chips = elements.verseWordOrbit.querySelectorAll(`.chip-cat-${category}`);
+  chips.forEach(chip => {
+    chip.classList.remove('chip-cat-pulse');
+    void chip.offsetWidth; // Trigger reflow for re-animation
+    chip.classList.add('chip-cat-pulse');
+  });
+}
+
 function renderVerseWordOrbit() {
   if (!elements.verseWordOrbit) return;
   const words = gameState.words.slice();
@@ -875,14 +1080,30 @@ function renderVerseWordOrbit() {
     elements.verseWordOrbit.innerHTML = '';
     orbitSnapshotKey = snapshotKey;
 
+    // Group words by category for index tracking within clusters
+    const categoryIndices = {};
+
     words.forEach((word, i) => {
+      const category = getWordCategory(word.text);
+      if (!categoryIndices[category]) categoryIndices[category] = 0;
+      const catIndex = categoryIndices[category]++;
+      const isContent = category === 'noun' || category === 'verb';
+
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = 'line-word-chip verse-orbit-chip';
+      chip.className = `line-word-chip verse-orbit-chip chip-cat-${category} chip-state-idle ${isContent ? 'cluster-content' : 'cluster-function'}`;
       chip.textContent = word.text;
       chip.dataset.wordId = String(word.id);
+      chip.dataset.category = category;
+
+      // Add returned-from-check animation class
+      if (word.returnedFromCheck) {
+        chip.classList.add('chip-state-incorrect');
+        word.returnedFromCheck = false; // Clear the flag after first render
+      }
+
       const savedPos = gameState.wordContainerPositions?.[word.id];
-      const pos = savedPos || wordOrbitPosition(i, words.length, parkedSet.has(word.id));
+      const pos = savedPos || wordOrbitPosition(catIndex, words.length, parkedSet.has(word.id), category);
       chip.style.left = pos.left + '%';
       chip.style.top = pos.top + '%';
       if (!savedPos && !pos.parked) chip.style.animationDelay = `${(i % 7) * 0.3}s`;
@@ -895,7 +1116,8 @@ function renderVerseWordOrbit() {
         moved = false;
         const rect = chip.getBoundingClientRect();
         orbitDragState = { wordId: word.id, chip, width: rect.width, height: rect.height, startX: e.clientX, startY: e.clientY, lastClientX: e.clientX, lastClientY: e.clientY };
-        chip.classList.add('dragging');
+        chip.classList.add('dragging', 'chip-state-dragging');
+        chip.classList.remove('chip-state-idle');
         elements.grammarHebrewLineDiv?.classList.add('compose-active');
         chip.style.position = 'fixed';
         chip.style.left = (e.clientX - rect.width / 2) + 'px';
@@ -922,7 +1144,8 @@ function renderVerseWordOrbit() {
       chip.addEventListener('pointerup', (e) => {
         if (!orbitDragState || orbitDragState.wordId !== word.id) return;
         chip.releasePointerCapture(e.pointerId);
-        chip.classList.remove('dragging');
+        chip.classList.remove('dragging', 'chip-state-dragging');
+        chip.classList.add('chip-state-idle');
         chip.style.visibility = 'hidden';
         chip.style.position = '';
         chip.style.left = '';
@@ -944,7 +1167,12 @@ function renderVerseWordOrbit() {
         const inOrbit = isPointInsideRect(dropX, dropY, orbitRect);
 
         if (inLine) {
-          placeWordInVerse(word.id, gameState.verseWords.length);
+          // Use gap placement if a check has been done, otherwise normal placement
+          if (gameState.verseHasChecked && gameState.verseLockedSlots?.length > 0) {
+            placeWordInVerseGap(word.id);
+          } else {
+            placeWordInVerse(word.id, gameState.verseWords.length);
+          }
           gameState.parkedWordIds = (gameState.parkedWordIds || []).filter(id => id !== word.id);
           if (gameState.wordContainerPositions) delete gameState.wordContainerPositions[word.id];
           orbitSnapshotKey = '';
@@ -995,7 +1223,15 @@ function renderVerseWordOrbit() {
  * Initialize versebook interactions
  */
 export function initWordSelector() {
-  // Legacy glossary controls removed for Verse Book spread redesign.
+  // Wire up the Check Verse button
+  const checkBtn = document.getElementById('checkVerseBtn');
+  if (checkBtn) {
+    checkBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      snapshotPreCheckVerseWords();
+      handleVerseCheck();
+    });
+  }
 }
 
 /**
