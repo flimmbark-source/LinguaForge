@@ -53,6 +53,28 @@ export function applyVerseSubmitPhase2() {
   orbitSnapshotKey = '';
 }
 
+export function resetVerseBookChipsHome() {
+  gameState.verseWords.forEach((entry) => {
+    if (!entry || entry.isPlaceholder || !entry.hebrew) return;
+    const lex = GRAMMAR_LEXICON[entry.hebrew];
+    addWord({
+      id: getNextWordId(),
+      text: entry.hebrew,
+      english: lex?.gloss || entry.hebrew,
+      length: entry.hebrew.length,
+      power: 0,
+      heated: true,
+    });
+  });
+
+  clearVerseWords();
+  gameState.parkedWordIds = [];
+  gameState.wordContainerPositions = {};
+  gameState.verseLastTriedSignature = '';
+  lastRenderedVerseWords = [];
+  orbitSnapshotKey = '';
+}
+
 // DOM element cache
 const elements = {};
 
@@ -661,10 +683,11 @@ export function updateGrammarUI(force = false) {
  */
 export function updateEnscribeButton() {
   if (!elements.enscribeBtn) return;
+  const hasPlacedChip = gameState.verseWords.some((w) => !w.isPlaceholder && !!w.hebrew);
   const solved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
     && gameState.verseWords.every((w, i) => !w.isPlaceholder && w.hebrew === SOLUTION_HEBREW_ORDER[i]);
-  elements.enscribeBtn.disabled = !solved;
-  elements.enscribeBtn.style.display = solved ? 'inline-flex' : 'none';
+  elements.enscribeBtn.disabled = !hasPlacedChip;
+  elements.enscribeBtn.style.display = hasPlacedChip ? 'inline-flex' : 'none';
   elements.enscribeBtn.textContent = 'Enscribe';
 }
 
