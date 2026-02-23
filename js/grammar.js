@@ -277,6 +277,12 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
       chip.style.visibility = '';
       // Just a click, not a drag - still update UI
       if (onUpdate) onUpdate();
+
+      // Pointer-based drag suppresses the normal click event in some browsers.
+      // Re-dispatch a click on the verse line so clicking a chip in a solved line
+      // still triggers enscribe behavior.
+      const verseLine = document.getElementById('grammarHebrewLine');
+      verseLine?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     }
 
     gameState.draggedVerseInstanceId = null;

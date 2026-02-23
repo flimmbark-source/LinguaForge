@@ -88,6 +88,9 @@ let lastRenderedScribes = [];
 // Track last rendered mold state to avoid unnecessary recreations
 let lastRenderedMoldIndex = -1;
 let lastRenderedMoldSlots = '';
+let autoEnscribeTimer = null;
+let autoEnscribeSignature = '';
+const AUTO_ENSCRIBE_DELAY_MS = 2000;
 
 /**
  * Initialize DOM element references
@@ -100,7 +103,6 @@ export function initializeElements() {
   elements.moldListDiv = document.getElementById('moldList');
   elements.moldIndexLabel = document.getElementById('moldIndexLabel');
   elements.wordListDiv = document.getElementById('wordList');
-  elements.enscribeBtn = document.getElementById('enscribeBtn');
   elements.linesCompletedSpan = document.getElementById('linesCompleted');
   elements.grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
   elements.grammarTranslitDiv = document.getElementById('grammarTranslit');
@@ -645,11 +647,36 @@ export function updateGrammarUI(force = false) {
 
   const solved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
     && gameState.verseWords.every((w, i) => !w.isPlaceholder && w.hebrew === SOLUTION_HEBREW_ORDER[i]);
+  const solvedSignature = solved
+    ? gameState.verseWords.map((w) => w.instanceId).join('|')
+    : '';
 
   elements.grammarHebrewLineDiv.classList.toggle('is-solved', solved);
   if (elements.verseTranslationReveal) {
     elements.verseTranslationReveal.textContent = solved ? gameState.currentLine.english : '';
     elements.verseTranslationReveal.classList.toggle('visible', solved);
+  }
+
+  if (solved) {
+    if (autoEnscribeSignature !== solvedSignature) {
+      autoEnscribeSignature = solvedSignature;
+      if (autoEnscribeTimer) {
+        clearTimeout(autoEnscribeTimer);
+      }
+      autoEnscribeTimer = setTimeout(() => {
+        autoEnscribeTimer = null;
+        const stillSolved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
+          && gameState.verseWords.every((w, i) => !w.isPlaceholder && w.hebrew === SOLUTION_HEBREW_ORDER[i]);
+        if (!stillSolved || !elements.grammarHebrewLineDiv) return;
+        elements.grammarHebrewLineDiv.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      }, AUTO_ENSCRIBE_DELAY_MS);
+    }
+  } else {
+    autoEnscribeSignature = '';
+    if (autoEnscribeTimer) {
+      clearTimeout(autoEnscribeTimer);
+      autoEnscribeTimer = null;
+    }
   }
 
   if (!solved && gameState.verseWords.length > 0) {
@@ -683,12 +710,7 @@ export function updateGrammarUI(force = false) {
  * Update enscribe button state
  */
 export function updateEnscribeButton() {
-  if (!elements.enscribeBtn) return;
-  const solved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
-    && gameState.verseWords.every((w, i) => !w.isPlaceholder && w.hebrew === SOLUTION_HEBREW_ORDER[i]);
-  elements.enscribeBtn.disabled = !solved;
-  elements.enscribeBtn.style.display = 'inline-flex';
-  elements.enscribeBtn.textContent = 'Enscribe';
+  // Enscribe now triggers from clicking the solved verse line.
 }
 
 /**
@@ -857,21 +879,14 @@ function getWordZoneKey(word, parked) {
 }
 
 function getDeterministicZonePosition(zone, zoneIndex, orbitRect) {
-  const rectWidth = Math.max(orbitRect?.width || 0, 1);
-  const zoneWidthPx = (zone.width / 100) * rectWidth;
+  const zoneHeightPx = Math.max(((zone.height / 100) * (orbitRect?.height || window.innerHeight)), 1);
+  const minGapPx = 26;
+  const yStep = Math.max((minGapPx / zoneHeightPx) * zone.height, 9);
+  const yPad = 6;
 
-  // Wrap cleanly based on available zone width.
-  const minSlotWidthPx = 84;
-  const columns = Math.max(1, Math.floor(zoneWidthPx / minSlotWidthPx));
-  const row = Math.floor(zoneIndex / columns);
-  const col = zoneIndex % columns;
-
-  const xStep = zone.width / columns;
-  const yStep = 11;
-  const yPad = 7;
-
-  const left = zone.left + xStep * (col + 0.5);
-  const unclampedTop = zone.top + yPad + row * yStep;
+  // Stack vertically down the column center (new words append at the bottom).
+  const left = zone.left + (zone.width / 2);
+  const unclampedTop = zone.top + yPad + zoneIndex * yStep;
   const maxTop = zone.top + zone.height - 4;
   const top = Math.max(zone.top + 4, Math.min(maxTop, unclampedTop));
 
@@ -892,6 +907,33 @@ function getWordHomePosition(word, words, parkedSet) {
   const pos = getDeterministicZonePosition(zone, zoneIndex, orbitRect);
 
   return { ...pos, parked: parkedSet.has(word.id), zoneKey };
+}
+
+export function placeNewWordInHomeColumnStack(wordId) {
+  const words = gameState.words.slice();
+  const targetWord = words.find((word) => word.id === wordId);
+  if (!targetWord) return;
+
+  const zones = getVerseLayoutZones();
+  const parkedSet = new Set(gameState.parkedWordIds || []);
+  const zoneKey = getWordZoneKey(targetWord, parkedSet.has(targetWord.id));
+  const zone = zones[zoneKey] || zones.nounZone;
+  const stackWords = words.filter((word) => (
+    word.id !== wordId && getWordZoneKey(word, parkedSet.has(word.id)) === zoneKey
+  ));
+
+  const stackIndex = stackWords.length;
+  const topStep = 9;
+  const topPadding = 6;
+  const maxTop = zone.top + zone.height - 4;
+  const top = Math.max(zone.top + 4, Math.min(maxTop, zone.top + topPadding + stackIndex * topStep));
+  const left = zone.left + zone.width / 2;
+
+  gameState.wordContainerPositions = gameState.wordContainerPositions || {};
+  gameState.wordContainerPositions[wordId] = {
+    left: clampPercent(left),
+    top: clampPercent(top),
+  };
 }
 
 
