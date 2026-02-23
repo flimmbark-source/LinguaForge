@@ -888,6 +888,33 @@ function getWordHomePosition(word, words, parkedSet) {
   return { ...pos, parked: parkedSet.has(word.id), zoneKey };
 }
 
+export function placeNewWordInHomeColumnStack(wordId) {
+  const words = gameState.words.slice();
+  const targetWord = words.find((word) => word.id === wordId);
+  if (!targetWord) return;
+
+  const zones = getVerseLayoutZones();
+  const parkedSet = new Set(gameState.parkedWordIds || []);
+  const zoneKey = getWordZoneKey(targetWord, parkedSet.has(targetWord.id));
+  const zone = zones[zoneKey] || zones.nounZone;
+  const stackWords = words.filter((word) => (
+    word.id !== wordId && getWordZoneKey(word, parkedSet.has(word.id)) === zoneKey
+  ));
+
+  const stackIndex = stackWords.length;
+  const topStep = 9;
+  const topPadding = 6;
+  const maxTop = zone.top + zone.height - 4;
+  const top = Math.max(zone.top + 4, Math.min(maxTop, zone.top + topPadding + stackIndex * topStep));
+  const left = zone.left + zone.width / 2;
+
+  gameState.wordContainerPositions = gameState.wordContainerPositions || {};
+  gameState.wordContainerPositions[wordId] = {
+    left: clampPercent(left),
+    top: clampPercent(top),
+  };
+}
+
 
 function getVerseDropInsertIndex(clientX) {
   const verseArea = elements.grammarHebrewLineDiv;

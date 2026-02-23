@@ -9,7 +9,7 @@ import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js
 import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
 import { setupVerseAreaDrop, completeVerse, isVerseSolved } from './grammar.js?v=9';
-import { initializeElements, updateUI, initWordSelector, resetVerseBookChipsHome } from './ui.js?v=9';
+import { initializeElements, updateUI, initWordSelector, resetVerseBookChipsHome, placeNewWordInHomeColumnStack } from './ui.js?v=9';
 import { gameState } from './state.js?v=9';
 import { addLetters } from './state.js?v=9';
 import { HammerSystem } from './hammer.js?v=9';
@@ -612,6 +612,7 @@ function spawnMagicalText(word, moldBounds, delay) {
           heated: true, // Already ready for verse
         };
         addWord(wordObj);
+        placeNewWordInHomeColumnStack(wordObj.id);
         recordForgedWord(word);
         updateUI();
 
