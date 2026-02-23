@@ -4927,13 +4927,19 @@ body.book-overlay-active .magic-book {
   background: rgba(245, 230, 200, 0.38);
   box-shadow: inset 0 0 0 1px rgba(201, 181, 138, 0.34);
   padding: 6px 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .verse-line {
   position: relative;
   min-height: 44px;
+  width: max-content;
+  min-width: 100%;
+  display: inline-flex;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 6px 10px;
   border-style: solid;
   border-width: 1px;
@@ -4941,6 +4947,7 @@ body.book-overlay-active .magic-book {
   background: rgba(245, 230, 200, 0.34);
   transition: all .25s ease;
   box-shadow: inset 0 0 0 1px rgba(201, 181, 138, 0.3);
+  white-space: nowrap;
 }
 
 .verse-line::before {
