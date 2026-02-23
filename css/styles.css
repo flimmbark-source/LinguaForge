@@ -4910,16 +4910,6 @@ body.book-overlay-active .magic-book {
   pointer-events: auto;
 }
 
-.verse-enscribe-float-btn {
-  position: absolute;
-  left: 50%;
-  top: -31px;
-  transform: translateX(-50%);
-  margin: 0;
-  z-index: 7;
-  pointer-events: auto;
-}
-
 .verse-intent-line {
   text-align: center;
   font-size: 14px;
@@ -4981,12 +4971,46 @@ body.book-overlay-active .magic-book {
 
 .verse-line.is-solved .line-word-chip {
   animation: verseLockLift .55s ease both;
-  cursor: default;
+  cursor: pointer;
+  position: relative;
+}
+
+.verse-line.is-solved {
+  cursor: pointer;
+}
+
+.verse-line.is-solved .line-word-chip::before,
+.verse-line.is-solved .line-word-chip::after {
+  content: '';
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 251, 235, 0.95) 0%, rgba(251, 191, 36, 0.9) 52%, rgba(251, 191, 36, 0) 100%);
+  animation: verseChipSparkle 1s ease-in-out infinite;
+}
+
+.verse-line.is-solved .line-word-chip::before {
+  top: -8px;
+  left: 14%;
+}
+
+.verse-line.is-solved .line-word-chip::after {
+  right: 12%;
+  bottom: -8px;
+  animation-delay: .35s;
 }
 
 @keyframes verseLockLift {
   from { transform: translateY(0); }
   to { transform: translateY(-4px); box-shadow: 0 0 12px rgba(245,158,11,.35); }
+}
+
+@keyframes verseChipSparkle {
+  0%, 100% { transform: translateY(0) scale(0.5); opacity: 0; }
+  35% { transform: translateY(-3px) scale(1); opacity: .95; }
+  70% { transform: translateY(-6px) scale(0.8); opacity: .45; }
 }
 
 .verse-meter-track { height: 6px; width: 100%; border-radius: 999px; background: rgba(93,64,30,.15); overflow: hidden; }

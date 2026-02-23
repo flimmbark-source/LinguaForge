@@ -9,7 +9,7 @@ import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js
 import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
 import { setupVerseAreaDrop, completeVerse, isVerseSolved } from './grammar.js?v=9';
-import { initializeElements, updateUI, initWordSelector, applyVerseSubmitPhase2, resetVerseBookChipsHome } from './ui.js?v=9';
+import { initializeElements, updateUI, initWordSelector, resetVerseBookChipsHome } from './ui.js?v=9';
 import { gameState } from './state.js?v=9';
 import { addLetters } from './state.js?v=9';
 import { HammerSystem } from './hammer.js?v=9';
@@ -1468,16 +1468,12 @@ function setupEventHandlers() {
 
   // Forge words button removed - now triggered by red-hot hammer hitting mold viewport
 
-  const enscribeBtn = document.getElementById('enscribeBtn');
-  if (enscribeBtn) {
-    enscribeBtn.addEventListener('click', (e) => {
+  const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
+  if (grammarHebrewLineDiv) {
+    grammarHebrewLineDiv.addEventListener('click', (e) => {
       e.preventDefault();
-      if (!isVerseSolved()) {
-        gameState.verseFailedAttempts = (gameState.verseFailedAttempts || 0) + 1;
-        applyVerseSubmitPhase2();
-        updateUI();
-        return;
-      }
+      if (!isVerseSolved()) return;
+
       const solvedWords = gameState.verseWords.map((w) => w.hebrew);
       const completed = completeVerse();
       if (completed) {
@@ -1485,11 +1481,8 @@ function setupEventHandlers() {
         gameState.verseLastTriedSignature = '';
         (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
         spawnVerseEchoWords(solvedWords);
-        const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
-        if (grammarHebrewLineDiv) {
-          const rect = grammarHebrewLineDiv.getBoundingClientRect();
-          spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
-        }
+        const rect = grammarHebrewLineDiv.getBoundingClientRect();
+        spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
       }
       updateUI();
     });

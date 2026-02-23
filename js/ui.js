@@ -100,7 +100,6 @@ export function initializeElements() {
   elements.moldListDiv = document.getElementById('moldList');
   elements.moldIndexLabel = document.getElementById('moldIndexLabel');
   elements.wordListDiv = document.getElementById('wordList');
-  elements.enscribeBtn = document.getElementById('enscribeBtn');
   elements.linesCompletedSpan = document.getElementById('linesCompleted');
   elements.grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
   elements.grammarTranslitDiv = document.getElementById('grammarTranslit');
@@ -683,12 +682,7 @@ export function updateGrammarUI(force = false) {
  * Update enscribe button state
  */
 export function updateEnscribeButton() {
-  if (!elements.enscribeBtn) return;
-  const solved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
-    && gameState.verseWords.every((w, i) => !w.isPlaceholder && w.hebrew === SOLUTION_HEBREW_ORDER[i]);
-  elements.enscribeBtn.disabled = !solved;
-  elements.enscribeBtn.style.display = 'inline-flex';
-  elements.enscribeBtn.textContent = 'Enscribe';
+  // Enscribe now triggers from clicking the solved verse line.
 }
 
 /**
