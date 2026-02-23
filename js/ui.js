@@ -1007,6 +1007,9 @@ function renderVerseWordOrbit() {
       chip.dataset.wordId = String(word.id);
       const savedPos = gameState.wordContainerPositions?.[word.id];
       const pos = savedPos || getWordHomePosition(word, words, parkedSet);
+      if (pos.zoneKey) {
+        chip.dataset.zone = pos.zoneKey;
+      }
       chip.style.left = pos.left + '%';
       chip.style.top = pos.top + '%';
       if (!savedPos && !pos.parked) chip.style.animationDelay = `${(i % 7) * 0.3}s`;
