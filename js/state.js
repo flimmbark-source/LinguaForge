@@ -33,6 +33,10 @@ export const gameState = {
 
   // Verse / Grammar
   verseWords: [],
+  verseLineSlots: [],
+  verseResolvedSlots: [],
+  verseResolvePhase: 'idle',
+  verseTutorialSeen: false,
 
   // Drag state
   draggedWordId: null,

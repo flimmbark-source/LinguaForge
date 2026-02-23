@@ -36,8 +36,14 @@
         </div>
       </div>
 
-      <div id="verseSpreadOverlay" class="verse-spread-overlay">
+            <div id="verseSpreadOverlay" class="verse-spread-overlay">
+        <div class="verse-zone-anchor anchor-verb" aria-hidden="true">ᚨ</div>
+        <div class="verse-zone-anchor anchor-noun" aria-hidden="true">◈</div>
+        <div class="verse-zone-anchor anchor-particle" aria-hidden="true">⋮</div>
+        <div class="verse-zone-anchor anchor-modifier" aria-hidden="true">✧</div>
+        <button id="verseHelpBtn" class="verse-help-btn" type="button" title="Verse help">?</button>
         <div id="verseWordOrbit" class="verse-word-orbit" aria-label="Verse word orbit"></div>
+
         <div class="verse-center-stack">
           <div id="grammarNatural" class="verse-intent-line"></div>
           <div class="verse-entry-container">
@@ -54,6 +60,15 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div id="verseTutorial" class="verse-tutorial" aria-hidden="true">
+    <div class="verse-tutorial-step">Tap</div>
+    <div class="verse-tutorial-step">Drag</div>
+    <div class="verse-tutorial-step">Place</div>
+    <div class="verse-tutorial-step">Submit</div>
+    <div class="verse-tutorial-step">Correct stays · wrong returns</div>
+    <div class="verse-tutorial-hand" aria-hidden="true">☞</div>
   </div>
 
   <div id="wordInfoSheet" class="word-info-sheet" aria-hidden="true">
