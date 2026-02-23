@@ -879,21 +879,14 @@ function getWordZoneKey(word, parked) {
 }
 
 function getDeterministicZonePosition(zone, zoneIndex, orbitRect) {
-  const rectWidth = Math.max(orbitRect?.width || 0, 1);
-  const zoneWidthPx = (zone.width / 100) * rectWidth;
+  const zoneHeightPx = Math.max(((zone.height / 100) * (orbitRect?.height || window.innerHeight)), 1);
+  const minGapPx = 26;
+  const yStep = Math.max((minGapPx / zoneHeightPx) * zone.height, 9);
+  const yPad = 6;
 
-  // Wrap cleanly based on available zone width.
-  const minSlotWidthPx = 84;
-  const columns = Math.max(1, Math.floor(zoneWidthPx / minSlotWidthPx));
-  const row = Math.floor(zoneIndex / columns);
-  const col = zoneIndex % columns;
-
-  const xStep = zone.width / columns;
-  const yStep = 11;
-  const yPad = 7;
-
-  const left = zone.left + xStep * (col + 0.5);
-  const unclampedTop = zone.top + yPad + row * yStep;
+  // Stack vertically down the column center (new words append at the bottom).
+  const left = zone.left + (zone.width / 2);
+  const unclampedTop = zone.top + yPad + zoneIndex * yStep;
   const maxTop = zone.top + zone.height - 4;
   const top = Math.max(zone.top + 4, Math.min(maxTop, unclampedTop));
 
