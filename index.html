@@ -37,6 +37,9 @@
       </div>
 
       <div id="verseSpreadOverlay" class="verse-spread-overlay">
+        <div class="verse-zone-anchor verse-zone-anchor--verb" aria-hidden="true">Verbs</div>
+        <div class="verse-zone-anchor verse-zone-anchor--noun" aria-hidden="true">Nouns</div>
+        <div class="verse-zone-anchor verse-zone-anchor--particle" aria-hidden="true">Prefixes</div>
         <div id="verseWordOrbit" class="verse-word-orbit" aria-label="Verse word orbit"></div>
         <div class="verse-center-stack">
           <div id="grammarNatural" class="verse-intent-line"></div>
@@ -48,10 +51,8 @@
           </div>
           <div id="verseHint" class="verse-hint" aria-live="polite"></div>
           <div id="verseTranslationReveal" class="verse-translation-reveal"></div>
-          <div class="row verse-footer-row">
-            <button id="enscribeBtn" disabled>Enscribe</button>
-          </div>
         </div>
+        <button id="verseResetBtn" class="verse-reset-btn" type="button" aria-label="Reset verse chips">↺</button>
       </div>
     </div>
   </div>
