@@ -661,6 +661,9 @@ function spawnVerseEchoWords(words) {
 }
 
 function runEnscribeCinematic() {
+  const verseSpreadOverlay = document.getElementById('verseSpreadOverlay');
+  if (!verseSpreadOverlay) return;
+
   const overlay = document.createElement('div');
   overlay.className = 'enscribe-cinematic-overlay';
 
@@ -680,11 +683,11 @@ function runEnscribeCinematic() {
     overlay.appendChild(sparkle);
   }
 
-  document.body.appendChild(overlay);
-  document.body.classList.add('enscribe-cinematic-active');
+  verseSpreadOverlay.appendChild(overlay);
+  verseSpreadOverlay.classList.add('enscribe-cinematic-active');
 
   setTimeout(() => {
-    document.body.classList.remove('enscribe-cinematic-active');
+    verseSpreadOverlay.classList.remove('enscribe-cinematic-active');
     overlay.remove();
   }, 3000);
 }
