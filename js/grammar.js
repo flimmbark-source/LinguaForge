@@ -4,6 +4,7 @@
  */
 
 import { GRAMMAR_LEXICON, SOLUTION_HEBREW_ORDER, VERSE_COMPLETION_REWARD } from './config.js?v=9';
+import { buildChipModel } from './verseLayoutManager.js?v=9';
 import {
   gameState,
   findWord,
@@ -75,7 +76,15 @@ export function placeWordInVerse(wordId, insertIndex) {
   if (!word) return false;
 
   const instanceId = 'vw-' + Date.now() + '-' + Math.random();
-  addVerseWord({ instanceId, hebrew: word.text }, insertIndex);
+  const chipModel = buildChipModel(word);
+  addVerseWord({
+    instanceId,
+    hebrew: word.text,
+    category: chipModel.category,
+    homeZoneId: chipModel.homeZoneId,
+    isPlaced: true,
+    isLockedCorrect: false,
+  }, insertIndex);
   removeWord(wordId);
   return true;
 }
@@ -86,6 +95,8 @@ export function placeWordInVerse(wordId, insertIndex) {
  * @param {number} newIndex - New index for the word
  */
 export function reorderWord(instanceId, newIndex) {
+  const chip = gameState.verseWords.find(w => w.instanceId === instanceId);
+  if (chip?.isLockedCorrect) return;
   reorderVerseWord(instanceId, newIndex);
 }
 

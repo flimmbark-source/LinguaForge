@@ -29,6 +29,17 @@ export const GRAMMAR_LEXICON = {
   'כוח':     { translit: 'koach',    gloss: 'power' },
 };
 
+export const GRAMMAR_WORD_META = {
+  'אש': { category: 'noun', icon: '◍' },
+  'היא': { category: 'verb', icon: '✶' },
+  'ה': { category: 'prefix', icon: '⌒' },
+  'ראשונה': { category: 'modifier', icon: '✧' },
+  'שנייה': { category: 'modifier', icon: '✧' },
+  'נשמת': { category: 'noun', icon: '◍' },
+  'של': { category: 'particle', icon: '⋄' },
+  'כוח': { category: 'noun', icon: '◍' },
+};
+
 // Current line/verse configuration
 export const CURRENT_LINE = {
   id: 1,

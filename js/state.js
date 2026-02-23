@@ -33,6 +33,7 @@ export const gameState = {
 
   // Verse / Grammar
   verseWords: [],
+  verseSlotLocks: {},
 
   // Drag state
   draggedWordId: null,
@@ -49,6 +50,7 @@ export const gameState = {
   verseFailedAttempts: 0,
   verseLastScore: 0,
   verseLastTriedSignature: '',
+  verseTutorialSeen: false,
 
   // Legacy selector/book state
   wordSelectorIndex: 0,
