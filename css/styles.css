@@ -5055,6 +5055,13 @@ body.book-overlay-active .magic-book {
   pointer-events: none;
 }
 
+.verse-slot-gap {
+  min-width: 54px;
+  min-height: 30px;
+  border: 1px dashed rgba(93,64,30,0.45);
+  background: rgba(245, 230, 200, 0.18);
+}
+
 .verse-orbit-chip:hover {
   transform: translate(-50%, -50%);
   box-shadow: none;

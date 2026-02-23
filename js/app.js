@@ -9,7 +9,7 @@ import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js
 import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
 import { setupVerseAreaDrop, completeVerse, isVerseSolved } from './grammar.js?v=9';
-import { initializeElements, updateUI, initWordSelector } from './ui.js?v=9';
+import { initializeElements, updateUI, initWordSelector, applyVerseSubmitPhase2 } from './ui.js?v=9';
 import { gameState } from './state.js?v=9';
 import { addLetters } from './state.js?v=9';
 import { HammerSystem } from './hammer.js?v=9';
@@ -1474,6 +1474,7 @@ function setupEventHandlers() {
       e.preventDefault();
       if (!isVerseSolved()) {
         gameState.verseFailedAttempts = (gameState.verseFailedAttempts || 0) + 1;
+        applyVerseSubmitPhase2();
         updateUI();
         return;
       }
