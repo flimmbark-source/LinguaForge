@@ -823,8 +823,8 @@ function getVerseLayoutZones() {
   const sideMargin = 8;
   const columnGap = 3;
   const columnWidth = (100 - sideMargin * 2 - columnGap * 2) / 3;
-  const rowTop = 54;
-  const rowHeight = 24;
+  const rowTop = 50;
+  const rowHeight = 20;
 
   return {
     // Normalized percentages in the verse spread overlay.

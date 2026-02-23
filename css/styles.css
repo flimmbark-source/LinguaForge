@@ -4893,14 +4893,14 @@ body.book-overlay-active .magic-book {
   user-select: none;
 }
 
-.verse-zone-anchor--verb { left: calc(8% + 12.666%); top: 55%; transform: translateX(-50%); }
-.verse-zone-anchor--noun { left: 50%; top: 55%; transform: translateX(-50%); }
-.verse-zone-anchor--particle { left: calc(92% - 12.666%); top: 55%; transform: translateX(-50%); }
+.verse-zone-anchor--verb { left: calc(8% + 12.666%); top: 45%; transform: translateX(-50%); }
+.verse-zone-anchor--noun { left: 50%; top: 45%; transform: translateX(-50%); }
+.verse-zone-anchor--particle { left: calc(92% - 12.666%); top: 45%; transform: translateX(-50%); }
 
 .verse-center-stack {
   position: absolute;
   left: 50%;
-  top: 42%;
+  top: 35%;
   transform: translate(-50%, -50%);
   width: min(360px, 86%);
   display: flex;
@@ -4913,7 +4913,7 @@ body.book-overlay-active .magic-book {
 .verse-enscribe-float-btn {
   position: absolute;
   left: 50%;
-  top: -54px;
+  top: -33px;
   transform: translateX(-50%);
   margin: 0;
   z-index: 7;
