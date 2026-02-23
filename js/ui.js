@@ -3,12 +3,13 @@
  * Handles all UI updates and rendering logic
  */
 
-import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON, SOLUTION_HEBREW_ORDER } from './config.js?v=9';
+import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON, GRAMMAR_WORD_META, SOLUTION_HEBREW_ORDER } from './config.js?v=9';
 import { gameState, addWord, removeVerseWord, getNextWordId, clearVerseWords } from './state.js?v=9';
 import { setupWordChipDrag, sellWord, renderMoldsInViewport } from './molds.js?v=9';
 import { toggleScribePaused } from './scribes.js?v=9';
 import { evaluateVerse, setupVerseWordChipDrag, placeWordInVerse } from './grammar.js?v=9';
 import { updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
+import { buildChipModel, getZoneSlots, getZoneAnchorMap, getHomeZoneId, getChipCategory } from './verseLayoutManager.js?v=9';
 
 // DOM element cache
 const elements = {};
@@ -53,6 +54,9 @@ export function initializeElements() {
   elements.wordInfoTranslit = document.getElementById('wordInfoTranslit');
   elements.wordInfoMeaning = document.getElementById('wordInfoMeaning');
   elements.wordInfoExample = document.getElementById('wordInfoExample');
+  elements.verseTutorialOverlay = document.getElementById('verseTutorialOverlay');
+  elements.verseTutorialDismiss = document.getElementById('verseTutorialDismiss');
+  elements.verseHelpBtn = document.getElementById('verseHelpBtn');
   elements.pestle = document.getElementById('selectPestle');
   elements.shovel = document.getElementById('selectShovel');
 }
@@ -380,6 +384,7 @@ function verseWordsChanged() {
 
   for (let i = 0; i < gameState.verseWords.length; i++) {
     if (gameState.verseWords[i].instanceId !== lastRenderedVerseWords[i].instanceId) return true;
+    if (!!gameState.verseWords[i].isLockedCorrect !== !!lastRenderedVerseWords[i].isLockedCorrect) return true;
   }
 
   return false;
@@ -389,36 +394,60 @@ function verseWordsChanged() {
  * Render verse word chips (only when verse changes)
  * @param {boolean} force - Force re-render even if verse hasn't changed
  */
+function chipCategoryClass(category) {
+  return `chip-category-${category || 'contentWord'}`;
+}
+
+function addChipCategoryStyling(chip, category) {
+  chip.classList.add(chipCategoryClass(category));
+  const icon = document.createElement('span');
+  icon.className = 'chip-category-icon';
+  icon.textContent = GRAMMAR_WORD_META[chip.textContent]?.icon || '◌';
+  chip.prepend(icon);
+}
+
 function renderVerseChips(force = false) {
   if (!elements.grammarHebrewLineDiv) return;
 
-  // Only recreate chips if verse actually changed (unless forced)
   if (!force && !verseWordsChanged()) return;
 
   elements.grammarHebrewLineDiv.innerHTML = '';
 
-  // Render verse word chips
-  gameState.verseWords.forEach(wordInstance => {
-    const chip = document.createElement('div');
-    chip.className = 'line-word-chip';
-    chip.style.direction = 'rtl';
-    chip.textContent = wordInstance.hebrew;
-    chip.dataset.instanceId = wordInstance.instanceId;
-    setupVerseWordChipDrag(chip, wordInstance.instanceId, () => updateGrammarUI(true), (instanceId, clientX, clientY) => {
-      moveVerseWordBackToOrbit(instanceId, clientX, clientY);
-    });
+  const slots = SOLUTION_HEBREW_ORDER.length;
+  for (let i = 0; i < slots; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'verse-line-slot';
+    const expected = SOLUTION_HEBREW_ORDER[i];
+    const expectedCategory = getChipCategory(expected);
+    slot.classList.add(`slot-${expectedCategory}`);
+    const wordInstance = gameState.verseWords[i];
 
-    // Allow dragover for inventory words to be dropped between existing chips
-    // This makes chips valid drop targets so position detection works correctly
-    chip.addEventListener('dragover', e => {
-      e.preventDefault();
-    });
+    if (wordInstance) {
+      const chip = document.createElement('div');
+      chip.className = 'line-word-chip';
+      chip.style.direction = 'rtl';
+      chip.textContent = wordInstance.hebrew;
+      chip.dataset.instanceId = wordInstance.instanceId;
+      chip.dataset.category = wordInstance.category || getChipCategory(wordInstance.hebrew);
+      addChipCategoryStyling(chip, chip.dataset.category);
+      if (wordInstance.isLockedCorrect) chip.classList.add('is-locked-correct');
+      if (!wordInstance.isLockedCorrect) {
+        setupVerseWordChipDrag(chip, wordInstance.instanceId, () => updateGrammarUI(true), (instanceId, clientX, clientY) => {
+          moveVerseWordBackToOrbit(instanceId, clientX, clientY);
+        });
+      }
+      chip.addEventListener('click', (e) => {
+        const rect = chip.getBoundingClientRect();
+        openWordInfo(wordInstance.hebrew, rect.left + rect.width / 2, rect.top + rect.height / 2);
+        highlightCategoryInOrbit(chip.dataset.category);
+      });
+      slot.appendChild(chip);
+    }
 
-    elements.grammarHebrewLineDiv.appendChild(chip);
-  });
+    elements.grammarHebrewLineDiv.appendChild(slot);
+  }
 
-  // Update our tracking state
-  lastRenderedVerseWords = gameState.verseWords.map(w => ({ instanceId: w.instanceId }));
+  lastRenderedVerseWords = gameState.verseWords.map(w => ({ instanceId: w.instanceId, isLockedCorrect: !!w.isLockedCorrect }));
 }
 
 
@@ -741,33 +770,25 @@ export function renderGlossary() {
 let orbitDragState = null;
 let orbitSnapshotKey = "";
 
-function wordOrbitPosition(index, total, parked) {
-  if (parked) {
-    const row = Math.floor(index / 3);
-    const col = index % 3;
-    return { left: 20 + col * 28, top: 72 + row * 12, parked: true };
+function highlightCategoryInOrbit(category) {
+  const chips = elements.verseWordOrbit?.querySelectorAll(`.verse-orbit-chip[data-category='${category}']`) || [];
+  chips.forEach((chip) => {
+    chip.classList.add('category-pulse');
+    setTimeout(() => chip.classList.remove('category-pulse'), 380);
+  });
+}
+
+function getLineInsertIndex(dropX) {
+  const slots = Array.from(elements.grammarHebrewLineDiv?.querySelectorAll('.verse-line-slot') || []);
+  let idx = slots.length;
+  for (let i = 0; i < slots.length; i++) {
+    const rect = slots[i].getBoundingClientRect();
+    if (dropX < rect.left + rect.width / 2) {
+      idx = i;
+      break;
+    }
   }
-
-  const orbitRect = elements.verseWordOrbit?.getBoundingClientRect();
-  const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
-  const hasOrbit = orbitRect && orbitRect.width > 0 && orbitRect.height > 0;
-
-  const leftMin = 12;
-  const leftMax = 88;
-  let topMin = 66;
-  const topMax = 94;
-
-  if (hasOrbit && lineRect) {
-    const lineBottom = lineRect.bottom - orbitRect.top;
-    const belowLinePercent = (lineBottom / orbitRect.height) * 100;
-    topMin = Math.max(topMin, Math.min(90, belowLinePercent + 6));
-  }
-
-  const safeTopMin = Math.min(topMin, topMax - 2);
-  return {
-    left: leftMin + Math.random() * (leftMax - leftMin),
-    top: safeTopMin + Math.random() * (topMax - safeTopMin),
-  };
+  return Math.max(0, Math.min(gameState.verseWords.length, idx));
 }
 
 let wordInfoDismissListenerActive = false;
@@ -775,50 +796,20 @@ let wordInfoDismissListenerActive = false;
 function positionWordInfoAtPoint(clientX, clientY) {
   if (!elements.wordInfoCard) return;
   const card = elements.wordInfoCard;
-
   card.style.left = '-9999px';
   card.style.top = '-9999px';
   card.style.visibility = 'hidden';
   elements.wordInfoSheet.classList.add('open');
-
   const rect = card.getBoundingClientRect();
   const width = rect.width || 220;
   const height = rect.height || 120;
-
-  // In landscape mobile, the book is a full-screen overlay and the interior
-  // is a centred panel (min(70vw,500px)). Clamp the card within that panel
-  // so it doesn't land on the dark backdrop outside the book.
-  const bookInterior = document.querySelector('.book-interior');
-  const isLandscapeOverlay = bookInterior &&
-    (window.matchMedia('(max-width: 768px) and (orientation: landscape)').matches ||
-     window.matchMedia('(max-height: 540px) and (orientation: landscape)').matches);
-
-  let minX, maxX, minY, maxY;
-  if (isLandscapeOverlay) {
-    const interiorRect = bookInterior.getBoundingClientRect();
-    const pad = 6;
-    minX = interiorRect.left + pad;
-    maxX = interiorRect.right - pad;
-    minY = interiorRect.top + pad;
-    maxY = interiorRect.bottom - pad;
-  } else {
-    minX = 8;
-    maxX = window.innerWidth - 8;
-    minY = 8;
-    maxY = window.innerHeight - 8;
-  }
-
-  // Position card directly at the click point, preferring below-right,
-  // flipping above or left if it would overflow the bounds.
+  let minX = 8; let maxX = window.innerWidth - 8; let minY = 8; let maxY = window.innerHeight - 8;
   let left = clientX + 8;
   let top = clientY + 8;
-
   if (left + width > maxX) left = clientX - width - 8;
   if (top + height > maxY) top = clientY - height - 8;
-
   left = Math.max(minX, Math.min(maxX - width, left));
   top = Math.max(minY, Math.min(maxY - height, top));
-
   card.style.left = `${left}px`;
   card.style.top = `${top}px`;
   card.style.visibility = 'visible';
@@ -826,6 +817,11 @@ function positionWordInfoAtPoint(clientX, clientY) {
 
 function openWordInfo(wordText, clientX, clientY) {
   if (!elements.wordInfoSheet) return;
+  document.querySelectorAll('.line-word-chip.is-selected-chip').forEach((el) => el.classList.remove('is-selected-chip'));
+  document.querySelectorAll('.line-word-chip').forEach((el) => {
+    const t = (el.textContent || '').replace(/^[^֐-׿]*/, '').trim();
+    if (t === wordText) el.classList.add('is-selected-chip');
+  });
   const lex = GRAMMAR_LEXICON[wordText] || {};
   elements.wordInfoHebrew.textContent = wordText;
   elements.wordInfoTranslit.textContent = lex.translit || '';
@@ -833,7 +829,6 @@ function openWordInfo(wordText, clientX, clientY) {
   elements.wordInfoExample.textContent = lex.gloss ? `${wordText} (${lex.gloss})` : wordText;
   elements.wordInfoSheet.setAttribute('aria-hidden', 'false');
   positionWordInfoAtPoint(clientX ?? window.innerWidth / 2, clientY ?? window.innerHeight / 2);
-
   if (!wordInfoDismissListenerActive) {
     wordInfoDismissListenerActive = true;
     setTimeout(() => {
@@ -858,37 +853,59 @@ function setupWordInfoHandlers() {
   setupWordInfoHandlers._done = true;
 }
 
+function renderZoneAnchors() {
+  const map = getZoneAnchorMap();
+  Object.entries(map).forEach(([zoneId, pos]) => {
+    let el = elements.verseWordOrbit.querySelector(`.verse-zone-anchor[data-zone='${zoneId}']`);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'verse-zone-anchor';
+      el.dataset.zone = zoneId;
+      el.textContent = zoneId.includes('noun') ? '◍' : zoneId.includes('verb') ? '✶' : zoneId.includes('modifier') ? '✧' : '⋄';
+      elements.verseWordOrbit.appendChild(el);
+    }
+    el.style.left = pos.left;
+    el.style.top = pos.top;
+  });
+}
+
 function renderVerseWordOrbit() {
   if (!elements.verseWordOrbit) return;
   const words = gameState.words.slice();
-  const parkedSet = new Set(gameState.parkedWordIds || []);
-  const snapshotKey = words.map((w) => {
-    const pos = gameState.wordContainerPositions?.[w.id];
-    const posKey = pos ? `${Math.round(pos.left*10)/10},${Math.round(pos.top*10)/10}` : 'auto';
-    return `${w.id}:${parkedSet.has(w.id) ? 1 : 0}:${posKey}`;
-  }).join('|');
+  const spreadRect = elements.verseWordOrbit.getBoundingClientRect();
+  const models = words.map(buildChipModel);
+  const zoneBuckets = new Map();
+  models.forEach((m) => {
+    if (!zoneBuckets.has(m.homeZoneId)) zoneBuckets.set(m.homeZoneId, []);
+    zoneBuckets.get(m.homeZoneId).push(m);
+  });
 
-  separateOverlappingWordContainers(words.map((w) => w.id));
+  const positions = {};
+  for (const [zoneId, chips] of zoneBuckets.entries()) {
+    const measured = chips.map((chip) => ({ ...chip, width: 90 }));
+    const slots = getZoneSlots(zoneId, measured, spreadRect);
+    chips.forEach((chip, idx) => positions[chip.id] = slots[idx]);
+  }
 
-  // Prevent chips from blinking/rebuilding while dragging.
+  const snapshotKey = words.map((w) => `${w.id}:${positions[w.id]?.left || 0}:${positions[w.id]?.top || 0}`).join('|');
   if (!orbitDragState && snapshotKey !== orbitSnapshotKey) {
     elements.verseWordOrbit.innerHTML = '';
     orbitSnapshotKey = snapshotKey;
+    renderZoneAnchors();
 
-    words.forEach((word, i) => {
+    words.forEach((word) => {
+      const model = buildChipModel(word);
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'line-word-chip verse-orbit-chip';
       chip.textContent = word.text;
       chip.dataset.wordId = String(word.id);
-      const savedPos = gameState.wordContainerPositions?.[word.id];
-      const pos = savedPos || wordOrbitPosition(i, words.length, parkedSet.has(word.id));
+      chip.dataset.category = model.category;
+      chip.dataset.homeZoneId = model.homeZoneId;
+      addChipCategoryStyling(chip, model.category);
+      const pos = positions[word.id] || { left: 50, top: 80 };
       chip.style.left = pos.left + '%';
       chip.style.top = pos.top + '%';
-      if (!savedPos && !pos.parked) chip.style.animationDelay = `${(i % 7) * 0.3}s`;
-      if (parkedSet.has(word.id)) chip.classList.add('is-parked');
-      gameState.wordContainerPositions = gameState.wordContainerPositions || {};
-      if (!savedPos) gameState.wordContainerPositions[word.id] = { left: pos.left, top: pos.top };
 
       let moved = false;
       chip.addEventListener('pointerdown', (e) => {
@@ -909,8 +926,6 @@ function renderVerseWordOrbit() {
         if (!orbitDragState || orbitDragState.wordId !== word.id) return;
         const dx = e.clientX - orbitDragState.startX;
         const dy = e.clientY - orbitDragState.startY;
-        // Only count as a drag once the pointer has moved more than 8px —
-        // this prevents touch jitter from suppressing the tap/info-popup path.
         if (!moved && dx * dx + dy * dy < 64) return;
         moved = true;
         orbitDragState.lastClientX = e.clientX;
@@ -934,68 +949,79 @@ function renderVerseWordOrbit() {
         const dropX = Number.isFinite(e.clientX) && e.clientX > 0 ? e.clientX : orbitDragState.lastClientX;
         const dropY = Number.isFinite(e.clientY) && e.clientY > 0 ? e.clientY : orbitDragState.lastClientY;
         const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
-        const matRectLeft = elements.verseWorkMatLeft?.getBoundingClientRect();
-        const matRectRight = elements.verseWorkMatRight?.getBoundingClientRect();
-        const orbitRect = elements.verseWordOrbit?.getBoundingClientRect();
         const inLine = lineRect && dropX >= lineRect.left && dropX <= lineRect.right && dropY >= lineRect.top && dropY <= lineRect.bottom;
-        const inMatLeft = matRectLeft && dropX >= matRectLeft.left && dropX <= matRectLeft.right && dropY >= matRectLeft.top && dropY <= matRectLeft.bottom;
-        const inMatRight = matRectRight && dropX >= matRectRight.left && dropX <= matRectRight.right && dropY >= matRectRight.top && dropY <= matRectRight.bottom;
-        const inMat = inMatLeft || inMatRight;
-        const inOrbit = isPointInsideRect(dropX, dropY, orbitRect);
 
         if (inLine) {
-          placeWordInVerse(word.id, gameState.verseWords.length);
-          gameState.parkedWordIds = (gameState.parkedWordIds || []).filter(id => id !== word.id);
-          if (gameState.wordContainerPositions) delete gameState.wordContainerPositions[word.id];
+          placeWordInVerse(word.id, getLineInsertIndex(dropX));
           orbitSnapshotKey = '';
           orbitDragState = null;
           updateUI();
-        } else if (inMat || (moved && inOrbit)) {
-          setWordContainerPosition(word.id, dropX, dropY);
-          if (inMat) {
-            if (!parkedSet.has(word.id)) gameState.parkedWordIds = [...(gameState.parkedWordIds || []), word.id];
-          } else {
-            gameState.parkedWordIds = (gameState.parkedWordIds || []).filter(id => id !== word.id);
-          }
-          orbitSnapshotKey = '';
-          orbitDragState = null;
-          updateUI();
-        } else if (moved) {
-          // If dropped outside the verse spread, restore chip to its stored position.
-          const savedPos = gameState.wordContainerPositions?.[word.id];
-          if (savedPos) {
-            chip.style.left = savedPos.left + '%';
-            chip.style.top = savedPos.top + '%';
-          }
-          chip.style.visibility = '';
-        } else {
-          // Simple tap/click — restore position and show word info.
-          const savedPos = gameState.wordContainerPositions?.[word.id];
-          if (savedPos) {
-            chip.style.left = savedPos.left + '%';
-            chip.style.top = savedPos.top + '%';
-          }
+        } else if (!moved) {
           chip.style.visibility = '';
           openWordInfo(word.text, dropX, dropY);
+          highlightCategoryInOrbit(model.category);
+          orbitDragState = null;
+        } else {
+          orbitSnapshotKey = '';
+          orbitDragState = null;
+          updateUI();
         }
-        orbitDragState = null;
       });
 
       elements.verseWordOrbit.appendChild(chip);
     });
   }
+}
 
-  const matActive = (gameState.parkedWordIds || []).length > 0 || words.length > 3;
-  if (elements.verseWorkMatLeft) elements.verseWorkMatLeft.classList.toggle('active', matActive);
-  if (elements.verseWorkMatRight) elements.verseWorkMatRight.classList.toggle('active', matActive);
-  }
+export function handleVerseSubmitAttempt() {
+  const incorrect = [];
+  gameState.verseWords = gameState.verseWords.filter((w, idx) => {
+    const correct = w.hebrew === SOLUTION_HEBREW_ORDER[idx];
+    if (correct) {
+      w.isLockedCorrect = true;
+      return true;
+    }
+    incorrect.push(w);
+    return false;
+  });
+
+  incorrect.forEach((w) => {
+    const newWordId = getNextWordId();
+    addWord({
+      id: newWordId,
+      text: w.hebrew,
+      english: (GRAMMAR_LEXICON[w.hebrew] || {}).gloss || w.hebrew,
+      length: w.hebrew.length,
+      power: 0,
+      heated: true,
+    });
+  });
+
+  orbitSnapshotKey = '';
+  lastRenderedVerseWords = [];
+  updateUI();
+
+  const solved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
+    && gameState.verseWords.every((w, i) => w.hebrew === SOLUTION_HEBREW_ORDER[i]);
+  return solved;
+}
 
 
 /**
  * Initialize versebook interactions
  */
 export function initWordSelector() {
-  // Legacy glossary controls removed for Verse Book spread redesign.
+  const showTutorial = () => {
+    if (!elements.verseTutorialOverlay) return;
+    elements.verseTutorialOverlay.classList.add('open');
+    localStorage.setItem('verseTutorialSeen', '1');
+    gameState.verseTutorialSeen = true;
+  };
+  const hideTutorial = () => elements.verseTutorialOverlay?.classList.remove('open');
+
+  elements.verseTutorialDismiss?.addEventListener('click', hideTutorial);
+  elements.verseHelpBtn?.addEventListener('click', showTutorial);
+  if (!localStorage.getItem('verseTutorialSeen')) showTutorial();
 }
 
 /**
