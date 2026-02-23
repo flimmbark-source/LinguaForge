@@ -741,6 +741,72 @@ export function renderGlossary() {
 let orbitDragState = null;
 let orbitSnapshotKey = "";
 
+// ---------------------------------------------------------------------------
+// Phase 1: Versebook zone layout — deterministic chip placement
+// Zones are expressed as percentage coordinates within the verse-spread-overlay.
+// The center stack (verse line) lives near 50% horizontal / 48% vertical, so
+// all three zones deliberately sit clear of the 40-60% vertical band.
+// ---------------------------------------------------------------------------
+const VERSE_ZONES = {
+  verb:     { leftMin: 4,  leftMax: 44, topMin: 5,  topMax: 38 },
+  noun:     { leftMin: 4,  leftMax: 44, topMin: 62, topMax: 90 },
+  particle: { leftMin: 57, leftMax: 94, topMin: 5,  topMax: 38 },
+};
+
+/** Map a word's GRAMMAR_LEXICON category to a zone key, with a safe fallback. */
+function getWordZoneCategory(wordText) {
+  const cat = GRAMMAR_LEXICON[wordText]?.category;
+  if (cat === 'verb') return 'verb';
+  if (cat === 'particle') return 'particle';
+  return 'noun'; // safe fallback: unknown or content words land left
+}
+
+/**
+ * Deterministic slot position inside a zone.
+ * Chips are arranged in a row-first grid that fills the zone evenly.
+ * @param {{leftMin,leftMax,topMin,topMax}} zone
+ * @param {number} slotIndex  - 0-based index within this zone's chip list
+ * @param {number} totalInZone
+ * @returns {{left: number, top: number}}
+ */
+function zoneSlotPosition(zone, slotIndex, totalInZone) {
+  const cols = Math.max(1, Math.min(3, Math.ceil(Math.sqrt(totalInZone))));
+  const rows = Math.ceil(totalInZone / cols);
+  const col  = slotIndex % cols;
+  const row  = Math.floor(slotIndex / cols);
+  const cellW = (zone.leftMax - zone.leftMin) / cols;
+  const cellH = (zone.topMax  - zone.topMin)  / Math.max(rows, 1);
+  return {
+    left: zone.leftMin + cellW * (col + 0.5),
+    top:  zone.topMin  + cellH * (row + 0.5),
+  };
+}
+
+/**
+ * Compute deterministic zone positions for all non-parked words that lack a
+ * saved position.  Returns a plain object keyed by word id.
+ * @param {Array}  words
+ * @param {Set}    parkedSet
+ * @returns {Object.<number, {left:number, top:number}>}
+ */
+function computeZonePositions(words, parkedSet) {
+  // Group words by zone (skip parked; they use the work-mat grid)
+  const groups = { verb: [], noun: [], particle: [] };
+  words.forEach(w => {
+    if (parkedSet.has(w.id)) return;
+    groups[getWordZoneCategory(w.text)].push(w.id);
+  });
+
+  const positions = {};
+  Object.entries(groups).forEach(([cat, ids]) => {
+    ids.forEach((id, i) => {
+      positions[id] = zoneSlotPosition(VERSE_ZONES[cat], i, ids.length);
+    });
+  });
+  return positions;
+}
+// ---------------------------------------------------------------------------
+
 function wordOrbitPosition(index, total, parked) {
   if (parked) {
     const row = Math.floor(index / 3);
@@ -862,6 +928,18 @@ function renderVerseWordOrbit() {
   if (!elements.verseWordOrbit) return;
   const words = gameState.words.slice();
   const parkedSet = new Set(gameState.parkedWordIds || []);
+
+  // Phase 1: pre-populate deterministic zone positions for words that don't
+  // yet have a saved (user-dragged) position.  This replaces the random
+  // wordOrbitPosition() fallback for non-parked chips.
+  gameState.wordContainerPositions = gameState.wordContainerPositions || {};
+  const zonePos = computeZonePositions(words, parkedSet);
+  words.forEach(w => {
+    if (!gameState.wordContainerPositions[w.id] && zonePos[w.id]) {
+      gameState.wordContainerPositions[w.id] = zonePos[w.id];
+    }
+  });
+
   const snapshotKey = words.map((w) => {
     const pos = gameState.wordContainerPositions?.[w.id];
     const posKey = pos ? `${Math.round(pos.left*10)/10},${Math.round(pos.top*10)/10}` : 'auto';
