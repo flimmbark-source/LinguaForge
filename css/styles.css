@@ -4913,7 +4913,7 @@ body.book-overlay-active .magic-book {
 .verse-enscribe-float-btn {
   position: absolute;
   left: 50%;
-  top: -33px;
+  top: -31px;
   transform: translateX(-50%);
   margin: 0;
   z-index: 7;
@@ -5106,10 +5106,16 @@ body.book-overlay-active .magic-book {
   color: #120d07;
 }
 
+.line-word-chip.dragging-out {
+  background: #eedcbc;
+  border-color: #b9975f;
+  color: #120d07;
+}
+
 .verse-line .line-word-chip.dragging-out {
   position: fixed;
   margin: 0;
-  transform: translate(-50%, -50%);
+  transform: none;
   transition: none;
   z-index: 1300;
   opacity: 0.95;

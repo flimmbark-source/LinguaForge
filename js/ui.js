@@ -73,7 +73,6 @@ export function resetVerseBookChipsHome() {
   gameState.parkedWordIds = [];
   gameState.wordContainerPositions = {};
   gameState.verseLastTriedSignature = '';
-  lastRenderedVerseWords = [];
   orbitSnapshotKey = '';
 }
 

@@ -175,12 +175,12 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
 
     // Create placeholder element
     const placeholder = document.createElement('div');
-    placeholder.className = 'line-word-chip-placeholder';
+    placeholder.className = 'line-word-chip line-word-chip-placeholder';
+    placeholder.textContent = chip.textContent || '';
+    placeholder.setAttribute('aria-hidden', 'true');;
     placeholder.style.width = rect.width + 'px';
     placeholder.style.height = rect.height + 'px';
-    placeholder.style.opacity = '0.3';
-    placeholder.style.border = '2px dashed #666';
-    placeholder.style.background = 'transparent';
+    placeholder.style.opacity = '0.4';
     placeholder.style.boxSizing = 'border-box';
 
     // Snapshot the containing-block origin at drag start. .magic-book has
@@ -201,6 +201,10 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
       lastClientX: e.clientX,
       lastClientY: e.clientY,
       origin,
+      pointerOffsetX: e.clientX - rect.left,
+      pointerOffsetY: e.clientY - rect.top,
+      originalParent: chip.parentElement,
+      originalNextSibling: chip.nextSibling,
     };
 
     // Insert placeholder at current position
@@ -208,10 +212,11 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
 
     // Make chip draggable — position in containing-block coordinates so the
     // chip appears directly under the pointer (combined with CSS translate(-50%,-50%)).
+    document.body.appendChild(chip);
     chip.classList.add('dragging-out');
     chip.style.position = 'fixed';
-    chip.style.left = (e.clientX - origin.x) + 'px';
-    chip.style.top = (e.clientY - origin.y) + 'px';
+    chip.style.left = (e.clientX - dragState.pointerOffsetX - origin.x) + 'px';
+    chip.style.top = (e.clientY - dragState.pointerOffsetY - origin.y) + 'px';
     chip.style.zIndex = '1300';
     chip.style.opacity = '0.95';
     chip.setPointerCapture(e.pointerId);
@@ -224,10 +229,9 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
     e.preventDefault();
     dragState.lastClientX = e.clientX;
     dragState.lastClientY = e.clientY;
-    const { origin } = dragState;
-    chip.style.left = (e.clientX - origin.x) + 'px';
-    chip.style.top = (e.clientY - origin.y) + 'px';
-
+    const { origin, pointerOffsetX, pointerOffsetY } = dragState;
+    chip.style.left = (e.clientX - pointerOffsetX - origin.x) + 'px';
+    chip.style.top = (e.clientY - pointerOffsetY - origin.y) + 'px';
     // Update placeholder position based on where drop would occur
     updatePlaceholderPosition(e.clientX, e.clientY, instanceId, dragState.placeholder);
   });
@@ -265,6 +269,11 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
     chip.style.opacity = '';
 
     if (!moved) {
+      if (dragState.placeholder && dragState.placeholder.parentElement) {
+        dragState.placeholder.parentElement.insertBefore(chip, dragState.placeholder);
+      } else if (dragState.originalParent) {
+        dragState.originalParent.insertBefore(chip, dragState.originalNextSibling);
+      }
       chip.style.visibility = '';
       // Just a click, not a drag - still update UI
       if (onUpdate) onUpdate();
@@ -292,6 +301,12 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
     chip.style.zIndex = '';
     chip.style.opacity = '';
     chip.style.visibility = '';
+
+    if (dragState.placeholder && dragState.placeholder.parentElement) {
+      dragState.placeholder.parentElement.insertBefore(chip, dragState.placeholder);
+    } else if (dragState.originalParent) {
+      dragState.originalParent.insertBefore(chip, dragState.originalNextSibling);
+    }
 
     gameState.draggedVerseInstanceId = null;
     dragState = null;
