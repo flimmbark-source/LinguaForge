@@ -4893,9 +4893,9 @@ body.book-overlay-active .magic-book {
   user-select: none;
 }
 
-.verse-zone-anchor--verb { left: calc(8% + 12.666%); top: 61%; transform: translateX(-50%); }
-.verse-zone-anchor--noun { left: 50%; top: 61%; transform: translateX(-50%); }
-.verse-zone-anchor--particle { left: calc(92% - 12.666%); top: 61%; transform: translateX(-50%); }
+.verse-zone-anchor--verb { left: calc(8% + 12.666%); top: 55%; transform: translateX(-50%); }
+.verse-zone-anchor--noun { left: 50%; top: 55%; transform: translateX(-50%); }
+.verse-zone-anchor--particle { left: calc(92% - 12.666%); top: 55%; transform: translateX(-50%); }
 
 .verse-center-stack {
   position: absolute;

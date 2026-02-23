@@ -823,7 +823,7 @@ function getVerseLayoutZones() {
   const sideMargin = 8;
   const columnGap = 3;
   const columnWidth = (100 - sideMargin * 2 - columnGap * 2) / 3;
-  const rowTop = 60;
+  const rowTop = 54;
   const rowHeight = 24;
 
   return {
