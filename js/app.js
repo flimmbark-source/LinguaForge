@@ -8,8 +8,8 @@ import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, compute
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
 import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
-import { setupVerseAreaDrop, completeVerse, isVerseSolved } from './grammar.js?v=9';
-import { initializeElements, updateUI, initWordSelector } from './ui.js?v=9';
+import { setupVerseAreaDrop } from './grammar.js?v=9';
+import { initializeElements, updateUI, initWordSelector, resolveVerseSubmit } from './ui.js?v=9';
 import { gameState } from './state.js?v=9';
 import { addLetters } from './state.js?v=9';
 import { HammerSystem } from './hammer.js?v=9';
@@ -1472,27 +1472,20 @@ function setupEventHandlers() {
   if (enscribeBtn) {
     enscribeBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (!isVerseSolved()) {
-        gameState.verseFailedAttempts = (gameState.verseFailedAttempts || 0) + 1;
-        updateUI();
-        return;
-      }
-      const solvedWords = gameState.verseWords.map((w) => w.hebrew);
-      const completed = completeVerse();
-      if (completed) {
-        gameState.verseFailedAttempts = 0;
-        gameState.verseLastTriedSignature = '';
-        (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
-        spawnVerseEchoWords(solvedWords);
-        const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
-        if (grammarHebrewLineDiv) {
-          const rect = grammarHebrewLineDiv.getBoundingClientRect();
-          spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
-        }
-      }
-      updateUI();
+      resolveVerseSubmit();
     });
   }
+
+  document.addEventListener('verse-solved-feedback', (event) => {
+    const solvedWords = event.detail?.solvedWords || [];
+    (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
+    if (solvedWords.length) spawnVerseEchoWords(solvedWords);
+    const grammarHebrewLineDiv = document.getElementById('grammarHebrewLine');
+    if (grammarHebrewLineDiv) {
+      const rect = grammarHebrewLineDiv.getBoundingClientRect();
+      spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
+    }
+  });
 
   const anvilGlyph = document.getElementById('anvilGlyph');
   if (anvilGlyph) {
