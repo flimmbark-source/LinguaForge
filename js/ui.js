@@ -741,33 +741,76 @@ export function renderGlossary() {
 let orbitDragState = null;
 let orbitSnapshotKey = "";
 
-function wordOrbitPosition(index, total, parked) {
-  if (parked) {
-    const row = Math.floor(index / 3);
-    const col = index % 3;
-    return { left: 20 + col * 28, top: 72 + row * 12, parked: true };
-  }
-
-  const orbitRect = elements.verseWordOrbit?.getBoundingClientRect();
-  const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
-  const hasOrbit = orbitRect && orbitRect.width > 0 && orbitRect.height > 0;
-
-  const leftMin = 12;
-  const leftMax = 88;
-  let topMin = 66;
-  const topMax = 94;
-
-  if (hasOrbit && lineRect) {
-    const lineBottom = lineRect.bottom - orbitRect.top;
-    const belowLinePercent = (lineBottom / orbitRect.height) * 100;
-    topMin = Math.max(topMin, Math.min(90, belowLinePercent + 6));
-  }
-
-  const safeTopMin = Math.min(topMin, topMax - 2);
+function getVerseLayoutZones() {
   return {
-    left: leftMin + Math.random() * (leftMax - leftMin),
-    top: safeTopMin + Math.random() * (topMax - safeTopMin),
+    // Normalized percentages in the verse spread overlay.
+    // Left side is split into upper (verb) and lower (noun) homes.
+    verbZone: { left: 8, top: 14, width: 40, height: 24 },
+    nounZone: { left: 8, top: 58, width: 40, height: 30 },
+    // Function words sit in a deterministic inner strip on the right.
+    particlePrefixZone: { left: 60, top: 20, width: 30, height: 62 },
+    // Reference-only zone for line intent; actual line behavior remains unchanged.
+    verseLineZone: { left: 26, top: 42, width: 48, height: 14 },
   };
+}
+
+function getWordZoneKey(word, parked) {
+  if (parked) return 'nounZone';
+
+  const mold = gameState.currentLine?.molds?.find((m) => m.pattern === word.text);
+  const english = (mold?.english || '').toLowerCase();
+  const gloss = (GRAMMAR_LEXICON[word.text]?.gloss || '').toLowerCase();
+
+  // Function words / prefixes / particles -> right strip.
+  const isFunctionWord =
+    english === 'the' || english === 'of' ||
+    gloss === 'the' || gloss === 'of' || gloss === 'breath of';
+  if (isFunctionWord) return 'particlePrefixZone';
+
+  // Verb-ish (copula in current data) -> upper-left verb zone.
+  const isVerbWord = english === 'is' || gloss === 'is';
+  if (isVerbWord) return 'verbZone';
+
+  // Safe fallback: content words stay on the left side.
+  return 'nounZone';
+}
+
+function getDeterministicZonePosition(zone, zoneIndex, orbitRect) {
+  const rectWidth = Math.max(orbitRect?.width || 0, 1);
+  const zoneWidthPx = (zone.width / 100) * rectWidth;
+
+  // Wrap cleanly based on available zone width.
+  const minSlotWidthPx = 84;
+  const columns = Math.max(1, Math.floor(zoneWidthPx / minSlotWidthPx));
+  const row = Math.floor(zoneIndex / columns);
+  const col = zoneIndex % columns;
+
+  const xStep = zone.width / columns;
+  const yStep = 11;
+  const yPad = 7;
+
+  const left = zone.left + xStep * (col + 0.5);
+  const unclampedTop = zone.top + yPad + row * yStep;
+  const maxTop = zone.top + zone.height - 4;
+  const top = Math.max(zone.top + 4, Math.min(maxTop, unclampedTop));
+
+  return {
+    left: clampPercent(left),
+    top: clampPercent(top),
+  };
+}
+
+function getWordHomePosition(word, words, parkedSet) {
+  const zones = getVerseLayoutZones();
+  const orbitRect = elements.verseWordOrbit?.getBoundingClientRect();
+  const zoneKey = getWordZoneKey(word, parkedSet.has(word.id));
+  const zone = zones[zoneKey] || zones.nounZone;
+
+  const zoneWords = words.filter((w) => getWordZoneKey(w, parkedSet.has(w.id)) === zoneKey);
+  const zoneIndex = Math.max(0, zoneWords.findIndex((w) => w.id === word.id));
+  const pos = getDeterministicZonePosition(zone, zoneIndex, orbitRect);
+
+  return { ...pos, parked: parkedSet.has(word.id), zoneKey };
 }
 
 let wordInfoDismissListenerActive = false;
@@ -882,7 +925,7 @@ function renderVerseWordOrbit() {
       chip.textContent = word.text;
       chip.dataset.wordId = String(word.id);
       const savedPos = gameState.wordContainerPositions?.[word.id];
-      const pos = savedPos || wordOrbitPosition(i, words.length, parkedSet.has(word.id));
+      const pos = savedPos || getWordHomePosition(word, words, parkedSet);
       chip.style.left = pos.left + '%';
       chip.style.top = pos.top + '%';
       if (!savedPos && !pos.parked) chip.style.animationDelay = `${(i % 7) * 0.3}s`;
