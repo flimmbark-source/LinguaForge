@@ -684,11 +684,10 @@ export function updateGrammarUI(force = false) {
  */
 export function updateEnscribeButton() {
   if (!elements.enscribeBtn) return;
-  const hasPlacedChip = gameState.verseWords.some((w) => !w.isPlaceholder && !!w.hebrew);
   const solved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
     && gameState.verseWords.every((w, i) => !w.isPlaceholder && w.hebrew === SOLUTION_HEBREW_ORDER[i]);
-  elements.enscribeBtn.disabled = !hasPlacedChip;
-  elements.enscribeBtn.style.display = hasPlacedChip ? 'inline-flex' : 'none';
+  elements.enscribeBtn.disabled = !solved;
+  elements.enscribeBtn.style.display = 'inline-flex';
   elements.enscribeBtn.textContent = 'Enscribe';
 }
 
