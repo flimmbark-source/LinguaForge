@@ -4911,8 +4911,13 @@ body.book-overlay-active .magic-book {
 }
 
 .verse-enscribe-float-btn {
-  align-self: center;
-  margin-bottom: 2px;
+  position: absolute;
+  left: 50%;
+  top: -28px;
+  transform: translateX(-50%);
+  margin: 0;
+  z-index: 7;
+  pointer-events: auto;
 }
 
 .verse-intent-line {
