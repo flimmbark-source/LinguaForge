@@ -8,7 +8,7 @@ import { initializeMoldSlots, STARTING_LETTERS, VERSE_COMPLETION_REWARD, compute
 import { spawnLetter, randomAllowedLetter, createLetterTile } from './letters.js?v=9';
 import { setMoldViewportWidth, initializeMoldSystem } from './molds.js?v=9';
 import { hireScribe, updateScribes } from './scribes.js?v=9';
-import { setupVerseAreaDrop, completeVerse, isVerseSolved } from './grammar.js?v=9';
+import { setupVerseAreaDrop, isVerseSolved } from './grammar.js?v=9';
 import { initializeElements, updateUI, initWordSelector, resetVerseBookChipsHome, placeNewWordInHomeColumnStack } from './ui.js?v=9';
 import { gameState } from './state.js?v=9';
 import { addLetters } from './state.js?v=9';
@@ -17,7 +17,7 @@ import { PestleSystem } from './pestle.js?v=9';
 import { ShovelSystem } from './shovel.js?v=9';
 import { initializeHearth, updateHearth } from './RuneHearth.js?v=9';
 import { initAudio, startBackgroundMusic, getMusicVolume, getSfxVolume, setMusicVolume, setSfxVolume, unlockAudio } from './audio.js?v=9';
-import { addInk, addVerseWord, addWord, getNextWordId, recordForgedWord } from './state.js?v=9';
+import { addInk, addWord, getNextWordId, recordForgedWord, incrementLinesCompleted, clearVerseWords } from './state.js?v=9';
 import * as upgradesAPI from './upgrades.js?v=9';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
 import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
@@ -658,6 +658,45 @@ function spawnVerseEchoWords(words) {
       }, 400 + index * 60);
     }, index * 180);
   });
+}
+
+function runEnscribeCinematic() {
+  const overlay = document.createElement('div');
+  overlay.className = 'enscribe-cinematic-overlay';
+
+  const text = document.createElement('div');
+  text.className = 'enscribe-cinematic-text';
+  text.textContent = 'Fire is the first breath of power';
+  overlay.appendChild(text);
+
+  for (let i = 0; i < 18; i += 1) {
+    const sparkle = document.createElement('div');
+    sparkle.className = 'enscribe-cinematic-sparkle';
+    const angle = (Math.PI * 2 * i) / 18 + (Math.random() - 0.5) * 0.45;
+    const distance = 48 + Math.random() * 80;
+    sparkle.style.setProperty('--sparkle-x', `${Math.cos(angle) * distance}px`);
+    sparkle.style.setProperty('--sparkle-y', `${Math.sin(angle) * distance}px`);
+    sparkle.style.animationDelay = `${Math.random() * 0.7}s`;
+    overlay.appendChild(sparkle);
+  }
+
+  document.body.appendChild(overlay);
+  document.body.classList.add('enscribe-cinematic-active');
+
+  setTimeout(() => {
+    document.body.classList.remove('enscribe-cinematic-active');
+    overlay.remove();
+  }, 3000);
+}
+
+function spawnInkBurstRain() {
+  for (let i = 0; i < VERSE_COMPLETION_REWARD; i += 1) {
+    setTimeout(() => {
+      const x = 30 + Math.random() * (window.innerWidth - 60);
+      const y = 30 + Math.random() * (window.innerHeight - 60);
+      spawnResourceGain(x, y, 1, 'ink');
+    }, i * 70);
+  }
 }
 function getWorldBucketDiscoverableWords() {
   const bucketIds = ['bucketFirst', 'bucketSecond'];
@@ -1476,15 +1515,15 @@ function setupEventHandlers() {
       if (!isVerseSolved()) return;
 
       const solvedWords = gameState.verseWords.map((w) => w.hebrew);
-      const completed = completeVerse();
-      if (completed) {
-        gameState.verseFailedAttempts = 0;
-        gameState.verseLastTriedSignature = '';
-        (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
-        spawnVerseEchoWords(solvedWords);
-        const rect = grammarHebrewLineDiv.getBoundingClientRect();
-        spawnResourceGain(rect.left + rect.width / 2, rect.top + rect.height / 2, VERSE_COMPLETION_REWARD, 'ink');
-      }
+      addInk(VERSE_COMPLETION_REWARD);
+      incrementLinesCompleted();
+      clearVerseWords();
+      gameState.verseFailedAttempts = 0;
+      gameState.verseLastTriedSignature = '';
+      (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
+      spawnVerseEchoWords(solvedWords);
+      runEnscribeCinematic();
+      spawnInkBurstRain();
       updateUI();
     });
   }
