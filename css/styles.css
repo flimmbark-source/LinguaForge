@@ -4878,6 +4878,25 @@ body.book-overlay-active .magic-book {
   pointer-events: none;
 }
 
+.verse-zone-anchor {
+  position: absolute;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(54, 42, 29, 0.68);
+  background: rgba(245, 230, 200, 0.48);
+  border: 1px solid rgba(93,64,30,0.22);
+  border-radius: 999px;
+  padding: 2px 8px;
+  pointer-events: none;
+  z-index: 2;
+  user-select: none;
+}
+
+.verse-zone-anchor--verb { left: calc(8% + 12.666%); top: 61%; transform: translateX(-50%); }
+.verse-zone-anchor--noun { left: 50%; top: 61%; transform: translateX(-50%); }
+.verse-zone-anchor--particle { left: calc(92% - 12.666%); top: 61%; transform: translateX(-50%); }
+
 .verse-center-stack {
   position: absolute;
   left: 50%;
@@ -4888,6 +4907,16 @@ body.book-overlay-active .magic-book {
   flex-direction: column;
   gap: 8px;
   align-items: stretch;
+  pointer-events: auto;
+}
+
+.verse-enscribe-float-btn {
+  position: absolute;
+  left: 50%;
+  top: -28px;
+  transform: translateX(-50%);
+  margin: 0;
+  z-index: 7;
   pointer-events: auto;
 }
 
@@ -4969,10 +4998,25 @@ body.book-overlay-active .magic-book {
 .verse-translation-reveal { min-height: 20px; opacity: 0; transition: opacity .35s ease; text-align:center; font-weight: 600; color: #19130c; }
 .verse-translation-reveal.visible { opacity: .95; }
 .verse-footer-row { margin-top: 2px; justify-content: center; gap: 8px; color: #1a1208; }
-.verse-footer-row #enscribeBtn { display: none; }
-.verse-footer-row #enscribeBtn,
-.verse-footer-row .pill,
-.verse-footer-row .work-mat-release-btn { pointer-events: auto; }
+
+.verse-reset-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(93,64,30,.35);
+  background: rgba(245,230,200,.82);
+  color: #2b2113;
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  z-index: 6;
+}
 
 .verse-word-orbit {
   position: absolute;
@@ -4990,12 +5034,29 @@ body.book-overlay-active .magic-book {
   animation: none;
   z-index: 3;
   box-shadow: 0 0 0 3px rgba(245, 230, 200, 0.55);
+  border-radius: 999px;
+  transition: left .2s ease, top .2s ease, box-shadow .14s ease, border-color .14s ease, background-color .14s ease;
+}
+
+.verse-orbit-chip[data-zone="verbZone"] {
+  border-radius: 10px;
+}
+
+.verse-orbit-chip[data-zone="nounZone"] {
+  border-radius: 999px;
+}
+
+.verse-orbit-chip[data-zone="particlePrefixZone"] {
+  border-radius: 8px;
+  background: #f2e6cf;
+  border-color: #a48353;
 }
 
 .verse-orbit-chip.dragging {
   box-shadow: 0 8px 20px rgba(0,0,0,.2);
   z-index: 30;
   animation: none;
+  transition: none;
 }
 
 .verse-orbit-chip.is-parked { animation: none; }
@@ -5053,6 +5114,13 @@ body.book-overlay-active .magic-book {
   z-index: 1300;
   opacity: 0.95;
   pointer-events: none;
+}
+
+.verse-slot-gap {
+  min-width: 54px;
+  min-height: 30px;
+  border: 1px dashed rgba(93,64,30,0.45);
+  background: rgba(245, 230, 200, 0.18);
 }
 
 .verse-orbit-chip:hover {

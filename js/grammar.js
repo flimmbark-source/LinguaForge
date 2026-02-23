@@ -75,7 +75,16 @@ export function placeWordInVerse(wordId, insertIndex) {
   if (!word) return false;
 
   const instanceId = 'vw-' + Date.now() + '-' + Math.random();
-  addVerseWord({ instanceId, hebrew: word.text }, insertIndex);
+
+  // Phase 2 placeholder flow: when an explicit slot placeholder exists,
+  // replace it in-place instead of inserting and shifting the line.
+  const target = gameState.verseWords[insertIndex];
+  if (target && target.isPlaceholder) {
+    gameState.verseWords.splice(insertIndex, 1, { instanceId, hebrew: word.text });
+  } else {
+    addVerseWord({ instanceId, hebrew: word.text }, insertIndex);
+  }
+
   removeWord(wordId);
   return true;
 }
