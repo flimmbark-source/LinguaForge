@@ -88,6 +88,9 @@ let lastRenderedScribes = [];
 // Track last rendered mold state to avoid unnecessary recreations
 let lastRenderedMoldIndex = -1;
 let lastRenderedMoldSlots = '';
+let autoEnscribeTimer = null;
+let autoEnscribeSignature = '';
+const AUTO_ENSCRIBE_DELAY_MS = 2000;
 
 /**
  * Initialize DOM element references
@@ -644,11 +647,36 @@ export function updateGrammarUI(force = false) {
 
   const solved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
     && gameState.verseWords.every((w, i) => !w.isPlaceholder && w.hebrew === SOLUTION_HEBREW_ORDER[i]);
+  const solvedSignature = solved
+    ? gameState.verseWords.map((w) => w.instanceId).join('|')
+    : '';
 
   elements.grammarHebrewLineDiv.classList.toggle('is-solved', solved);
   if (elements.verseTranslationReveal) {
     elements.verseTranslationReveal.textContent = solved ? gameState.currentLine.english : '';
     elements.verseTranslationReveal.classList.toggle('visible', solved);
+  }
+
+  if (solved) {
+    if (autoEnscribeSignature !== solvedSignature) {
+      autoEnscribeSignature = solvedSignature;
+      if (autoEnscribeTimer) {
+        clearTimeout(autoEnscribeTimer);
+      }
+      autoEnscribeTimer = setTimeout(() => {
+        autoEnscribeTimer = null;
+        const stillSolved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
+          && gameState.verseWords.every((w, i) => !w.isPlaceholder && w.hebrew === SOLUTION_HEBREW_ORDER[i]);
+        if (!stillSolved || !elements.grammarHebrewLineDiv) return;
+        elements.grammarHebrewLineDiv.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      }, AUTO_ENSCRIBE_DELAY_MS);
+    }
+  } else {
+    autoEnscribeSignature = '';
+    if (autoEnscribeTimer) {
+      clearTimeout(autoEnscribeTimer);
+      autoEnscribeTimer = null;
+    }
   }
 
   if (!solved && gameState.verseWords.length > 0) {
