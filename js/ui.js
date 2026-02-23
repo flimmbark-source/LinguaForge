@@ -794,12 +794,19 @@ let orbitDragState = null;
 let orbitSnapshotKey = "";
 
 function getVerseLayoutZones() {
+  // Keep the three home columns mathematically equal and evenly spaced.
+  const sideMargin = 8;
+  const columnGap = 3;
+  const columnWidth = (100 - sideMargin * 2 - columnGap * 2) / 3;
+  const rowTop = 66;
+  const rowHeight = 24;
+
   return {
     // Normalized percentages in the verse spread overlay.
     // Keep verse line centered; chip homes are now 3 side-by-side columns below it.
-    verbZone: { left: 8, top: 66, width: 26, height: 24 },
-    nounZone: { left: 37, top: 66, width: 26, height: 24 },
-    particlePrefixZone: { left: 66, top: 66, width: 26, height: 24 },
+    verbZone: { left: sideMargin, top: rowTop, width: columnWidth, height: rowHeight },
+    nounZone: { left: sideMargin + columnWidth + columnGap, top: rowTop, width: columnWidth, height: rowHeight },
+    particlePrefixZone: { left: sideMargin + (columnWidth + columnGap) * 2, top: rowTop, width: columnWidth, height: rowHeight },
     // Reference-only zone for line intent; actual line behavior remains unchanged.
     verseLineZone: { left: 26, top: 42, width: 48, height: 14 },
   };
