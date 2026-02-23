@@ -4910,6 +4910,11 @@ body.book-overlay-active .magic-book {
   pointer-events: auto;
 }
 
+.verse-enscribe-float-btn {
+  align-self: center;
+  margin-bottom: 2px;
+}
+
 .verse-intent-line {
   text-align: center;
   font-size: 14px;
@@ -4988,10 +4993,25 @@ body.book-overlay-active .magic-book {
 .verse-translation-reveal { min-height: 20px; opacity: 0; transition: opacity .35s ease; text-align:center; font-weight: 600; color: #19130c; }
 .verse-translation-reveal.visible { opacity: .95; }
 .verse-footer-row { margin-top: 2px; justify-content: center; gap: 8px; color: #1a1208; }
-.verse-footer-row #enscribeBtn { display: none; }
-.verse-footer-row #enscribeBtn,
-.verse-footer-row .pill,
-.verse-footer-row .work-mat-release-btn { pointer-events: auto; }
+
+.verse-reset-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(93,64,30,.35);
+  background: rgba(245,230,200,.82);
+  color: #2b2113;
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  z-index: 6;
+}
 
 .verse-word-orbit {
   position: absolute;
