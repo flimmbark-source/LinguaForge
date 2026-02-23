@@ -796,11 +796,10 @@ let orbitSnapshotKey = "";
 function getVerseLayoutZones() {
   return {
     // Normalized percentages in the verse spread overlay.
-    // Left side is split into upper (verb) and lower (noun) homes.
-    verbZone: { left: 8, top: 14, width: 40, height: 24 },
-    nounZone: { left: 8, top: 58, width: 40, height: 30 },
-    // Function words sit in a deterministic inner strip on the right.
-    particlePrefixZone: { left: 60, top: 20, width: 30, height: 62 },
+    // Keep verse line centered; chip homes are now 3 side-by-side columns below it.
+    verbZone: { left: 8, top: 66, width: 26, height: 24 },
+    nounZone: { left: 37, top: 66, width: 26, height: 24 },
+    particlePrefixZone: { left: 66, top: 66, width: 26, height: 24 },
     // Reference-only zone for line intent; actual line behavior remains unchanged.
     verseLineZone: { left: 26, top: 42, width: 48, height: 14 },
   };

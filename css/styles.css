@@ -4893,9 +4893,9 @@ body.book-overlay-active .magic-book {
   user-select: none;
 }
 
-.verse-zone-anchor--verb { left: 8%; top: 10%; }
-.verse-zone-anchor--noun { left: 8%; top: 53%; }
-.verse-zone-anchor--particle { right: 8%; top: 16%; }
+.verse-zone-anchor--verb { left: 8%; top: 61%; }
+.verse-zone-anchor--noun { left: 37%; top: 61%; }
+.verse-zone-anchor--particle { left: 66%; top: 61%; }
 
 .verse-center-stack {
   position: absolute;
