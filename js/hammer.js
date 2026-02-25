@@ -16,6 +16,8 @@ const MOBILE_ANVIL_PORTRAIT_OFFSET_Y = 44;
 const MOBILE_ANVIL_LANDSCAPE_OFFSET_X = -5;
 const MOBILE_ANVIL_LANDSCAPE_OFFSET_Y = 38;
 const DESKTOP_HANG_SNAP_OFFSET_Y = 150;
+const HEATING_FLAME_INTERVAL = 0.2;
+const MAX_HEATING_FLAMES = 8;
 
 function getMobileAnvilVisualOffset() {
   const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
@@ -233,6 +235,8 @@ export class HammerSystem {
 
     // Visual effects
     this.sparks = [];
+    this.heatingFlames = [];
+    this.heatingFlameSpawnTimer = 0;
     this.flyingLetters = [];
     this.clankWords = []; // Comic-style impact words
 
@@ -1134,13 +1138,14 @@ spawnSparks(x, y, power, options = {}) {
    */
   updateHeating(dt) {
     const hammer = this.hammer;
+    const isHeatingActive = isHearthHeated() && this.isHammerOverHearth();
     // Apply Fast Heat upgrade to reduce heating time
     const baseHeatingTime = 5; // base seconds per heat level
     const fastHeatReduction = gameState.fastHeatLevel || 0;
     const heatingRequired = Math.max(2, baseHeatingTime - fastHeatReduction); // minimum 2 seconds
     hammer.heatingRequired = heatingRequired;
 
-    if (isHearthHeated() && this.isHammerOverHearth()) {
+    if (isHeatingActive) {
       // Over heated hearth → accumulate heat
       hammer.heatingTimer += dt;
 
@@ -1189,6 +1194,42 @@ spawnSparks(x, y, power, options = {}) {
         hammer.isHeated = false;
       }
     }
+
+    this.updateHeatingFlames(dt, isHeatingActive);
+  }
+
+  spawnHeatingFlame() {
+    this.heatingFlames.push({
+      x: (Math.random() - 0.5) * 62,
+      y: -10 - Math.random() * 8,
+      size: 5 + Math.random() * 5,
+      driftX: (Math.random() - 0.5) * 5,
+      life: 0.7 + Math.random() * 0.45,
+      age: 0,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+
+  updateHeatingFlames(dt, isHeatingActive) {
+    const flames = this.heatingFlames;
+
+    if (isHeatingActive) {
+      this.heatingFlameSpawnTimer += dt;
+      while (this.heatingFlameSpawnTimer >= HEATING_FLAME_INTERVAL && flames.length < MAX_HEATING_FLAMES) {
+        this.heatingFlameSpawnTimer -= HEATING_FLAME_INTERVAL;
+        this.spawnHeatingFlame();
+      }
+    } else {
+      this.heatingFlameSpawnTimer = 0;
+    }
+
+    for (const flame of flames) {
+      flame.age += dt;
+      flame.y -= dt * (7 + flame.size * 0.4);
+      flame.x += flame.driftX * dt;
+    }
+
+    this.heatingFlames = flames.filter((flame) => flame.age < flame.life);
   }
 
   /**
@@ -2101,6 +2142,31 @@ drawHammer(ctx, hammer) {
     ctx.beginPath();
     ctx.arc(0, headCenterY, glowRadius, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  if (this.heatingFlames.length > 0) {
+    const headTopY = -(handleLength + headHeight);
+    for (const flame of this.heatingFlames) {
+      const lifePct = flame.age / flame.life;
+      const alpha = Math.max(0, 1 - lifePct);
+      const flicker = 0.85 + 0.15 * Math.sin((performance.now() / 1000) * 16 + flame.phase);
+      const flameHeight = flame.size * (1.5 + (1 - lifePct) * 0.5) * flicker;
+      const flameWidth = flame.size * (0.5 + (1 - lifePct) * 0.3);
+      const flameX = flame.x;
+      const flameY = headTopY + flame.y;
+
+      ctx.fillStyle = `rgba(255, ${Math.round(200 - lifePct * 40)}, 80, ${0.32 * alpha})`;
+      ctx.beginPath();
+      ctx.ellipse(flameX, flameY + 2, flameWidth, flameHeight * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = `rgba(255, 244, 185, ${0.7 * alpha})`;
+      ctx.beginPath();
+      ctx.moveTo(flameX, flameY - flameHeight);
+      ctx.quadraticCurveTo(flameX - flameWidth, flameY - flameHeight * 0.35, flameX, flameY + flameHeight * 0.25);
+      ctx.quadraticCurveTo(flameX + flameWidth, flameY - flameHeight * 0.35, flameX, flameY - flameHeight);
+      ctx.fill();
+    }
   }
 
   // Draw hammer PNG image (fixed size regardless of grab point)
