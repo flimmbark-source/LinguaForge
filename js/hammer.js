@@ -17,6 +17,7 @@ const MOBILE_ANVIL_LANDSCAPE_OFFSET_X = -5;
 const MOBILE_ANVIL_LANDSCAPE_OFFSET_Y = 38;
 const DESKTOP_HANG_SNAP_OFFSET_Y = 150;
 const HEATING_FLAME_INTERVAL = 0.2;
+const HEATING_FLAME_FULLY_HEATED_INTERVAL = 0.55;
 const MAX_HEATING_FLAMES = 8;
 
 function getMobileAnvilVisualOffset() {
@@ -1144,14 +1145,14 @@ spawnSparks(x, y, power, options = {}) {
     const fastHeatReduction = gameState.fastHeatLevel || 0;
     const heatingRequired = Math.max(2, baseHeatingTime - fastHeatReduction); // minimum 2 seconds
     hammer.heatingRequired = heatingRequired;
+    const maxHeatLevel = Math.max(1, gameState.heatLevels || 0);
+    const hearthLevel = getHearthLevel() || 0;
+    const effectiveMax = Math.min(maxHeatLevel, hearthLevel);
+    const isFullyHeated = hammer.heatLevel >= maxHeatLevel;
 
     if (isHeatingActive) {
       // Over heated hearth → accumulate heat
       hammer.heatingTimer += dt;
-
-      const maxHeatLevel = Math.max(1, gameState.heatLevels || 0);
-      const hearthLevel  = getHearthLevel() || 0;
-      const effectiveMax = Math.min(maxHeatLevel, hearthLevel);
 
       // Compute desired heat level from total time in hearth
       const targetLevel = Math.min(
@@ -1195,7 +1196,11 @@ spawnSparks(x, y, power, options = {}) {
       }
     }
 
-    this.updateHeatingFlames(dt, isHeatingActive);
+    const flameSpawnInterval = isFullyHeated
+      ? HEATING_FLAME_FULLY_HEATED_INTERVAL
+      : HEATING_FLAME_INTERVAL;
+
+    this.updateHeatingFlames(dt, isHeatingActive || isFullyHeated, flameSpawnInterval);
   }
 
   spawnHeatingFlame() {
@@ -1210,13 +1215,13 @@ spawnSparks(x, y, power, options = {}) {
     });
   }
 
-  updateHeatingFlames(dt, isHeatingActive) {
+  updateHeatingFlames(dt, shouldSpawnFlames, spawnInterval = HEATING_FLAME_INTERVAL) {
     const flames = this.heatingFlames;
 
-    if (isHeatingActive) {
+    if (shouldSpawnFlames) {
       this.heatingFlameSpawnTimer += dt;
-      while (this.heatingFlameSpawnTimer >= HEATING_FLAME_INTERVAL && flames.length < MAX_HEATING_FLAMES) {
-        this.heatingFlameSpawnTimer -= HEATING_FLAME_INTERVAL;
+      while (this.heatingFlameSpawnTimer >= spawnInterval && flames.length < MAX_HEATING_FLAMES) {
+        this.heatingFlameSpawnTimer -= spawnInterval;
         this.spawnHeatingFlame();
       }
     } else {
@@ -1225,7 +1230,7 @@ spawnSparks(x, y, power, options = {}) {
 
     for (const flame of flames) {
       flame.age += dt;
-      flame.y -= dt * (7 + flame.size * 0.4);
+      flame.y += dt * (7 + flame.size * 0.4);
       flame.x += flame.driftX * dt;
     }
 
@@ -1902,8 +1907,14 @@ updateFreeHammer(dt) {
           this.spawnClankWord(impactX, impactY, power, { isRip: true, force: 'Clonk!' }); // Add clank word (ripped)
           playHammerClank();
 
+          const multiplier = 1 + (4 * hammer.heatLevel);
+          if (hammer.heatLevel > 0) {
+            hammer.heatLevel = 0;
+            hammer.heatingTimer = 0;
+          }
+
           if (this.onLetterForged) {
-            this.onLetterForged(impactX, impactY, power, hammer.headVx, 1);
+            this.onLetterForged(impactX, impactY, power, hammer.headVx, multiplier);
           }
         }
 
