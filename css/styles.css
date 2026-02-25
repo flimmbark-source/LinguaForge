@@ -3749,7 +3749,7 @@ body.book-overlay-active .magic-book {
   height: 240px;
   border-radius: 10px;
   overflow: hidden;
-  background-image: url('/Public/VersebookClosed.png');
+  background-image: url('../Public/VersebookClosed.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   background-position: center;
@@ -4906,7 +4906,7 @@ body.book-overlay-active .magic-book {
 
 .verse-book-interior {
   position: relative;
-  background-image: url('/Public/Versebook.png');
+  background-image: url('../Public/Versebook.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   background-position: center;
