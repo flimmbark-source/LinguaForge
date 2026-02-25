@@ -17,7 +17,7 @@ import { PestleSystem } from './pestle.js?v=9';
 import { ShovelSystem } from './shovel.js?v=9';
 import { initializeHearth, updateHearth } from './RuneHearth.js?v=9';
 import { initAudio, startBackgroundMusic, getMusicVolume, getSfxVolume, setMusicVolume, setSfxVolume, unlockAudio } from './audio.js?v=9';
-import { addInk, addWord, getNextWordId, recordForgedWord, incrementLinesCompleted, clearVerseWords } from './state.js?v=9';
+import { addInk, addWord, getNextWordId, recordForgedWord, incrementLinesCompleted } from './state.js?v=9';
 import * as upgradesAPI from './upgrades.js?v=9';
 import { getResourceFeedbackSystem, updateResourceFeedback, spawnResourceGain } from './resourceGainFeedback.js?v=9';
 import { initMagicBook, initToolsSidebar, initMoldSidebarTab, initFloatingPanels, updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
@@ -1520,7 +1520,7 @@ function setupEventHandlers() {
       const solvedWords = gameState.verseWords.map((w) => w.hebrew);
       addInk(VERSE_COMPLETION_REWARD);
       incrementLinesCompleted();
-      clearVerseWords();
+      resetVerseBookChipsHome();
       gameState.verseFailedAttempts = 0;
       gameState.verseLastTriedSignature = '';
       (upgradesAPI.grantUpgradeLevel || (() => false))('verseEcho', 1);
