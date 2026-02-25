@@ -3696,8 +3696,8 @@ body.book-overlay-active .magic-book {
 /* Toggle button - centered on left (spine) edge */
 .book-toggle-btn {
   position: absolute;
-  top: 50%;
-  left: -16px;
+  top: 45%;
+  left: 36px;
   transform: translateY(-50%);
   width: 32px;
   height: 32px;
@@ -3740,22 +3740,42 @@ body.book-overlay-active .magic-book {
 
 .magic-book.open .book-interior {
   display: flex;
+  overflow: visible;
+}
+
+.book-toggle-btn-closed {
+  position: absolute;
+  top: 45%;
+  left: 36px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2d1f0e;
+  border: 2px solid #8b6914;
+  color: #fcd34d;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  padding: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: background 0.2s ease;
 }
 
 /* Book Cover (closed state) */
 .book-cover {
   display: flex;
-  width: 193px;
-  height: 240px;
+  width: 243px;
+  height: 340px;
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
   background-image: url('../Public/VersebookClosed.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  background-position: center;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.6),
-    inset 0 0 0 1px rgba(139, 105, 20, 0.3);
+  background-position: right;
   cursor: grab;
 }
 
@@ -3773,9 +3793,7 @@ body.book-overlay-active .magic-book {
 
 .book-cover-front {
   flex: 1;
-  background:
-    linear-gradient(145deg, #6b4423 0%, #4a2e14 40%, #3d2510 100%);
-  display: flex;
+  display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -3812,8 +3830,8 @@ body.book-overlay-active .magic-book {
 /* ===== OPEN BOOK STATE ===== */
 .book-interior {
   display: flex;
-  width: 660px;
-  min-height: 440px;
+  width: 560px;
+  min-height: 320px;
   aspect-ratio: 3 / 2;
   border-radius: 4px;
   overflow: hidden;
@@ -4906,6 +4924,7 @@ body.book-overlay-active .magic-book {
 
 .verse-book-interior {
   position: relative;
+  display: flex;
   overflow: visible;
   background: none;
 }
@@ -4924,7 +4943,7 @@ body.book-overlay-active .magic-book {
   border-radius: 20px;
   background-image: url('../Public/Versebook.png');
   background-repeat: no-repeat;
-  background-size: 100% 100%;
+  background-size: 123% 123%;
   background-position: center;
 }
 
@@ -5109,17 +5128,6 @@ body.book-overlay-active .magic-book {
     radial-gradient(circle at 88% 84%, rgba(120, 87, 48, 0.08) 0 14%, transparent 56%);
 }
 
-.page-ornate-border::after {
-  content: '';
-  position: absolute;
-  inset: 8px;
-  border-radius: 8px;
-  border: 1px solid rgba(94, 137, 125, 0.11);
-  box-shadow: 0 0 8px rgba(89, 171, 145, 0.08);
-  opacity: 0;
-  animation: runeTracePulse 8s ease-in-out infinite;
-}
-
 .ornate-corner {
   position: absolute;
   width: 16px;
@@ -5219,7 +5227,7 @@ body.book-overlay-active .magic-book {
 .verse-construct-hint {
   text-align: center;
   font-size: 10px;
-  color: #8b7355;
+  color: #000000;
   font-style: italic;
   margin-top: 6px;
   opacity: 0.8;
@@ -5378,7 +5386,7 @@ body.book-overlay-active .magic-book {
 .verse-hint {
   min-height: 14px;
   font-size: 10px;
-  color: #8b7355;
+  color: #000000;
   font-style: italic;
   text-align: center;
   padding: 0 14px;
