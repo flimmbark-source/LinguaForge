@@ -1201,7 +1201,7 @@ spawnSparks(x, y, power, options = {}) {
   spawnHeatingFlame() {
     this.heatingFlames.push({
       x: (Math.random() - 0.5) * 62,
-      y: -10 - Math.random() * 8,
+      y: 45 - Math.random() * 8,
       size: 5 + Math.random() * 5,
       driftX: (Math.random() - 0.5) * 5,
       life: 0.7 + Math.random() * 0.45,
@@ -2108,6 +2108,10 @@ drawHammer(ctx, hammer) {
   const handleLength = Math.min(length, this.getMaxHandleLength());
   const headHeight = 42;
   const headWidth = hammer.width;
+  const heatingRequired = Math.max(0.001, hammer.heatingRequired || 5);
+  const currentLevelTime = hammer.heatLevel * heatingRequired;
+  const heatProgressToNext = Math.max(0, Math.min(1, (hammer.heatingTimer - currentLevelTime) / heatingRequired));
+  const heatTintStrength = Math.max(0, Math.min(1, (hammer.heatLevel / 3) + heatProgressToNext * 0.35));
 
   // Draw subtle ambient glow behind hammer head (always on for visibility)
   const headCenterY = -(handleLength + headHeight - 30);
@@ -2144,6 +2148,37 @@ drawHammer(ctx, hammer) {
     ctx.fill();
   }
 
+  // Draw hammer PNG image (fixed size regardless of grab point)
+  if (this._hammerImg && this._hammerImg.complete && this._hammerImg.naturalWidth > 0) {
+    const imgAspect = this._hammerImg.naturalWidth / this._hammerImg.naturalHeight;
+    const baseLength = hammer.baseLength || 180;
+    const imgHeight = baseLength + headHeight;
+    const imgWidth = imgHeight * imgAspect;
+    const headTopY = -(handleLength + headHeight);
+    // Head (top of image) anchored to physics head position;
+    // handle extends past the grip point when grabbing mid-haft
+    ctx.drawImage(this._hammerImg, -imgWidth / 2, headTopY, imgWidth, imgHeight);
+
+    // Heat tint over the hammer head: gradually deepens to red as it heats up.
+    if (heatTintStrength > 0.01) {
+      const tintGradient = ctx.createLinearGradient(0, headTopY - 2, 0, headTopY + headHeight + 8);
+      tintGradient.addColorStop(0, `rgba(255, 245, 220, ${0.22 * heatTintStrength})`);
+      tintGradient.addColorStop(0.35, `rgba(255, 120, 80, ${0.3 * heatTintStrength})`);
+      tintGradient.addColorStop(1, `rgba(220, 25, 10, ${0.65 * heatTintStrength})`);
+
+      ctx.save();
+      ctx.fillStyle = tintGradient;
+      ctx.fillRect(-headWidth / 2 - 8, headTopY - 2, headWidth + 16, headHeight + 10);
+
+      if (heatTintStrength >= 0.9) {
+        const pulse = 0.9 + Math.sin(performance.now() * 0.01) * 0.1;
+        ctx.fillStyle = `rgba(255, 90, 70, ${0.25 * pulse})`;
+        ctx.fillRect(-headWidth * 0.43, headTopY + 4, headWidth * 0.86, headHeight * 0.6);
+      }
+      ctx.restore();
+    }
+  }
+
   if (this.heatingFlames.length > 0) {
     const headTopY = -(handleLength + headHeight);
     for (const flame of this.heatingFlames) {
@@ -2169,25 +2204,9 @@ drawHammer(ctx, hammer) {
     }
   }
 
-  // Draw hammer PNG image (fixed size regardless of grab point)
-  if (this._hammerImg && this._hammerImg.complete && this._hammerImg.naturalWidth > 0) {
-    const imgAspect = this._hammerImg.naturalWidth / this._hammerImg.naturalHeight;
-    const baseLength = hammer.baseLength || 180;
-    const imgHeight = baseLength + headHeight;
-    const imgWidth = imgHeight * imgAspect;
-    // Head (top of image) anchored to physics head position;
-    // handle extends past the grip point when grabbing mid-haft
-    ctx.drawImage(this._hammerImg, -imgWidth / 2, -(handleLength + headHeight), imgWidth, imgHeight);
-  }
-
   // Show progress indicator for heating to next level
   if (hammer.heatingTimer > 0) {
-    // Use dynamic heating required time
-    const baseHeatingTime = 5;
-    const fastHeatReduction = gameState.fastHeatLevel || 0;
-    const heatingRequired = Math.max(2, baseHeatingTime - fastHeatReduction);
 
-    const currentLevelTime = hammer.heatLevel * heatingRequired;
     const progressToNextLevel = (hammer.heatingTimer - currentLevelTime) / heatingRequired;
 
     if (progressToNextLevel > 0 && progressToNextLevel < 1) {
