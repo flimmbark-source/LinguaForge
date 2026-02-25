@@ -113,8 +113,6 @@ export function initializeElements() {
   elements.verseHint = document.getElementById('verseHint');
   elements.verseTranslationReveal = document.getElementById('verseTranslationReveal');
   elements.verseWordOrbit = document.getElementById('verseWordOrbit');
-  elements.verseWorkMatLeft = document.getElementById('verseWorkMatLeft');
-  elements.verseWorkMatRight = document.getElementById('verseWorkMatRight');
   elements.wordInfoSheet = document.getElementById('wordInfoSheet');
   elements.wordInfoCard = document.getElementById('wordInfoCard');
   elements.wordInfoHebrew = document.getElementById('wordInfoHebrew');
@@ -481,8 +479,8 @@ function renderVerseChips(force = false) {
     chip.style.direction = 'rtl';
     chip.textContent = wordInstance.hebrew;
     chip.dataset.instanceId = wordInstance.instanceId;
-    setupVerseWordChipDrag(chip, wordInstance.instanceId, () => updateGrammarUI(true), (instanceId, clientX, clientY) => {
-      moveVerseWordBackToOrbit(instanceId, clientX, clientY);
+    setupVerseWordChipDrag(chip, wordInstance.instanceId, () => updateGrammarUI(true), (instanceId) => {
+      moveVerseWordBackToOrbit(instanceId);
     });
 
     // Allow dragover for inventory words to be dropped between existing chips
@@ -582,7 +580,7 @@ function separateOverlappingWordContainers(wordIds) {
   }
 }
 
-function moveVerseWordBackToOrbit(instanceId, clientX, clientY) {
+function moveVerseWordBackToOrbit(instanceId) {
   const removed = removeVerseWord(instanceId);
   if (!removed) return;
 
@@ -597,16 +595,6 @@ function moveVerseWordBackToOrbit(instanceId, clientX, clientY) {
     heated: true,
   });
 
-  setWordContainerPosition(newWordId, clientX, clientY);
-
-  const leftMat = elements.verseWorkMatLeft?.getBoundingClientRect();
-  const rightMat = elements.verseWorkMatRight?.getBoundingClientRect();
-  const inMat = isPointInsideRect(clientX, clientY, leftMat) || isPointInsideRect(clientX, clientY, rightMat);
-  if (inMat) {
-    gameState.parkedWordIds = [...new Set([...(gameState.parkedWordIds || []), newWordId])];
-  }
-
-  lastRenderedVerseWords = [];
   orbitSnapshotKey = '';
   updateUI();
 }
@@ -837,103 +825,29 @@ export function renderGlossary() {
 
 let orbitDragState = null;
 let orbitSnapshotKey = "";
+let currentWordBankFilter = 'all';
 
-function getVerseLayoutZones() {
-  // Keep the three home columns mathematically equal and evenly spaced.
-  const sideMargin = 8;
-  const columnGap = 3;
-  const columnWidth = (100 - sideMargin * 2 - columnGap * 2) / 3;
-  const rowTop = 50;
-  const rowHeight = 20;
-
-  return {
-    // Normalized percentages in the verse spread overlay.
-    // Keep verse line centered; chip homes are now 3 side-by-side columns below it.
-    verbZone: { left: sideMargin, top: rowTop, width: columnWidth, height: rowHeight },
-    nounZone: { left: sideMargin + columnWidth + columnGap, top: rowTop, width: columnWidth, height: rowHeight },
-    particlePrefixZone: { left: sideMargin + (columnWidth + columnGap) * 2, top: rowTop, width: columnWidth, height: rowHeight },
-    // Reference-only zone for line intent; actual line behavior remains unchanged.
-    verseLineZone: { left: 26, top: 42, width: 48, height: 14 },
-  };
-}
-
-function getWordZoneKey(word, parked) {
-  if (parked) return 'nounZone';
-
+/**
+ * Get the category zone key for a word based on its grammatical role.
+ */
+function getWordZoneKey(word) {
   const mold = gameState.currentLine?.molds?.find((m) => m.pattern === word.text);
   const english = (mold?.english || '').toLowerCase();
   const gloss = (GRAMMAR_LEXICON[word.text]?.gloss || '').toLowerCase();
 
-  // Function words / prefixes / particles -> right strip.
   const isFunctionWord =
     english === 'the' || english === 'of' ||
     gloss === 'the' || gloss === 'of' || gloss === 'breath of';
   if (isFunctionWord) return 'particlePrefixZone';
 
-  // Verb-ish (copula in current data) -> upper-left verb zone.
   const isVerbWord = english === 'is' || gloss === 'is';
   if (isVerbWord) return 'verbZone';
 
-  // Safe fallback: content words stay on the left side.
   return 'nounZone';
 }
 
-function getDeterministicZonePosition(zone, zoneIndex, orbitRect) {
-  const zoneHeightPx = Math.max(((zone.height / 100) * (orbitRect?.height || window.innerHeight)), 1);
-  const minGapPx = 26;
-  const yStep = Math.max((minGapPx / zoneHeightPx) * zone.height, 9);
-  const yPad = 6;
-
-  // Stack vertically down the column center (new words append at the bottom).
-  const left = zone.left + (zone.width / 2);
-  const unclampedTop = zone.top + yPad + zoneIndex * yStep;
-  const maxTop = zone.top + zone.height - 4;
-  const top = Math.max(zone.top + 4, Math.min(maxTop, unclampedTop));
-
-  return {
-    left: clampPercent(left),
-    top: clampPercent(top),
-  };
-}
-
-function getWordHomePosition(word, words, parkedSet) {
-  const zones = getVerseLayoutZones();
-  const orbitRect = elements.verseWordOrbit?.getBoundingClientRect();
-  const zoneKey = getWordZoneKey(word, parkedSet.has(word.id));
-  const zone = zones[zoneKey] || zones.nounZone;
-
-  const zoneWords = words.filter((w) => getWordZoneKey(w, parkedSet.has(w.id)) === zoneKey);
-  const zoneIndex = Math.max(0, zoneWords.findIndex((w) => w.id === word.id));
-  const pos = getDeterministicZonePosition(zone, zoneIndex, orbitRect);
-
-  return { ...pos, parked: parkedSet.has(word.id), zoneKey };
-}
-
 export function placeNewWordInHomeColumnStack(wordId) {
-  const words = gameState.words.slice();
-  const targetWord = words.find((word) => word.id === wordId);
-  if (!targetWord) return;
-
-  const zones = getVerseLayoutZones();
-  const parkedSet = new Set(gameState.parkedWordIds || []);
-  const zoneKey = getWordZoneKey(targetWord, parkedSet.has(targetWord.id));
-  const zone = zones[zoneKey] || zones.nounZone;
-  const stackWords = words.filter((word) => (
-    word.id !== wordId && getWordZoneKey(word, parkedSet.has(word.id)) === zoneKey
-  ));
-
-  const stackIndex = stackWords.length;
-  const topStep = 9;
-  const topPadding = 6;
-  const maxTop = zone.top + zone.height - 4;
-  const top = Math.max(zone.top + 4, Math.min(maxTop, zone.top + topPadding + stackIndex * topStep));
-  const left = zone.left + zone.width / 2;
-
-  gameState.wordContainerPositions = gameState.wordContainerPositions || {};
-  gameState.wordContainerPositions[wordId] = {
-    left: clampPercent(left),
-    top: clampPercent(top),
-  };
+  // No-op — word bank layout doesn't use absolute positioning.
 }
 
 
@@ -980,9 +894,6 @@ function positionWordInfoAtPoint(clientX, clientY) {
   const width = rect.width || 220;
   const height = rect.height || 120;
 
-  // In landscape mobile, the book is a full-screen overlay and the interior
-  // is a centred panel (min(70vw,500px)). Clamp the card within that panel
-  // so it doesn't land on the dark backdrop outside the book.
   const bookInterior = document.querySelector('.book-interior');
   const isLandscapeOverlay = bookInterior &&
     (window.matchMedia('(max-width: 768px) and (orientation: landscape)').matches ||
@@ -1003,8 +914,6 @@ function positionWordInfoAtPoint(clientX, clientY) {
     maxY = window.innerHeight - 8;
   }
 
-  // Position card directly at the click point, preferring below-right,
-  // flipping above or left if it would overflow the bounds.
   let left = clientX + 8;
   let top = clientY + 8;
 
@@ -1053,148 +962,248 @@ function setupWordInfoHandlers() {
   setupWordInfoHandlers._done = true;
 }
 
+/**
+ * Create a word chip for the word bank with drag-to-place and tap-for-info.
+ */
+function createWordBankChip(word) {
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'line-word-chip verse-orbit-chip';
+  chip.textContent = word.text;
+  chip.dataset.wordId = String(word.id);
+
+  const zoneKey = getWordZoneKey(word);
+  chip.dataset.zone = zoneKey;
+
+  // Add transliteration tooltip
+  const lex = GRAMMAR_LEXICON[word.text];
+  if (lex) {
+    chip.title = `${lex.translit} — ${lex.gloss}`;
+  }
+
+  let moved = false;
+
+  chip.addEventListener('pointerdown', (e) => {
+    moved = false;
+    const rect = chip.getBoundingClientRect();
+    orbitDragState = {
+      wordId: word.id, chip,
+      width: rect.width, height: rect.height,
+      startX: e.clientX, startY: e.clientY,
+      lastClientX: e.clientX, lastClientY: e.clientY,
+    };
+    chip.classList.add('dragging');
+    elements.grammarHebrewLineDiv?.classList.add('compose-active');
+    chip.style.position = 'fixed';
+    chip.style.left = (e.clientX - rect.width / 2) + 'px';
+    chip.style.top = (e.clientY - rect.height / 2) + 'px';
+    chip.style.transform = 'none';
+    chip.style.zIndex = '1200';
+    chip.setPointerCapture(e.pointerId);
+  });
+
+  chip.addEventListener('pointermove', (e) => {
+    if (!orbitDragState || orbitDragState.wordId !== word.id) return;
+    const dx = e.clientX - orbitDragState.startX;
+    const dy = e.clientY - orbitDragState.startY;
+    if (!moved && dx * dx + dy * dy < 64) return;
+    moved = true;
+    orbitDragState.lastClientX = e.clientX;
+    orbitDragState.lastClientY = e.clientY;
+    chip.style.left = (e.clientX - orbitDragState.width / 2) + 'px';
+    chip.style.top = (e.clientY - orbitDragState.height / 2) + 'px';
+  });
+
+  chip.addEventListener('pointerup', (e) => {
+    if (!orbitDragState || orbitDragState.wordId !== word.id) return;
+    chip.releasePointerCapture(e.pointerId);
+    chip.classList.remove('dragging');
+    chip.style.position = '';
+    chip.style.left = '';
+    chip.style.top = '';
+    chip.style.transform = '';
+    chip.style.zIndex = '';
+    elements.grammarHebrewLineDiv?.classList.remove('compose-active');
+
+    const dropX = Number.isFinite(e.clientX) && e.clientX > 0 ? e.clientX : orbitDragState.lastClientX;
+    const dropY = Number.isFinite(e.clientY) && e.clientY > 0 ? e.clientY : orbitDragState.lastClientY;
+    const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
+    const inLine = lineRect && dropX >= lineRect.left && dropX <= lineRect.right && dropY >= lineRect.top && dropY <= lineRect.bottom;
+
+    if (inLine && moved) {
+      const insertIndex = getVerseDropInsertIndex(dropX);
+      placeWordInVerse(word.id, insertIndex);
+      orbitSnapshotKey = '';
+      orbitDragState = null;
+      updateUI();
+    } else if (!moved) {
+      // Tap — place at end of verse line (click-to-place behavior)
+      const insertIndex = gameState.verseWords.length;
+      placeWordInVerse(word.id, insertIndex);
+      orbitSnapshotKey = '';
+      orbitDragState = null;
+      updateUI();
+    } else {
+      // Dropped outside verse line — chip stays in bank
+      chip.style.visibility = '';
+      orbitDragState = null;
+    }
+  });
+
+  return chip;
+}
+
+/**
+ * Render word chips in the right-page word bank, organized by category.
+ */
 function renderVerseWordOrbit() {
   if (!elements.verseWordOrbit) return;
   const words = gameState.words.slice();
-  const parkedSet = new Set(gameState.parkedWordIds || []);
-  const snapshotKey = words.map((w) => {
-    const pos = gameState.wordContainerPositions?.[w.id];
-    const posKey = pos ? `${Math.round(pos.left*10)/10},${Math.round(pos.top*10)/10}` : 'auto';
-    return `${w.id}:${parkedSet.has(w.id) ? 1 : 0}:${posKey}`;
-  }).join('|');
+  const snapshotKey = words.map((w) => `${w.id}`).join('|') + '|f:' + currentWordBankFilter;
 
-  separateOverlappingWordContainers(words.map((w) => w.id));
-
-  // Prevent chips from blinking/rebuilding while dragging.
   if (!orbitDragState && snapshotKey !== orbitSnapshotKey) {
-    elements.verseWordOrbit.innerHTML = '';
     orbitSnapshotKey = snapshotKey;
 
-    words.forEach((word, i) => {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'line-word-chip verse-orbit-chip';
-      chip.textContent = word.text;
-      chip.dataset.wordId = String(word.id);
-      const savedPos = gameState.wordContainerPositions?.[word.id];
-      const pos = savedPos || getWordHomePosition(word, words, parkedSet);
-      if (pos.zoneKey) {
-        chip.dataset.zone = pos.zoneKey;
+    // Get category containers
+    const verbContainer = elements.verseWordOrbit.querySelector('[data-zone="verbZone"]');
+    const nounContainer = elements.verseWordOrbit.querySelector('[data-zone="nounZone"]');
+    const prefixContainer = elements.verseWordOrbit.querySelector('[data-zone="particlePrefixZone"]');
+    const emptyMsg = elements.verseWordOrbit.querySelector('.word-bank-empty');
+
+    if (verbContainer) verbContainer.innerHTML = '';
+    if (nounContainer) nounContainer.innerHTML = '';
+    if (prefixContainer) prefixContainer.innerHTML = '';
+
+    // Sort words into categories
+    const categorized = { verbZone: [], nounZone: [], particlePrefixZone: [] };
+    words.forEach((word) => {
+      const zone = getWordZoneKey(word);
+      categorized[zone].push(word);
+    });
+
+    // Apply filter
+    const filter = currentWordBankFilter;
+    const categories = elements.verseWordOrbit.querySelectorAll('.word-bank-category');
+    categories.forEach((cat) => {
+      const catKey = cat.dataset.category;
+      if (filter === 'all') {
+        cat.style.display = '';
+      } else if (filter === 'verb' && catKey === 'verb') {
+        cat.style.display = '';
+      } else if (filter === 'noun' && catKey === 'noun') {
+        cat.style.display = '';
+      } else if (filter === 'prefix' && catKey === 'prefix') {
+        cat.style.display = '';
+      } else {
+        cat.style.display = 'none';
       }
-      chip.style.left = pos.left + '%';
-      chip.style.top = pos.top + '%';
-      if (!savedPos && !pos.parked) chip.style.animationDelay = `${(i % 7) * 0.3}s`;
-      if (parkedSet.has(word.id)) chip.classList.add('is-parked');
-      gameState.wordContainerPositions = gameState.wordContainerPositions || {};
-      if (!savedPos) gameState.wordContainerPositions[word.id] = { left: pos.left, top: pos.top };
+    });
 
-      let moved = false;
-      chip.addEventListener('pointerdown', (e) => {
-        moved = false;
-        const rect = chip.getBoundingClientRect();
-        orbitDragState = { wordId: word.id, chip, width: rect.width, height: rect.height, startX: e.clientX, startY: e.clientY, lastClientX: e.clientX, lastClientY: e.clientY };
-        chip.classList.add('dragging');
-        elements.grammarHebrewLineDiv?.classList.add('compose-active');
-        chip.style.position = 'fixed';
-        chip.style.left = (e.clientX - rect.width / 2) + 'px';
-        chip.style.top = (e.clientY - rect.height / 2) + 'px';
-        chip.style.transform = 'none';
-        chip.style.zIndex = '1200';
-        chip.setPointerCapture(e.pointerId);
+    // Render chips into their category containers
+    categorized.verbZone.forEach((word) => {
+      if (verbContainer) verbContainer.appendChild(createWordBankChip(word));
+    });
+    categorized.nounZone.forEach((word) => {
+      if (nounContainer) nounContainer.appendChild(createWordBankChip(word));
+    });
+    categorized.particlePrefixZone.forEach((word) => {
+      if (prefixContainer) prefixContainer.appendChild(createWordBankChip(word));
+    });
+
+    // Show/hide empty message
+    if (emptyMsg) {
+      emptyMsg.style.display = words.length === 0 ? '' : 'none';
+    }
+
+    // Hide empty categories
+    if (verbContainer && filter === 'all') {
+      verbContainer.closest('.word-bank-category').style.display = categorized.verbZone.length ? '' : 'none';
+    }
+    if (nounContainer && filter === 'all') {
+      nounContainer.closest('.word-bank-category').style.display = categorized.nounZone.length ? '' : 'none';
+    }
+    if (prefixContainer && filter === 'all') {
+      prefixContainer.closest('.word-bank-category').style.display = categorized.particlePrefixZone.length ? '' : 'none';
+    }
+  }
+
+  // Update completion counter
+  const countEl = document.getElementById('verseCompletionCount');
+  const totalEl = document.getElementById('verseCompletionTotal');
+  if (countEl) {
+    const placed = gameState.verseWords.filter((w) => !w.isPlaceholder).length;
+    countEl.textContent = placed;
+  }
+  if (totalEl) {
+    totalEl.textContent = SOLUTION_HEBREW_ORDER.length;
+  }
+}
+
+/**
+ * Initialize versebook interactions: tab filtering, undo/clear/hint buttons.
+ */
+export function initWordSelector() {
+  // Word bank tab filtering
+  const tabs = document.querySelectorAll('.word-bank-tab');
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      tabs.forEach((t) => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
       });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      currentWordBankFilter = tab.dataset.filter || 'all';
+      orbitSnapshotKey = ''; // Force re-render
+      renderVerseWordOrbit();
+    });
+  });
 
-      chip.addEventListener('pointermove', (e) => {
-        if (!orbitDragState || orbitDragState.wordId !== word.id) return;
-        const dx = e.clientX - orbitDragState.startX;
-        const dy = e.clientY - orbitDragState.startY;
-        // Only count as a drag once the pointer has moved more than 8px —
-        // this prevents touch jitter from suppressing the tap/info-popup path.
-        if (!moved && dx * dx + dy * dy < 64) return;
-        moved = true;
-        orbitDragState.lastClientX = e.clientX;
-        orbitDragState.lastClientY = e.clientY;
-        chip.style.left = (e.clientX - orbitDragState.width / 2) + 'px';
-        chip.style.top = (e.clientY - orbitDragState.height / 2) + 'px';
-      });
-
-      chip.addEventListener('pointerup', (e) => {
-        if (!orbitDragState || orbitDragState.wordId !== word.id) return;
-        chip.releasePointerCapture(e.pointerId);
-        chip.classList.remove('dragging');
-        chip.style.visibility = 'hidden';
-        chip.style.position = '';
-        chip.style.left = '';
-        chip.style.top = '';
-        chip.style.transform = '';
-        chip.style.zIndex = '';
-        elements.grammarHebrewLineDiv?.classList.remove('compose-active');
-
-        const dropX = Number.isFinite(e.clientX) && e.clientX > 0 ? e.clientX : orbitDragState.lastClientX;
-        const dropY = Number.isFinite(e.clientY) && e.clientY > 0 ? e.clientY : orbitDragState.lastClientY;
-        const lineRect = elements.grammarHebrewLineDiv?.getBoundingClientRect();
-        const matRectLeft = elements.verseWorkMatLeft?.getBoundingClientRect();
-        const matRectRight = elements.verseWorkMatRight?.getBoundingClientRect();
-        const orbitRect = elements.verseWordOrbit?.getBoundingClientRect();
-        const inLine = lineRect && dropX >= lineRect.left && dropX <= lineRect.right && dropY >= lineRect.top && dropY <= lineRect.bottom;
-        const inMatLeft = matRectLeft && dropX >= matRectLeft.left && dropX <= matRectLeft.right && dropY >= matRectLeft.top && dropY <= matRectLeft.bottom;
-        const inMatRight = matRectRight && dropX >= matRectRight.left && dropX <= matRectRight.right && dropY >= matRectRight.top && dropY <= matRectRight.bottom;
-        const inMat = inMatLeft || inMatRight;
-        const inOrbit = isPointInsideRect(dropX, dropY, orbitRect);
-
-        if (inLine) {
-          const insertIndex = getVerseDropInsertIndex(dropX);
-          placeWordInVerse(word.id, insertIndex);
-          gameState.parkedWordIds = (gameState.parkedWordIds || []).filter(id => id !== word.id);
-          if (gameState.wordContainerPositions) delete gameState.wordContainerPositions[word.id];
+  // Undo button — remove last placed word from verse, return to bank
+  const undoBtn = document.getElementById('verseUndoBtn');
+  if (undoBtn) {
+    undoBtn.addEventListener('click', () => {
+      // Find the last non-placeholder word in the verse
+      for (let i = gameState.verseWords.length - 1; i >= 0; i--) {
+        const entry = gameState.verseWords[i];
+        if (entry && !entry.isPlaceholder && entry.hebrew) {
+          const lex = GRAMMAR_LEXICON[entry.hebrew];
+          const newWordId = getNextWordId();
+          addWord({
+            id: newWordId,
+            text: entry.hebrew,
+            english: lex?.gloss || entry.hebrew,
+            length: entry.hebrew.length,
+            power: 0,
+            heated: true,
+          });
+          gameState.verseWords.splice(i, 1);
           orbitSnapshotKey = '';
-          orbitDragState = null;
           updateUI();
-        } else if (inMat || (moved && inOrbit)) {
-          setWordContainerPosition(word.id, dropX, dropY);
-          if (inMat) {
-            if (!parkedSet.has(word.id)) gameState.parkedWordIds = [...(gameState.parkedWordIds || []), word.id];
-          } else {
-            gameState.parkedWordIds = (gameState.parkedWordIds || []).filter(id => id !== word.id);
-          }
-          orbitSnapshotKey = '';
-          orbitDragState = null;
-          updateUI();
-        } else if (moved) {
-          // If dropped outside the verse spread, restore chip to its stored position.
-          const savedPos = gameState.wordContainerPositions?.[word.id];
-          if (savedPos) {
-            chip.style.left = savedPos.left + '%';
-            chip.style.top = savedPos.top + '%';
-          }
-          chip.style.visibility = '';
-        } else {
-          // Simple tap/click — restore position and show word info.
-          const savedPos = gameState.wordContainerPositions?.[word.id];
-          if (savedPos) {
-            chip.style.left = savedPos.left + '%';
-            chip.style.top = savedPos.top + '%';
-          }
-          chip.style.visibility = '';
-          openWordInfo(word.text, dropX, dropY);
+          return;
         }
-        orbitDragState = null;
-      });
-
-      elements.verseWordOrbit.appendChild(chip);
+      }
     });
   }
 
-  const matActive = (gameState.parkedWordIds || []).length > 0 || words.length > 3;
-  if (elements.verseWorkMatLeft) elements.verseWorkMatLeft.classList.toggle('active', matActive);
-  if (elements.verseWorkMatRight) elements.verseWorkMatRight.classList.toggle('active', matActive);
+  // Hint button
+  const hintBtn = document.getElementById('verseHintBtn');
+  if (hintBtn) {
+    hintBtn.addEventListener('click', () => {
+      if (elements.verseHint) {
+        const placed = gameState.verseWords.filter((w) => !w.isPlaceholder).length;
+        if (placed === 0) {
+          elements.verseHint.textContent = 'Start with the subject of the verse...';
+        } else if (placed < SOLUTION_HEBREW_ORDER.length) {
+          const nextExpected = SOLUTION_HEBREW_ORDER[placed];
+          const lex = GRAMMAR_LEXICON[nextExpected];
+          if (lex) {
+            elements.verseHint.textContent = `Next word means "${lex.gloss}"...`;
+          }
+        }
+      }
+    });
   }
-
-
-/**
- * Initialize versebook interactions
- */
-export function initWordSelector() {
-  // Legacy glossary controls removed for Verse Book spread redesign.
 }
 
 /**
@@ -1204,7 +1213,6 @@ export function updateUI() {
   updateStatsDisplay();
   updateScribePurchaseButton();
   renderMolds();
-  // renderWordList(); // Disabled - chips now appear on screen with physics
   renderScribeBlocks();
   updateGrammarUI();
   updateEnscribeButton();

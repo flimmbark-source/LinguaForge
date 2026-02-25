@@ -22,38 +22,124 @@
         <div class="book-cover-ornament">✦</div>
       </div>
     </div>
+    <!-- Sparkle particles around the book -->
+    <div class="book-sparkles" aria-hidden="true">
+      <span class="book-sparkle s1"></span>
+      <span class="book-sparkle s2"></span>
+      <span class="book-sparkle s3"></span>
+      <span class="book-sparkle s4"></span>
+      <span class="book-sparkle s5"></span>
+      <span class="book-sparkle s6"></span>
+      <span class="book-sparkle s7"></span>
+      <span class="book-sparkle s8"></span>
+    </div>
     <!-- Book interior (shown when open) -->
     <div class="book-interior verse-book-interior">
+      <div class="book-edge book-edge-left"></div>
       <div class="book-spine"></div>
 
+      <!-- LEFT PAGE: Target Verse & Construction -->
       <div class="book-page book-page-left verse-page" id="versePageLeft">
-        <div class="book-page-content verse-page-content">
+        <div class="book-page-inner">
+          <div class="page-ornate-border">
+            <div class="ornate-corner ornate-corner-tl"></div>
+            <div class="ornate-corner ornate-corner-tr"></div>
+            <div class="ornate-corner ornate-corner-bl"></div>
+            <div class="ornate-corner ornate-corner-br"></div>
+          </div>
+          <div class="book-page-content verse-page-content">
+            <div class="verse-target-header">
+              <span class="verse-target-ornament">&#x2726;</span>
+              <span class="verse-target-label">TARGET VERSE</span>
+              <span class="verse-target-ornament">&#x2726;</span>
+            </div>
+            <div id="grammarNatural" class="verse-intent-line"></div>
+            <div class="verse-construct-area">
+              <div class="verse-entry-container">
+                <div id="grammarHebrewLine" class="letter-board verse-line" aria-label="Verse line"></div>
+              </div>
+              <div class="verse-construct-hint">Construct the verse using discovered words.</div>
+            </div>
+            <div class="verse-seal" aria-hidden="true">
+              <svg viewBox="0 0 80 80" class="verse-seal-svg">
+                <circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+                <circle cx="40" cy="40" r="30" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.2"/>
+                <path d="M40 10 L40 70 M10 40 L70 40" stroke="currentColor" stroke-width="0.6" opacity="0.15"/>
+                <path d="M18 18 L62 62 M62 18 L18 62" stroke="currentColor" stroke-width="0.4" opacity="0.1"/>
+                <circle cx="40" cy="40" r="12" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.2"/>
+                <circle cx="40" cy="40" r="4" fill="currentColor" opacity="0.1"/>
+              </svg>
+            </div>
+            <div class="verse-progress-row">
+              <div class="verse-meter-track" aria-hidden="true">
+                <div id="verseMeterFill" class="verse-meter-fill"></div>
+              </div>
+              <div id="verseCompletionLabel" class="verse-completion-label">VERSE COMPLETION: <span id="verseCompletionCount">0</span> / <span id="verseCompletionTotal">7</span></div>
+            </div>
+            <div class="verse-action-buttons">
+              <button id="verseUndoBtn" class="verse-action-btn" type="button" title="Undo last word">
+                <span class="verse-action-icon">&#x21B6;</span>
+                <span>Undo</span>
+              </button>
+              <button id="verseResetBtn" class="verse-action-btn" type="button" aria-label="Clear all words" title="Clear all words">
+                <span class="verse-action-icon">&#x2715;</span>
+                <span>Clear</span>
+              </button>
+              <button id="verseHintBtn" class="verse-action-btn" type="button" title="Get a hint">
+                <span class="verse-action-icon">&#x1F4A1;</span>
+                <span>Hint</span>
+              </button>
+            </div>
+            <div id="verseHint" class="verse-hint" aria-live="polite"></div>
+            <div id="verseTranslationReveal" class="verse-translation-reveal"></div>
+          </div>
         </div>
       </div>
 
+      <!-- RIGHT PAGE: Word Bank -->
       <div class="book-page book-page-right verse-page" id="versePageRight">
-        <div class="book-page-content verse-page-content">
+        <div class="book-page-inner">
+          <div class="page-ornate-border">
+            <div class="ornate-corner ornate-corner-tl"></div>
+            <div class="ornate-corner ornate-corner-tr"></div>
+            <div class="ornate-corner ornate-corner-bl"></div>
+            <div class="ornate-corner ornate-corner-br"></div>
+          </div>
+          <div class="book-page-content verse-page-content">
+            <div class="word-bank-tabs" role="tablist">
+              <button class="word-bank-tab active" data-filter="all" role="tab" aria-selected="true">ALL</button>
+              <button class="word-bank-tab" data-filter="verb" role="tab">VERBS</button>
+              <button class="word-bank-tab" data-filter="noun" role="tab">NOUNS</button>
+              <button class="word-bank-tab" data-filter="prefix" role="tab">PREFIXES</button>
+            </div>
+            <div id="verseWordOrbit" class="verse-word-bank" aria-label="Word bank">
+              <div class="word-bank-category" data-category="verb">
+                <div class="word-bank-category-header">
+                  <span class="category-icon category-icon-verb"></span>
+                  <span>VERBS</span>
+                </div>
+                <div class="word-bank-category-words" data-zone="verbZone"></div>
+              </div>
+              <div class="word-bank-category" data-category="noun">
+                <div class="word-bank-category-header">
+                  <span class="category-icon category-icon-noun"></span>
+                  <span>NOUNS</span>
+                </div>
+                <div class="word-bank-category-words" data-zone="nounZone"></div>
+              </div>
+              <div class="word-bank-category" data-category="prefix">
+                <div class="word-bank-category-header">
+                  <span class="category-icon category-icon-prefix"></span>
+                  <span>PREFIXES</span>
+                </div>
+                <div class="word-bank-category-words" data-zone="particlePrefixZone"></div>
+              </div>
+              <div class="word-bank-empty">Discovered words appear here.</div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div id="verseSpreadOverlay" class="verse-spread-overlay">
-        <div class="verse-zone-anchor verse-zone-anchor--verb" aria-hidden="true">Verbs</div>
-        <div class="verse-zone-anchor verse-zone-anchor--noun" aria-hidden="true">Nouns</div>
-        <div class="verse-zone-anchor verse-zone-anchor--particle" aria-hidden="true">Prefixes</div>
-        <div id="verseWordOrbit" class="verse-word-orbit" aria-label="Verse word orbit"></div>
-        <div class="verse-center-stack">
-          <div id="grammarNatural" class="verse-intent-line"></div>
-          <div class="verse-entry-container">
-            <div id="grammarHebrewLine" class="letter-board verse-line" aria-label="Verse line"></div>
-          </div>
-          <div class="verse-meter-track" aria-hidden="true">
-            <div id="verseMeterFill" class="verse-meter-fill"></div>
-          </div>
-          <div id="verseHint" class="verse-hint" aria-live="polite"></div>
-          <div id="verseTranslationReveal" class="verse-translation-reveal"></div>
-        </div>
-        <button id="verseResetBtn" class="verse-reset-btn" type="button" aria-label="Reset verse chips">↺</button>
-      </div>
+      <div class="book-edge book-edge-right"></div>
     </div>
   </div>
 
