@@ -132,12 +132,15 @@ function isInteractiveElement(el) {
   if (el.classList.contains('letter-board')) return true;
   if (el.classList.contains('line-word-chip')) return true;
   if (el.classList.contains('book-toggle-btn')) return true;
+  if (el.classList.contains('verse-orbit-chip')) return true;
+  if (el.classList.contains('word-bank-tab')) return true;
+  if (el.classList.contains('verse-action-btn')) return true;
   if (el.id === 'grammarHebrewLine') return true;
-  // Check if inside the letter-board area (verse drop zone)
   if (el.closest('#grammarHebrewLine')) return true;
   if (el.closest('.line-word-chip')) return true;
-  if (el.closest('.word-selector-container')) return true;
-  if (el.closest('.word-selector-actions')) return true;
+  if (el.closest('.verse-word-bank')) return true;
+  if (el.closest('.word-bank-tabs')) return true;
+  if (el.closest('.verse-action-buttons')) return true;
   return false;
 }
 
