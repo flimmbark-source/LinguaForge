@@ -2458,7 +2458,7 @@ button.secondary {
   }
 
   .book-cover {
-    width: 100px;
+    width: 105px;
     height: 130px;
   }
 
@@ -3040,7 +3040,7 @@ button.secondary {
   }
 
   .book-cover {
-    width: 160px;
+    width: 177px;
     height: 220px;
   }
 
@@ -3401,7 +3401,7 @@ button.secondary {
   }
 
   .book-cover {
-    width: 100px;
+    width: 105px;
     height: 130px;
   }
 
@@ -3745,14 +3745,23 @@ body.book-overlay-active .magic-book {
 /* Book Cover (closed state) */
 .book-cover {
   display: flex;
-  width: 180px;
+  width: 193px;
   height: 240px;
-  border-radius: 4px 12px 12px 4px;
+  border-radius: 10px;
   overflow: hidden;
+  background-image: url('/Public/VersebookClosed.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.6),
     inset 0 0 0 1px rgba(139, 105, 20, 0.3);
   cursor: grab;
+}
+
+.book-cover-spine,
+.book-cover-front {
+  display: none;
 }
 
 .book-cover-spine {
@@ -3803,8 +3812,9 @@ body.book-overlay-active .magic-book {
 /* ===== OPEN BOOK STATE ===== */
 .book-interior {
   display: flex;
-  width: 640px;
-  min-height: 400px;
+  width: 660px;
+  min-height: 440px;
+  aspect-ratio: 3 / 2;
   border-radius: 4px;
   overflow: hidden;
   box-shadow:
@@ -4896,11 +4906,14 @@ body.book-overlay-active .magic-book {
 
 .verse-book-interior {
   position: relative;
-  background: linear-gradient(180deg, rgba(140, 88, 42, 0.2) 0%, rgba(56, 32, 14, 0.28) 100%);
+  background-image: url('/Public/Versebook.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center;
 }
 
 .verse-book-interior::before {
-  content: '';
+  content: none;
   position: absolute;
   inset: -5px -8px;
   pointer-events: none;
@@ -4916,7 +4929,7 @@ body.book-overlay-active .magic-book {
 }
 
 .verse-book-interior::after {
-  content: '';
+  content: none;
   position: absolute;
   inset: 0;
   pointer-events: none;
