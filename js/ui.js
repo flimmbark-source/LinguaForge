@@ -595,7 +595,6 @@ function moveVerseWordBackToOrbit(instanceId) {
     heated: true,
   });
 
-  lastRenderedVerseWords = [];
   orbitSnapshotKey = '';
   updateUI();
 }
@@ -1179,7 +1178,6 @@ export function initWordSelector() {
             heated: true,
           });
           gameState.verseWords.splice(i, 1);
-          lastRenderedVerseWords = [];
           orbitSnapshotKey = '';
           updateUI();
           return;
