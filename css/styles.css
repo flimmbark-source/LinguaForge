@@ -2395,7 +2395,8 @@ button.secondary {
   .magic-book .book-close-btn {
     display: flex;
     top: 12px;
-    right: 12px;
+    left: calc(50% + min(40vw, 310px) - 48px);
+    right: auto;
     z-index: 720;
   }
 
@@ -3011,7 +3012,8 @@ button.secondary {
   .magic-book .book-close-btn {
     display: flex;
     top: 12px;
-    right: 12px;
+    left: calc(50% + min(40vw, 310px) - 48px);
+    right: auto;
     z-index: 520;
   }
 
@@ -3677,7 +3679,8 @@ body.book-overlay-active .magic-book {
   display: none;
   position: absolute;
   top: 8px;
-  right: 8px;
+  left: calc(50% + min(40vw, 310px) - 48px);
+  right: auto;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -3696,9 +3699,6 @@ body.book-overlay-active .magic-book {
 /* Toggle button - centered on left (spine) edge */
 .book-toggle-btn {
   position: absolute;
-  top: 45%;
-  left: 36px;
-  transform: translateY(-50%);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -3714,6 +3714,12 @@ body.book-overlay-active .magic-book {
   padding: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   transition: background 0.2s ease;
+}
+
+.book-toggle-btn-open {
+  top: 5%;
+  left: 16px;
+  transform: translateY(-50%);
 }
 
 .book-toggle-btn:hover {
@@ -3746,7 +3752,7 @@ body.book-overlay-active .magic-book {
 .book-toggle-btn-closed {
   position: absolute;
   top: 45%;
-  left: 36px;
+  left: 136px;
   transform: translateY(-50%);
   width: 32px;
   height: 32px;

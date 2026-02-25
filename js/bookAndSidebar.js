@@ -12,6 +12,14 @@ let bookDragging = false;
 let bookOffsetX = 0;
 let bookOffsetY = 0;
 
+function setBookToggleState(toggleBtn, isOpen) {
+  if (!toggleBtn) return;
+  toggleBtn.textContent = isOpen ? '📕' : '📖';
+  toggleBtn.title = isOpen ? 'Close Book' : 'Open Book';
+  toggleBtn.classList.toggle('book-toggle-btn-open', isOpen);
+  toggleBtn.classList.toggle('book-toggle-btn-closed', !isOpen);
+}
+
 /** Check if we're on a mobile-sized screen */
 function isMobileScreen() {
   return window.innerWidth <= 768;
@@ -61,6 +69,8 @@ export function initMagicBook() {
   const closeBtn = document.getElementById('bookCloseBtn');
   if (!book || !toggleBtn) return;
 
+    setBookToggleState(toggleBtn, book.classList.contains('open'));
+
   // Toggle open/close
   toggleBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -68,13 +78,11 @@ export function initMagicBook() {
     if (isOpen) {
       book.classList.remove('open');
       book.classList.add('closed');
-      toggleBtn.textContent = '📖';
-      toggleBtn.title = 'Open Book';
+      setBookToggleState(toggleBtn, false);
     } else {
       book.classList.remove('closed');
       book.classList.add('open');
-      toggleBtn.textContent = '📕';
-      toggleBtn.title = 'Close Book';
+      setBookToggleState(toggleBtn, false);
     }
   });
 
@@ -370,8 +378,7 @@ function moveBookToPointer(clientX, clientY) {
 
   const btn = document.getElementById('bookToggleBtn');
   if (btn) {
-    btn.textContent = '📖';
-    btn.title = 'Open Book';
+  setBookToggleState(btn, false);
   }
 }
 
