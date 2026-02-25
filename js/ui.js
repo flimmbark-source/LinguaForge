@@ -73,6 +73,7 @@ export function resetVerseBookChipsHome() {
   gameState.parkedWordIds = [];
   gameState.wordContainerPositions = {};
   gameState.verseLastTriedSignature = '';
+  persistentVerseHintText = '';
   orbitSnapshotKey = '';
 }
 
@@ -90,6 +91,7 @@ let lastRenderedMoldIndex = -1;
 let lastRenderedMoldSlots = '';
 let autoEnscribeTimer = null;
 let autoEnscribeSignature = '';
+let persistentVerseHintText = '';
 const AUTO_ENSCRIBE_DELAY_MS = 2000;
 
 /**
@@ -689,8 +691,12 @@ export function updateGrammarUI(force = false) {
   }
 
   if (elements.verseHint) {
+    if (solved) {
+      persistentVerseHintText = '';
+    }
     const showHint = !solved && gameState.verseFailedAttempts >= 2;
-    elements.verseHint.textContent = showHint ? 'Something about “of” placement feels off…' : '';
+    const passiveHint = showHint ? 'Something about “of” placement feels off…' : '';
+    elements.verseHint.textContent = persistentVerseHintText || passiveHint;
   }
 }
 
@@ -1190,17 +1196,22 @@ export function initWordSelector() {
   const hintBtn = document.getElementById('verseHintBtn');
   if (hintBtn) {
     hintBtn.addEventListener('click', () => {
-      if (elements.verseHint) {
-        const placed = gameState.verseWords.filter((w) => !w.isPlaceholder).length;
-        if (placed === 0) {
-          elements.verseHint.textContent = 'Start with the subject of the verse...';
-        } else if (placed < SOLUTION_HEBREW_ORDER.length) {
-          const nextExpected = SOLUTION_HEBREW_ORDER[placed];
-          const lex = GRAMMAR_LEXICON[nextExpected];
-          if (lex) {
-            elements.verseHint.textContent = `Next word means "${lex.gloss}"...`;
-          }
+      const placed = gameState.verseWords.filter((w) => !w.isPlaceholder).length;
+      let nextHint = '';
+
+      if (placed === 0) {
+        nextHint = 'Start with the subject of the verse...';
+      } else if (placed < SOLUTION_HEBREW_ORDER.length) {
+        const nextExpected = SOLUTION_HEBREW_ORDER[placed];
+        const lex = GRAMMAR_LEXICON[nextExpected];
+        if (lex) {
+          nextHint = `Next word means "${lex.gloss}"...`;
         }
+      }
+
+      persistentVerseHintText = nextHint;
+      if (elements.verseHint) {
+        elements.verseHint.textContent = persistentVerseHintText;
       }
     });
   }

@@ -2395,7 +2395,8 @@ button.secondary {
   .magic-book .book-close-btn {
     display: flex;
     top: 12px;
-    right: 12px;
+    left: calc(50% + min(40vw, 310px) - 48px);
+    right: auto;
     z-index: 720;
   }
 
@@ -2458,7 +2459,7 @@ button.secondary {
   }
 
   .book-cover {
-    width: 100px;
+    width: 105px;
     height: 130px;
   }
 
@@ -3011,7 +3012,8 @@ button.secondary {
   .magic-book .book-close-btn {
     display: flex;
     top: 12px;
-    right: 12px;
+    left: calc(50% + min(40vw, 310px) - 48px);
+    right: auto;
     z-index: 520;
   }
 
@@ -3040,7 +3042,7 @@ button.secondary {
   }
 
   .book-cover {
-    width: 160px;
+    width: 177px;
     height: 220px;
   }
 
@@ -3401,7 +3403,7 @@ button.secondary {
   }
 
   .book-cover {
-    width: 100px;
+    width: 105px;
     height: 130px;
   }
 
@@ -3677,7 +3679,8 @@ body.book-overlay-active .magic-book {
   display: none;
   position: absolute;
   top: 8px;
-  right: 8px;
+  left: calc(50% + min(40vw, 310px) - 48px);
+  right: auto;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -3696,9 +3699,6 @@ body.book-overlay-active .magic-book {
 /* Toggle button - centered on left (spine) edge */
 .book-toggle-btn {
   position: absolute;
-  top: 50%;
-  left: -16px;
-  transform: translateY(-50%);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -3714,6 +3714,12 @@ body.book-overlay-active .magic-book {
   padding: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   transition: background 0.2s ease;
+}
+
+.book-toggle-btn-open {
+  top: 5%;
+  left: 16px;
+  transform: translateY(-50%);
 }
 
 .book-toggle-btn:hover {
@@ -3740,19 +3746,48 @@ body.book-overlay-active .magic-book {
 
 .magic-book.open .book-interior {
   display: flex;
+  overflow: visible;
+}
+
+.book-toggle-btn-closed {
+  position: absolute;
+  top: 45%;
+  left: 136px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2d1f0e;
+  border: 2px solid #8b6914;
+  color: #fcd34d;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  padding: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: background 0.2s ease;
 }
 
 /* Book Cover (closed state) */
 .book-cover {
   display: flex;
-  width: 180px;
-  height: 240px;
-  border-radius: 4px 12px 12px 4px;
-  overflow: hidden;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.6),
-    inset 0 0 0 1px rgba(139, 105, 20, 0.3);
+  width: 243px;
+  height: 340px;
+  border-radius: 10px;
+  overflow: visible;
+  background-image: url('../Public/VersebookClosed.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: right;
   cursor: grab;
+}
+
+.book-cover-spine,
+.book-cover-front {
+  display: none;
 }
 
 .book-cover-spine {
@@ -3764,9 +3799,7 @@ body.book-overlay-active .magic-book {
 
 .book-cover-front {
   flex: 1;
-  background:
-    linear-gradient(145deg, #6b4423 0%, #4a2e14 40%, #3d2510 100%);
-  display: flex;
+  display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -3803,8 +3836,9 @@ body.book-overlay-active .magic-book {
 /* ===== OPEN BOOK STATE ===== */
 .book-interior {
   display: flex;
-  width: 640px;
-  min-height: 400px;
+  width: 560px;
+  min-height: 320px;
+  aspect-ratio: 3 / 2;
   border-radius: 4px;
   overflow: hidden;
   box-shadow:
@@ -4896,11 +4930,73 @@ body.book-overlay-active .magic-book {
 
 .verse-book-interior {
   position: relative;
+  display: flex;
+  overflow: visible;
+  background: none;
 }
+
+.verse-book-interior .book-edge,
+.verse-book-interior .book-spine {
+  display: none;
+}
+
+.verse-book-interior::before {
+  content: '';
+  position: absolute;
+  inset: -22px -24px;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 20px;
+  background-image: url('../Public/Versebook.png');
+  background-repeat: no-repeat;
+  background-size: 123% 123%;
+  background-position: center;
+}
+
+.verse-book-interior::after {
+  content: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  background:
+    radial-gradient(120% 52% at 50% -8%, rgba(255, 211, 151, 0.28) 0%, rgba(255, 211, 151, 0.08) 54%, rgba(255, 211, 151, 0) 82%),
+    radial-gradient(180px 68px at 26% 44%, rgba(249, 195, 105, 0.1) 0%, transparent 100%),
+    radial-gradient(180px 68px at 75% 46%, rgba(249, 195, 105, 0.08) 0%, transparent 100%);
+  mix-blend-mode: screen;
+}
+
+.verse-book-interior > * {
+  position: relative;
+  z-index: 1;
+}
+
 
 .verse-page {
   pointer-events: auto;
 }
+
+.verse-page::before,
+.verse-page::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  z-index: 3;
+  background:
+    linear-gradient(135deg, rgba(219, 177, 96, 0.86), rgba(123, 84, 30, 0.9)),
+    repeating-linear-gradient(45deg, rgba(78, 51, 17, 0.14) 0 1px, rgba(255, 214, 133, 0) 1px 3px);
+  box-shadow:
+    inset 0 0 0 1px rgba(252, 225, 165, 0.38),
+    0 1px 6px rgba(35, 18, 7, 0.35);
+  opacity: 0.92;
+}
+
+.verse-page.book-page-left::before { left: 3px; top: 3px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.verse-page.book-page-left::after { left: 3px; bottom: 3px; clip-path: polygon(0 100%, 0 0, 100% 100%); }
+.verse-page.book-page-right::before { right: 3px; top: 3px; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+.verse-page.book-page-right::after { right: 3px; bottom: 3px; clip-path: polygon(0 100%, 100% 0, 100% 100%); }
 
 .verse-page-content {
   position: relative;
@@ -4910,12 +5006,64 @@ body.book-overlay-active .magic-book {
   height: 100%;
 }
 
+.verse-book-interior .book-spine {
+  width: 16px;
+  background:
+    linear-gradient(to right, #261306 0%, #482712 24%, #6a4322 47%, #5b381b 53%, #47260f 76%, #241104 100%),
+    repeating-linear-gradient(180deg, rgba(234, 194, 129, 0.12) 0 1px, rgba(72, 40, 18, 0) 1px 5px);
+  box-shadow:
+    inset -4px 0 8px rgba(0, 0, 0, 0.55),
+    inset 4px 0 8px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(183, 130, 68, 0.25),
+    0 0 16px rgba(0, 0, 0, 0.25);
+  position: relative;
+}
+
+.verse-book-interior .book-spine::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(to bottom, rgba(236, 196, 136, 0.7) 0 2px, rgba(50, 28, 12, 0.14) 2px 9px);
+  opacity: 0.6;
+}
+
+.verse-page.book-page-left {
+  background: transparent;
+  box-shadow: none;
+}
+
+.verse-page.book-page-right {
+  background: transparent;
+  box-shadow: none;
+}
+
+.verse-page .book-page-inner::before,
+.verse-page .book-page-inner::after,
+.verse-page .page-ornate-border {
+  content: none;
+  display: none;
+}
+
+.verse-book-interior .book-page-content {
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 1px 0 rgba(255, 246, 227, 0.34);
+}
+
 /* ── Book edges (dark binding) ── */
 .book-edge {
   width: 8px;
   flex-shrink: 0;
-  background: linear-gradient(to bottom, #1a0f05, #2a1a0a, #1a0f05);
-  box-shadow: inset 0 0 4px rgba(0,0,0,0.6);
+  background:
+    linear-gradient(180deg, #2a1509 0%, #4b2a15 35%, #3e220f 62%, #261106 100%),
+    repeating-linear-gradient(180deg, rgba(255, 230, 189, 0.05) 0 1px, rgba(65, 33, 15, 0) 1px 3px);
+  box-shadow:
+    inset 0 0 8px rgba(0,0,0,0.65),
+    inset 0 1px 0 rgba(255,210,160,0.18);
 }
 .book-edge-left { border-radius: 6px 0 0 6px; }
 .book-edge-right { border-radius: 0 6px 6px 0; }
@@ -4928,24 +5076,62 @@ body.book-overlay-active .magic-book {
   flex-direction: column;
   padding: 0;
   overflow: hidden;
+  isolation: isolate;
+}
+
+.book-page-inner::before,
+.book-page-inner::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+.book-page-inner::before {
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(130% 96% at 50% -10%, rgba(255, 233, 190, 0.3) 0%, rgba(255, 233, 190, 0) 60%),
+    radial-gradient(140% 95% at 50% 130%, rgba(102, 61, 27, 0.1) 0%, rgba(102, 61, 27, 0) 60%),
+    repeating-linear-gradient(100deg, rgba(141, 97, 51, 0.04) 0 2px, rgba(255, 250, 237, 0.02) 2px 5px),
+    radial-gradient(circle at 12% 18%, rgba(164, 100, 54, 0.08) 0 13%, transparent 40%),
+    radial-gradient(circle at 84% 74%, rgba(164, 100, 54, 0.06) 0 12%, transparent 40%);
+  opacity: 0.9;
+}
+
+.book-page-inner::after {
+  inset: 8px;
+  z-index: 2;
+  border-radius: 6px;
+  background:
+    radial-gradient(circle at 20% 16%, rgba(108, 80, 46, 0.08) 0 2px, transparent 4px),
+    radial-gradient(circle at 80% 70%, rgba(108, 80, 46, 0.07) 0 2px, transparent 4px),
+    radial-gradient(circle at 50% 50%, rgba(107, 75, 42, 0.03) 0 1px, transparent 3px);
+  mix-blend-mode: multiply;
+  opacity: 0.45;
 }
 
 /* ── Ornate page border ── */
 .page-ornate-border {
   position: absolute;
   inset: 6px;
-  border: 2px solid rgba(139, 105, 20, 0.35);
+  border: 1px solid rgba(132, 95, 38, 0.32);
   border-radius: 4px;
   pointer-events: none;
   z-index: 1;
+  box-shadow:
+    inset 0 0 0 1px rgba(190, 150, 88, 0.14),
+    inset 0 0 14px rgba(110, 76, 32, 0.1);
 }
 
 .page-ornate-border::before {
   content: '';
   position: absolute;
   inset: 3px;
-  border: 1px solid rgba(139, 105, 20, 0.18);
+  border: 1px solid rgba(139, 105, 20, 0.12);
   border-radius: 3px;
+  background:
+    radial-gradient(circle at 9% 12%, rgba(120, 87, 48, 0.08) 0 18%, transparent 56%),
+    radial-gradient(circle at 88% 84%, rgba(120, 87, 48, 0.08) 0 14%, transparent 56%);
 }
 
 .ornate-corner {
@@ -4957,7 +5143,7 @@ body.book-overlay-active .magic-book {
 .ornate-corner::after {
   content: '';
   position: absolute;
-  background: rgba(139, 105, 20, 0.4);
+  background: rgba(165, 123, 42, 0.5);
 }
 .ornate-corner::before { width: 16px; height: 2px; }
 .ornate-corner::after { width: 2px; height: 16px; }
@@ -5025,16 +5211,29 @@ body.book-overlay-active .magic-book {
   border-radius: 6px;
   border: 1px dashed rgba(93,64,30,0.35);
   background: rgba(245, 230, 200, 0.22);
-  box-shadow: inset 0 1px 4px rgba(93,64,30,0.08);
+  box-shadow:
+    inset 0 1px 4px rgba(93,64,30,0.08),
+    0 0 0 1px rgba(245, 214, 146, 0.12),
+    0 8px 14px rgba(54, 31, 14, 0.08);
   padding: 6px 8px;
   overflow-x: hidden;
   overflow-y: auto;
 }
 
+.verse-entry-container::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 9px;
+  pointer-events: none;
+  box-shadow: 0 0 16px rgba(255, 199, 98, 0.12);
+  opacity: 0.7;
+}
+
 .verse-construct-hint {
   text-align: center;
   font-size: 10px;
-  color: #8b7355;
+  color: #000000;
   font-style: italic;
   margin-top: 6px;
   opacity: 0.8;
@@ -5193,7 +5392,7 @@ body.book-overlay-active .magic-book {
 .verse-hint {
   min-height: 14px;
   font-size: 10px;
-  color: #8b7355;
+  color: #000000;
   font-style: italic;
   text-align: center;
   padding: 0 14px;
@@ -5355,33 +5554,50 @@ body.book-overlay-active .magic-book {
   position: absolute;
   inset: -20px;
   pointer-events: none;
-  z-index: -1;
+  z-index: 5;
   overflow: visible;
 }
 
 .book-sparkle {
   position: absolute;
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,251,235,0.95) 0%, rgba(251,191,36,0.7) 50%, transparent 100%);
-  animation: bookSparkleFloat 3s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(255, 250, 230, 0.95) 0%, rgba(255, 205, 92, 0.76) 44%, rgba(255, 169, 53, 0.28) 65%, transparent 100%);
+  box-shadow: 0 0 10px rgba(255, 197, 100, 0.45);
+  animation: bookSparkleFloat 4s ease-in-out infinite;
   opacity: 0;
+  filter: blur(0.2px);
 }
 
-.book-sparkle.s1 { left: 5%; top: 10%; animation-delay: 0s; animation-duration: 3.2s; }
-.book-sparkle.s2 { left: 90%; top: 15%; animation-delay: 0.5s; animation-duration: 2.8s; }
-.book-sparkle.s3 { left: 15%; top: 85%; animation-delay: 1s; animation-duration: 3.5s; }
-.book-sparkle.s4 { left: 85%; top: 80%; animation-delay: 1.5s; animation-duration: 3s; }
-.book-sparkle.s5 { left: 50%; top: 5%; animation-delay: 0.3s; animation-duration: 2.6s; }
-.book-sparkle.s6 { left: 30%; top: 95%; animation-delay: 0.8s; animation-duration: 3.3s; }
-.book-sparkle.s7 { left: 95%; top: 50%; animation-delay: 1.2s; animation-duration: 2.9s; }
-.book-sparkle.s8 { left: 3%; top: 50%; animation-delay: 2s; animation-duration: 3.1s; }
+.book-sparkle.s1 { left: 5%; top: 10%; animation-delay: 0s; animation-duration: 4.1s; }
+.book-sparkle.s2 { left: 90%; top: 15%; animation-delay: 0.5s; animation-duration: 3.8s; }
+.book-sparkle.s3 { left: 15%; top: 85%; animation-delay: 1s; animation-duration: 4.4s; }
+.book-sparkle.s4 { left: 85%; top: 80%; animation-delay: 1.5s; animation-duration: 3.9s; }
+.book-sparkle.s5 { left: 50%; top: 5%; animation-delay: 0.3s; animation-duration: 3.6s; }
+.book-sparkle.s6 { left: 30%; top: 95%; animation-delay: 0.8s; animation-duration: 4.2s; }
+.book-sparkle.s7 { left: 95%; top: 50%; animation-delay: 1.2s; animation-duration: 3.7s; }
+.book-sparkle.s8 { left: 3%; top: 50%; animation-delay: 2s; animation-duration: 4.0s; }
 
 @keyframes bookSparkleFloat {
-  0%, 100% { opacity: 0; transform: translateY(0) scale(0.5); }
-  30% { opacity: 0.9; transform: translateY(-8px) scale(1); }
-  70% { opacity: 0.6; transform: translateY(-14px) scale(0.8); }
+  0%, 100% { opacity: 0; transform: translate3d(0, 0, 0) scale(0.45); }
+  25% { opacity: 0.8; transform: translate3d(-2px, -7px, 0) scale(0.95); }
+  60% { opacity: 0.5; transform: translate3d(3px, -14px, 0) scale(0.78); }
+}
+
+@keyframes runeTracePulse {
+  0%, 76%, 100% {
+    opacity: 0;
+    filter: blur(0.5px);
+  }
+  82% {
+    opacity: 0.35;
+    filter: blur(0);
+  }
+  90% {
+    opacity: 0.12;
+    filter: blur(0.4px);
+  }
 }
 
 .word-info-sheet {
