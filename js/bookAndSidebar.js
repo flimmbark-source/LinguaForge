@@ -82,7 +82,7 @@ export function initMagicBook() {
     } else {
       book.classList.remove('closed');
       book.classList.add('open');
-      setBookToggleState(toggleBtn, false);
+      setBookToggleState(toggleBtn, true);
     }
   });
 
