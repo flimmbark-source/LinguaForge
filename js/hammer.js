@@ -273,9 +273,10 @@ export class HammerSystem {
 
     // Load hammer PNG image
     this._hammerImg = new Image();
-    this._hammerImg.decoding = 'sync';
     this._hammerImg.fetchPriority = 'high';
-    this._hammerImg.src = 'Public/Hammer.png';
+    this._hammerImg.decoding = 'async';
+    this._hammerImg.src = '';
+    this._hammerImgLoaded = false;
     this.anvilAnchor = null;
 
     // Mobile detection for performance tuning
@@ -2357,10 +2358,17 @@ drawHammer(ctx, hammer) {
     ctx.restore();
   }
 
+  ensureHammerImageLoaded() {
+    if (this._hammerImgLoaded) return;
+    this._hammerImg.src = 'Public/Hammer.png';
+    this._hammerImgLoaded = true;
+  }
+
   /**
    * Render frame
    */
   render(frameTime = null) {
+    this.ensureHammerImageLoaded();
     // Clear canvas
     if (this.coordinatedCanvasClear && frameTime != null) {
       const canvas = this.canvas;
