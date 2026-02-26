@@ -12,6 +12,20 @@ let bookDragging = false;
 let bookOffsetX = 0;
 let bookOffsetY = 0;
 
+function ensureBookArtLoaded() {
+  const book = document.getElementById('magicBook');
+  if (!book || book.classList.contains('book-art-ready')) return;
+  book.classList.add('book-art-ready');
+}
+
+function setBookToggleState(toggleBtn, isOpen) {
+  if (!toggleBtn) return;
+  toggleBtn.textContent = isOpen ? '📕' : '📖';
+  toggleBtn.title = isOpen ? 'Close Book' : 'Open Book';
+  toggleBtn.classList.toggle('book-toggle-btn-open', isOpen);
+  toggleBtn.classList.toggle('book-toggle-btn-closed', !isOpen);
+}
+
 /** Check if we're on a mobile-sized screen */
 function isMobileScreen() {
   return window.innerWidth <= 768;
@@ -25,6 +39,7 @@ function showBookMobile() {
   const book = document.getElementById('magicBook');
   if (!book) return;
   book.style.display = '';
+  ensureBookArtLoaded();
   document.body.classList.add('book-overlay-active');
   // Always open the book interior on mobile
   book.classList.remove('closed');
@@ -61,20 +76,21 @@ export function initMagicBook() {
   const closeBtn = document.getElementById('bookCloseBtn');
   if (!book || !toggleBtn) return;
 
+    setBookToggleState(toggleBtn, book.classList.contains('open'));
+
   // Toggle open/close
   toggleBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     const isOpen = book.classList.contains('open');
+    ensureBookArtLoaded();
     if (isOpen) {
       book.classList.remove('open');
       book.classList.add('closed');
-      toggleBtn.textContent = '📖';
-      toggleBtn.title = 'Open Book';
+      setBookToggleState(toggleBtn, false);
     } else {
       book.classList.remove('closed');
       book.classList.add('open');
-      toggleBtn.textContent = '📕';
-      toggleBtn.title = 'Close Book';
+      setBookToggleState(toggleBtn, true);
     }
   });
 
@@ -134,13 +150,14 @@ function isInteractiveElement(el) {
   if (el.classList.contains('book-toggle-btn')) return true;
   if (el.classList.contains('verse-orbit-chip')) return true;
   if (el.classList.contains('word-bank-tab')) return true;
+  if (el.classList.contains('word-bank-word')) return true;
   if (el.classList.contains('verse-action-btn')) return true;
   if (el.id === 'grammarHebrewLine') return true;
   if (el.closest('#grammarHebrewLine')) return true;
   if (el.closest('.line-word-chip')) return true;
-  if (el.closest('.verse-word-bank')) return true;
-  if (el.closest('.word-bank-tabs')) return true;
-  if (el.closest('.verse-action-buttons')) return true;
+  if (el.closest('.word-bank-word')) return true;
+  if (el.closest('.word-bank-tab')) return true;
+  if (el.closest('.verse-action-btn')) return true;
   return false;
 }
 
@@ -362,6 +379,7 @@ function moveBookToPointer(clientX, clientY) {
   if (!book || isMobileScreen()) return;
 
   book.style.display = '';
+  ensureBookArtLoaded();
   book.classList.remove('open');
   book.classList.add('closed');
   book.style.transform = 'none';
@@ -370,8 +388,7 @@ function moveBookToPointer(clientX, clientY) {
 
   const btn = document.getElementById('bookToggleBtn');
   if (btn) {
-    btn.textContent = '📖';
-    btn.title = 'Open Book';
+  setBookToggleState(btn, false);
   }
 }
 
