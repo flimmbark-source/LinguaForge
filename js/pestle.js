@@ -50,9 +50,13 @@ export class PestleSystem {
 
     // Load pestle and mortar PNG images
     this._pestleImg = new Image();
-    this._pestleImg.src = 'Public/Pestle.png';
+    this._pestleImg.src = '';
+    this._pestleImg.decoding = 'async';
+    this._pestleImgLoaded = false;
     this._mortarImg = new Image();
-    this._mortarImg.src = 'Public/Mortar.png';
+    this._mortarImg.src = '';
+    this._mortarImg.decoding = 'async';
+    this._mortarImgLoaded = false;
 
     // World physics constants
     this.gravity = 5400;
@@ -1011,7 +1015,19 @@ export class PestleSystem {
 
   // ─── Render ───────────────────────────────────────────
 
+  ensurePestleImagesLoaded() {
+    if (!this._pestleImgLoaded) {
+      this._pestleImg.src = 'Public/Pestle.png';
+      this._pestleImgLoaded = true;
+    }
+    if (!this._mortarImgLoaded) {
+      this._mortarImg.src = 'Public/Mortar.png';
+      this._mortarImgLoaded = true;
+    }
+  }
+
   render(frameTime = null) {
+    this.ensurePestleImagesLoaded();
     if (this.coordinatedCanvasClear && frameTime != null) {
       const canvas = this.canvas;
       if (canvas.__linguaForgeLastClearFrame !== frameTime) {

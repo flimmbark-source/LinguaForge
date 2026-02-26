@@ -2395,7 +2395,7 @@ button.secondary {
   .magic-book .book-close-btn {
     display: flex;
     top: 12px;
-    left: calc(30% + min(40vw, 310px) + 48px);
+    left: calc(50% + min(40vw, 310px) + 18px);
     right: auto;
     z-index: 720;
   }
@@ -3794,11 +3794,20 @@ body.book-overlay-active .magic-book {
   height: 340px;
   border-radius: 10px;
   overflow: visible;
-  background-image: url('../Public/VersebookClosed.png');
+  background-image: none;
   background-repeat: no-repeat;
   background-size: 100% 100%;
   background-position: right;
   cursor: grab;
+}
+
+
+.magic-book.book-art-ready .book-cover {
+  background-image: url('../Public/VersebookClosed.png');
+}
+
+.magic-book.book-art-ready .verse-book-interior::before {
+  background-image: url('../Public/Versebook.png');
 }
 
 .book-cover-spine,
@@ -4963,7 +4972,7 @@ body.book-overlay-active .magic-book {
   pointer-events: none;
   z-index: 0;
   border-radius: 20px;
-  background-image: url('../Public/Versebook.png');
+  background-image: none;
   background-repeat: no-repeat;
   background-size: 123% 123%;
   background-position: center;

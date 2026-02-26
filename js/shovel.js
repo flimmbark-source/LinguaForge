@@ -73,7 +73,9 @@ export class ShovelSystem {
 
     // Load shovel PNG image
     this._shovelImg = new Image();
-    this._shovelImg.src = 'Public/Shovel.png';
+    this._shovelImg.src = '';
+    this._shovelImg.decoding = 'async';
+    this._shovelImgLoaded = false;
 
     // world physics constants (mirroring hammer semantics)
     this.gravity = 2600;      // px/s^2 (optional if you want sag)
@@ -545,7 +547,14 @@ resize() {
     ctx.restore();
   }
 
+  ensureShovelImageLoaded() {
+    if (this._shovelImgLoaded) return;
+    this._shovelImg.src = 'Public/Shovel.png';
+    this._shovelImgLoaded = true;
+  }
+
   render(frameTime = null) {
+    this.ensureShovelImageLoaded();
     if (this.coordinatedCanvasClear && frameTime != null) {
       const canvas = this.canvas;
       if (canvas.__linguaForgeLastClearFrame !== frameTime) {
