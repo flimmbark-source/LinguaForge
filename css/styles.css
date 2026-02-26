@@ -2395,7 +2395,7 @@ button.secondary {
   .magic-book .book-close-btn {
     display: flex;
     top: 12px;
-    left: calc(30% + min(40vw, 310px) + 48px);
+    left: calc(50% + min(40vw, 310px) + 18px);
     right: auto;
     z-index: 720;
   }

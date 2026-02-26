@@ -150,13 +150,14 @@ function isInteractiveElement(el) {
   if (el.classList.contains('book-toggle-btn')) return true;
   if (el.classList.contains('verse-orbit-chip')) return true;
   if (el.classList.contains('word-bank-tab')) return true;
+  if (el.classList.contains('word-bank-word')) return true;
   if (el.classList.contains('verse-action-btn')) return true;
   if (el.id === 'grammarHebrewLine') return true;
   if (el.closest('#grammarHebrewLine')) return true;
   if (el.closest('.line-word-chip')) return true;
-  if (el.closest('.verse-word-bank')) return true;
-  if (el.closest('.word-bank-tabs')) return true;
-  if (el.closest('.verse-action-buttons')) return true;
+  if (el.closest('.word-bank-word')) return true;
+  if (el.closest('.word-bank-tab')) return true;
+  if (el.closest('.verse-action-btn')) return true;
   return false;
 }
 
