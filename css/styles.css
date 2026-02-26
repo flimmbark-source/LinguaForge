@@ -4999,29 +4999,19 @@ body.book-overlay-active .magic-book {
 
 .verse-page {
   pointer-events: auto;
+  --verse-frame-inset: 2px;
+  --verse-frame-offset-x: 0px;
+  --verse-frame-offset-y: 0px;
+  --verse-corner-size: 18px;
+  --verse-corner-overhang: 1px;
 }
 
 .verse-page::before,
 .verse-page::after {
-  content: '';
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  pointer-events: none;
-  z-index: 3;
-  background:
-    linear-gradient(135deg, rgba(219, 177, 96, 0.86), rgba(123, 84, 30, 0.9)),
-    repeating-linear-gradient(45deg, rgba(78, 51, 17, 0.14) 0 1px, rgba(255, 214, 133, 0) 1px 3px);
-  box-shadow:
-    inset 0 0 0 1px rgba(252, 225, 165, 0.38),
-    0 1px 6px rgba(35, 18, 7, 0.35);
-  opacity: 0.92;
+  content: none;
+  display: none;
 }
 
-.verse-page.book-page-left::before { left: 3px; top: 3px; clip-path: polygon(0 0, 100% 0, 0 100%); }
-.verse-page.book-page-left::after { left: 3px; bottom: 3px; clip-path: polygon(0 100%, 0 0, 100% 100%); }
-.verse-page.book-page-right::before { right: 3px; top: 3px; clip-path: polygon(0 0, 100% 0, 100% 100%); }
-.verse-page.book-page-right::after { right: 3px; bottom: 3px; clip-path: polygon(0 100%, 100% 0, 100% 100%); }
 
 .verse-page-content {
   position: relative;
@@ -5067,10 +5057,21 @@ body.book-overlay-active .magic-book {
 }
 
 .verse-page .book-page-inner::before,
-.verse-page .book-page-inner::after,
-.verse-page .page-ornate-border {
+.verse-page .book-page-inner::after {
   content: none;
   display: none;
+}
+
+.verse-page .page-ornate-border {
+  inset: var(--verse-frame-inset);
+  border: none;
+  box-shadow: none;
+  display: block;
+  transform: translate(var(--verse-frame-offset-x), var(--verse-frame-offset-y));
+}
+
+.verse-page .page-ornate-border::before {
+  content: none;
 }
 
 .verse-book-interior .book-page-content {
@@ -5161,33 +5162,43 @@ body.book-overlay-active .magic-book {
 
 .ornate-corner {
   position: absolute;
-  width: 16px;
-  height: 16px;
+  width: var(--verse-corner-size);
+  height: var(--verse-corner-size);
+  pointer-events: none;
+  z-index: 3;
+  background:
+    linear-gradient(135deg, rgba(219, 177, 96, 0.86), rgba(123, 84, 30, 0.9)),
+    repeating-linear-gradient(45deg, rgba(78, 51, 17, 0.14) 0 1px, rgba(255, 214, 133, 0) 1px 3px);
+  box-shadow:
+    inset 0 0 0 1px rgba(252, 225, 165, 0.38),
+    0 1px 6px rgba(35, 18, 7, 0.35);
+  opacity: 0.92;
 }
 .ornate-corner::before,
 .ornate-corner::after {
-  content: '';
-  position: absolute;
-  background: rgba(165, 123, 42, 0.5);
+  content: none;
 }
-.ornate-corner::before { width: 16px; height: 2px; }
-.ornate-corner::after { width: 2px; height: 16px; }
 
-.ornate-corner-tl { top: -2px; left: -2px; }
-.ornate-corner-tl::before { top: 0; left: 0; }
-.ornate-corner-tl::after { top: 0; left: 0; }
-
-.ornate-corner-tr { top: -2px; right: -2px; }
-.ornate-corner-tr::before { top: 0; right: 0; }
-.ornate-corner-tr::after { top: 0; right: 0; }
-
-.ornate-corner-bl { bottom: -2px; left: -2px; }
-.ornate-corner-bl::before { bottom: 0; left: 0; }
-.ornate-corner-bl::after { bottom: 0; left: 0; }
-
-.ornate-corner-br { bottom: -2px; right: -2px; }
-.ornate-corner-br::before { bottom: 0; right: 0; }
-.ornate-corner-br::after { bottom: 0; right: 0; }
+.ornate-corner-tl {
+  top: calc(-1 * var(--verse-corner-overhang));
+  left: calc(-1 * var(--verse-corner-overhang));
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+.ornate-corner-tr {
+  top: calc(-1 * var(--verse-corner-overhang));
+  right: calc(-1 * var(--verse-corner-overhang));
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+.ornate-corner-bl {
+  bottom: calc(-1 * var(--verse-corner-overhang));
+  left: calc(-1 * var(--verse-corner-overhang));
+  clip-path: polygon(0 100%, 0 0, 100% 100%);
+}
+.ornate-corner-br {
+  bottom: calc(-1 * var(--verse-corner-overhang));
+  right: calc(-1 * var(--verse-corner-overhang));
+  clip-path: polygon(0 100%, 100% 0, 100% 100%);
+}
 
 /* ── Target Verse Header ── */
 .verse-target-header {
