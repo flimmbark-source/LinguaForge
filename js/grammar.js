@@ -16,12 +16,26 @@ import {
 } from './state.js?v=9';
 
 /**
+ * Return the active verse solution order for the currently equipped line/deck.
+ * Falls back to static config when a runtime line is unavailable.
+ * @returns {string[]}
+ */
+export function getTargetVerseOrder() {
+  const equippedOrder = gameState.currentLine?.molds
+    ?.map((mold) => mold?.pattern)
+    ?.filter((pattern) => typeof pattern === 'string' && pattern.length > 0);
+
+  return (equippedOrder && equippedOrder.length > 0) ? equippedOrder : SOLUTION_HEBREW_ORDER;
+}
+
+/**
  * Evaluate the current verse
  * @param {Array} verseWordsArr - Array of verse word objects
  * @returns {Object} Evaluation result with translit, literal, and score
  */
 export function evaluateVerse(verseWordsArr) {
   const verseHebrew = verseWordsArr.map(w => w.hebrew);
+  const targetOrder = getTargetVerseOrder();
 
   // Build transliteration and literal gloss from lexicon
   const translitParts = [];
@@ -38,10 +52,10 @@ export function evaluateVerse(verseWordsArr) {
   });
 
   // Score: how many positions match the solution order
-  const len = SOLUTION_HEBREW_ORDER.length;
+  const len = targetOrder.length;
   let matches = 0;
   for (let i = 0; i < len; i++) {
-    if (verseHebrew[i] && verseHebrew[i] === SOLUTION_HEBREW_ORDER[i]) {
+    if (verseHebrew[i] && verseHebrew[i] === targetOrder[i]) {
       matches++;
     }
   }
@@ -59,9 +73,10 @@ export function evaluateVerse(verseWordsArr) {
  * @returns {boolean} True if verse matches solution
  */
 export function isVerseSolved() {
+  const targetOrder = getTargetVerseOrder();
   const verseHebrew = gameState.verseWords.map(w => w.hebrew);
-  if (verseHebrew.length !== SOLUTION_HEBREW_ORDER.length) return false;
-  return SOLUTION_HEBREW_ORDER.every((h, i) => verseHebrew[i] === h);
+  if (verseHebrew.length !== targetOrder.length) return false;
+  return targetOrder.every((h, i) => verseHebrew[i] === h);
 }
 
 /**
@@ -118,9 +133,10 @@ export function completeVerse() {
  * @returns {boolean}
  */
 export function isSelectedVerseCorrect(selectedWords) {
+  const targetOrder = getTargetVerseOrder();
   if (!Array.isArray(selectedWords)) return false;
-  if (selectedWords.length !== SOLUTION_HEBREW_ORDER.length) return false;
-  return SOLUTION_HEBREW_ORDER.every((h, i) => selectedWords[i] === h);
+  if (selectedWords.length !== targetOrder.length) return false;
+  return targetOrder.every((h, i) => selectedWords[i] === h);
 }
 
 /**

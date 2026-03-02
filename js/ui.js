@@ -3,11 +3,11 @@
  * Handles all UI updates and rendering logic
  */
 
-import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON, SOLUTION_HEBREW_ORDER } from './config.js?v=9';
+import { getScribeCost, SCRIBE_GHOST_LIFETIME, GRAMMAR_LEXICON } from './config.js?v=9';
 import { gameState, addWord, removeVerseWord, getNextWordId, clearVerseWords } from './state.js?v=9';
 import { setupWordChipDrag, sellWord, renderMoldsInViewport } from './molds.js?v=9';
 import { toggleScribePaused } from './scribes.js?v=9';
-import { evaluateVerse, setupVerseWordChipDrag, placeWordInVerse } from './grammar.js?v=9';
+import { evaluateVerse, setupVerseWordChipDrag, placeWordInVerse, getTargetVerseOrder } from './grammar.js?v=9';
 import { updateSidebarToolVisibility } from './bookAndSidebar.js?v=9';
 
 function createVersePlaceholder(expectedHebrew, slotIndex) {
@@ -20,10 +20,11 @@ function createVersePlaceholder(expectedHebrew, slotIndex) {
 }
 
 export function applyVerseSubmitPhase2() {
+  const targetVerseOrder = getTargetVerseOrder();
   const nextVerseWords = [];
 
-  for (let i = 0; i < SOLUTION_HEBREW_ORDER.length; i += 1) {
-    const expected = SOLUTION_HEBREW_ORDER[i];
+  for (let i = 0; i < targetVerseOrder.length; i += 1) {
+    const expected = targetVerseOrder[i];
     const current = gameState.verseWords[i];
 
     if (current && !current.isPlaceholder && current.hebrew === expected) {
@@ -635,8 +636,10 @@ export function updateGrammarUI(force = false) {
     gameState.verseLastScore = score;
   }
 
-  const solved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
-    && gameState.verseWords.every((w, i) => !w.isPlaceholder && w.hebrew === SOLUTION_HEBREW_ORDER[i]);
+  const targetVerseOrder = getTargetVerseOrder();
+
+  const solved = gameState.verseWords.length === targetVerseOrder.length
+    && gameState.verseWords.every((w, i) => !w.isPlaceholder && w.hebrew === targetVerseOrder[i]);
   const solvedSignature = solved
     ? gameState.verseWords.map((w) => w.instanceId).join('|')
     : '';
@@ -655,8 +658,8 @@ export function updateGrammarUI(force = false) {
       }
       autoEnscribeTimer = setTimeout(() => {
         autoEnscribeTimer = null;
-        const stillSolved = gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length
-          && gameState.verseWords.every((w, i) => !w.isPlaceholder && w.hebrew === SOLUTION_HEBREW_ORDER[i]);
+        const stillSolved = gameState.verseWords.length === targetVerseOrder.length
+          && gameState.verseWords.every((w, i) => !w.isPlaceholder && w.hebrew === targetVerseOrder[i]);
         if (!stillSolved || !elements.grammarHebrewLineDiv) return;
         elements.grammarHebrewLineDiv.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       }, AUTO_ENSCRIBE_DELAY_MS);
@@ -670,7 +673,7 @@ export function updateGrammarUI(force = false) {
   }
 
   if (!solved && gameState.verseWords.length > 0) {
-    const mismatch = gameState.verseWords.findIndex((w, i) => w.isPlaceholder || w.hebrew !== SOLUTION_HEBREW_ORDER[i]);
+    const mismatch = gameState.verseWords.findIndex((w, i) => w.isPlaceholder || w.hebrew !== targetVerseOrder[i]);
     if (mismatch >= 0) {
       const chips = elements.grammarHebrewLineDiv.querySelectorAll('.line-word-chip');
       chips.forEach(c => c.classList.remove('wrong-order'));
@@ -682,7 +685,7 @@ export function updateGrammarUI(force = false) {
     elements.grammarHebrewLineDiv.classList.remove('is-unstable');
   }
 
-  if (!solved && gameState.verseWords.length === SOLUTION_HEBREW_ORDER.length) {
+  if (!solved && gameState.verseWords.length === targetVerseOrder.length) {
     const signature = gameState.verseWords.map((w) => (w.isPlaceholder ? '_' : w.hebrew)).join(' ');
     if (gameState.verseLastTriedSignature !== signature) {
       gameState.verseFailedAttempts = (gameState.verseFailedAttempts || 0) + 1;
@@ -749,7 +752,7 @@ function handleGlossaryWordSelect(wordText, entryEl) {
   gameState.enscribeSelectedWords.push(wordText);
   entryEl.classList.add('is-selected');
 
-  if (gameState.enscribeSelectedWords.length >= SOLUTION_HEBREW_ORDER.length) {
+  if (gameState.enscribeSelectedWords.length >= getTargetVerseOrder().length) {
     document.dispatchEvent(new CustomEvent('enscribe-attempt', {
       detail: { words: [...gameState.enscribeSelectedWords] }
     }));
@@ -1141,7 +1144,7 @@ function renderVerseWordOrbit() {
     countEl.textContent = placed;
   }
   if (totalEl) {
-    totalEl.textContent = SOLUTION_HEBREW_ORDER.length;
+    totalEl.textContent = getTargetVerseOrder().length;
   }
 }
 
@@ -1201,8 +1204,8 @@ export function initWordSelector() {
 
       if (placed === 0) {
         nextHint = 'Start with the subject of the verse...';
-      } else if (placed < SOLUTION_HEBREW_ORDER.length) {
-        const nextExpected = SOLUTION_HEBREW_ORDER[placed];
+      } else if (placed < getTargetVerseOrder().length) {
+        const nextExpected = getTargetVerseOrder()[placed];
         const lex = GRAMMAR_LEXICON[nextExpected];
         if (lex) {
           nextHint = `Next word means "${lex.gloss}"...`;
