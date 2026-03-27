@@ -34,6 +34,10 @@ export class LetterPhysicsSystem {
 
     // callback set by app.js when a mold slot is filled
     this.onSlotFilled = null;
+    this.onAnvilClick = null;
+
+    // Cached tile gradient (rebuilt when canvas context changes)
+    this._tileGradient = null;
 
     // Cached DOM refs/rects to avoid per-frame layout reads
     this._slotCache = null;
@@ -50,6 +54,9 @@ export class LetterPhysicsSystem {
     this._basketCacheInterval = IS_MOBILE ? 220 : 140;
     this._basketRef = null;
     this._letterPoolRef = null;
+    this._anvilRectCache = null;
+    this._anvilCacheTime = 0;
+    this._anvilCacheInterval = IS_MOBILE ? 120 : 80;
   }
 
   // ─── Spawning ────────────────────────────────────────────
@@ -72,7 +79,7 @@ export class LetterPhysicsSystem {
       else return null; // hard cap
     }
 
-    const letter = {
+      const letter = {
       id: ++this._idCounter,
       char,
       x, y,
@@ -82,6 +89,7 @@ export class LetterPhysicsSystem {
       isHeld: false,
       settled: false,
       consumed: false,
+      hasAnvilLanded: false,
     };
     this.letters.push(letter);
     return letter;
@@ -97,6 +105,14 @@ export class LetterPhysicsSystem {
    */
   update(dt, w, h) {
     const floorY = h - FLOOR_MARGIN;
+    const now = performance.now();
+    if (!this._anvilRectCache || now - this._anvilCacheTime > this._anvilCacheInterval) {
+      this._anvilRectCache = typeof window.getAnvilViewportRect === 'function'
+        ? window.getAnvilViewportRect()
+        : null;
+      this._anvilCacheTime = now;
+    }
+    const anvilRect = this._anvilRectCache;
     let hasActive = false;
     let hasMoving = false;
 
@@ -143,6 +159,36 @@ export class LetterPhysicsSystem {
         }
       }
 
+      // ── Anvil platform ──
+      if (anvilRect && l.vy >= 0) {
+        const withinX = l.x >= (anvilRect.left + HALF_W) && l.x <= (anvilRect.right - HALF_W);
+        const footY = l.y + HALF_H;
+        const nearTop = footY >= anvilRect.top && footY <= anvilRect.top + 18;
+        if (withinX && nearTop) {
+          l.y = anvilRect.top - HALF_H;
+          l.vx *= 0.82;
+
+          if (Math.abs(l.vy) <= 90) {
+            l.vy = 0;
+            l.vx *= 0.6;
+            if (Math.abs(l.vx) < MOBILE_STOP_VEL) {
+              l.vx = 0;
+              l.angularVel = 0;
+              l.settled = true;
+              l.angle = Math.round(l.angle / (Math.PI / 2)) * (Math.PI / 2);
+            }
+          } else {
+            l.vy = -l.vy * 0.18;
+            l.angularVel *= 0.75;
+          }
+
+          if (!l.hasAnvilLanded) {
+            l.hasAnvilLanded = true;
+            if (this.onAnvilClick) this.onAnvilClick(l.x, l.y);
+          }
+        }
+      }
+
       // ── Ceiling ──
       if (l.y - HALF_H < 0) {
         l.y = HALF_H;
@@ -171,8 +217,14 @@ export class LetterPhysicsSystem {
     this.hasActiveLetters = hasActive;
     this.hasMovingLetters = hasMoving;
 
-    // Purge consumed
-    this.letters = this.letters.filter(l => !l.consumed);
+    // Purge consumed (in-place to avoid allocating a new array every frame)
+    let writeIdx = 0;
+    for (let i = 0; i < this.letters.length; i++) {
+      if (!this.letters[i].consumed) {
+        this.letters[writeIdx++] = this.letters[i];
+      }
+    }
+    this.letters.length = writeIdx;
   }
 
   // ─── Mold-slot auto-fill ─────────────────────────────────
@@ -318,16 +370,22 @@ export class LetterPhysicsSystem {
 
       if (this._basketRef) {
         const basketRect = this._basketRef.getBoundingClientRect();
-        const basketStyles = getComputedStyle(this._basketRef);
-        const padLeft = parseFloat(basketStyles.paddingLeft) || 0;
-        const padRight = parseFloat(basketStyles.paddingRight) || 0;
-        const padTop = parseFloat(basketStyles.paddingTop) || 0;
-        const padBottom = parseFloat(basketStyles.paddingBottom) || 0;
+        // Cache computed padding to avoid forcing layout with getComputedStyle every refresh
+        if (!this._basketPadding) {
+          const basketStyles = getComputedStyle(this._basketRef);
+          this._basketPadding = {
+            left: parseFloat(basketStyles.paddingLeft) || 0,
+            right: parseFloat(basketStyles.paddingRight) || 0,
+            top: parseFloat(basketStyles.paddingTop) || 0,
+            bottom: parseFloat(basketStyles.paddingBottom) || 0,
+          };
+        }
+        const pad = this._basketPadding;
 
-        left = Math.max(left, basketRect.left + padLeft - margin);
-        right = Math.min(right, basketRect.right - padRight + margin);
-        top = Math.max(top, basketRect.top + padTop - margin);
-        bottom = Math.min(bottom, basketRect.bottom - padBottom + margin);
+        left = Math.max(left, basketRect.left + pad.left - margin);
+        right = Math.min(right, basketRect.right - pad.right + margin);
+        top = Math.max(top, basketRect.top + pad.top - margin);
+        bottom = Math.min(bottom, basketRect.bottom - pad.bottom + margin);
       }
 
       this._basketRectCache = { left, top, right, bottom };
@@ -408,6 +466,39 @@ export class LetterPhysicsSystem {
     }
   }
 
+  /**
+   * Return settled physics letters that are currently sitting on the anvil.
+   * Useful for word discovery checks during red-hot hits.
+   * @returns {Array<{id:number,char:string,x:number,y:number}>}
+   */
+  getAnvilLetters() {
+    const anvilRect = typeof window.getAnvilViewportRect === 'function'
+      ? window.getAnvilViewportRect()
+      : null;
+    if (!anvilRect) return [];
+
+    return this.letters
+      .filter((l) => {
+        if (l.consumed || l.isHeld) return false;
+        const onTopBand = (l.y + HALF_H) >= (anvilRect.top - 2) && (l.y + HALF_H) <= (anvilRect.top + 20);
+        const withinX = l.x >= anvilRect.left && l.x <= anvilRect.right;
+        return onTopBand && withinX;
+      })
+      .map((l) => ({ id: l.id, char: l.char, x: l.x, y: l.y }));
+  }
+
+  /**
+   * Consume physics letters by id.
+   * @param {number[]} ids
+   */
+  consumeLettersByIds(ids) {
+    if (!ids || !ids.length) return;
+    const idSet = new Set(ids);
+    this.letters.forEach((l) => {
+      if (idSet.has(l.id)) l.consumed = true;
+    });
+  }
+
   // ─── Render ──────────────────────────────────────────────
 
   /**
@@ -422,6 +513,13 @@ export class LetterPhysicsSystem {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
+    // Reuse a single gradient for all tiles (origin-relative, applied via translate)
+    if (!this._tileGradient) {
+      this._tileGradient = ctx.createLinearGradient(-tileW / 2, -tileH / 2, tileW / 2, tileH / 2);
+      this._tileGradient.addColorStop(0, '#0f0f10');
+      this._tileGradient.addColorStop(1, '#1b1b1d');
+    }
+
     for (const l of this.letters) {
       if (l.consumed) continue;
 
@@ -430,11 +528,8 @@ export class LetterPhysicsSystem {
       ctx.rotate(l.angle);
 
       // Tile background — match DOM basket tile visuals
-      const grad = ctx.createLinearGradient(-tileW / 2, -tileH / 2, tileW / 2, tileH / 2);
-      grad.addColorStop(0, '#0f0f10');
-      grad.addColorStop(1, '#1b1b1d');
       roundRect(ctx, -tileW / 2, -tileH / 2, tileW, tileH, 6);
-      ctx.fillStyle = grad;
+      ctx.fillStyle = this._tileGradient;
       ctx.fill();
 
       // Border: use basket gold color; on mobile keep previous behavior of skipping stroke for settled
@@ -454,7 +549,11 @@ export class LetterPhysicsSystem {
 
   /** Number of active (non-consumed) letters */
   get count() {
-    return this.letters.filter(l => !l.consumed).length;
+    let n = 0;
+    for (let i = 0; i < this.letters.length; i++) {
+      if (!this.letters[i].consumed) n++;
+    }
+    return n;
   }
 }
 

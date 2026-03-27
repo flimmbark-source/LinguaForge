@@ -8,6 +8,21 @@ import { gameState, addLetters } from './state.js?v=9';
 import { placeWordInVerse } from './grammar.js?v=9';
 import { spawnResourceGain } from './resourceGainFeedback.js?v=9';
 
+
+function isPointerBlockedByVerseBook(eventLike) {
+  const book = document.getElementById('magicBook');
+  if (!book) return false;
+  const style = getComputedStyle(book);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+  const target = eventLike?.target;
+  if (target?.closest && target.closest('#magicBook')) return true;
+
+  const client = eventLike?.touches?.[0] || eventLike;
+  if (!client || typeof client.clientX !== 'number' || typeof client.clientY !== 'number') return false;
+  const rect = book.getBoundingClientRect();
+  return client.clientX >= rect.left && client.clientX <= rect.right && client.clientY >= rect.top && client.clientY <= rect.bottom;
+}
 export class ChipSystem {
   constructor(canvas) {
     this.canvas = canvas;
@@ -113,7 +128,6 @@ export class ChipSystem {
     const screenY = canvasRect.top + moldTopY;
     spawnResourceGain(screenX, screenY, renownGained, 'renown');
 
-    console.log(`Chip created: "${word.text}" - Gained ${renownGained} renown (${word.length} letters × 2)`);
   }
 
   /**
@@ -305,7 +319,6 @@ export class ChipSystem {
       // If fully heated, set heat level
       if (chip.heatingProgress >= 1) {
         chip.heatLevel = 1;
-        console.log(`Chip "${chip.word.text}" fully heated - ready for verse!`);
         if (this.onChipHeated) {
           this.onChipHeated(chip);
         }
@@ -347,6 +360,7 @@ export class ChipSystem {
    * Handle pointer down
    */
   onPointerDown(e) {
+    if (isPointerBlockedByVerseBook(e)) return;
     const rect = this.canvas.getBoundingClientRect();
     const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
     const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
@@ -428,7 +442,6 @@ export class ChipSystem {
       // It was a click! Align chip to horizontal
       chip.angle = 0;
       chip.angularVel = 0;
-      console.log(`Chip "${chip.word.text}" aligned to horizontal`);
       this.isDragging = false;
       this.draggedChip = null;
       this.setScreenLocked(false);
@@ -470,7 +483,6 @@ export class ChipSystem {
           }
         } else {
           // Chip is not heated, bounce it back with feedback
-          console.log(`Chip "${chip.word.text}" must be heated before placing in verse!`);
           chip.vx = (Math.random() - 0.5) * 300;
           chip.vy = -200; // Bounce upward
           chip.angularVel = (Math.random() - 0.5) * 6;
@@ -597,7 +609,6 @@ export class ChipSystem {
       // Heat the chip to level 1
       if (chip.heatLevel < 1) {
         chip.heatLevel = 1;
-        console.log(`Chip "${chip.word.text}" heated to level 1 - ready for verse!`);
         if (this.onChipHeated) {
           this.onChipHeated(chip);
         }

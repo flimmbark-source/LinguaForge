@@ -12,6 +12,20 @@ let bookDragging = false;
 let bookOffsetX = 0;
 let bookOffsetY = 0;
 
+function ensureBookArtLoaded() {
+  const book = document.getElementById('magicBook');
+  if (!book || book.classList.contains('book-art-ready')) return;
+  book.classList.add('book-art-ready');
+}
+
+function setBookToggleState(toggleBtn, isOpen) {
+  if (!toggleBtn) return;
+  toggleBtn.textContent = isOpen ? '📕' : '📖';
+  toggleBtn.title = isOpen ? 'Close Book' : 'Open Book';
+  toggleBtn.classList.toggle('book-toggle-btn-open', isOpen);
+  toggleBtn.classList.toggle('book-toggle-btn-closed', !isOpen);
+}
+
 /** Check if we're on a mobile-sized screen */
 function isMobileScreen() {
   return window.innerWidth <= 768;
@@ -25,6 +39,7 @@ function showBookMobile() {
   const book = document.getElementById('magicBook');
   if (!book) return;
   book.style.display = '';
+  ensureBookArtLoaded();
   document.body.classList.add('book-overlay-active');
   // Always open the book interior on mobile
   book.classList.remove('closed');
@@ -61,20 +76,21 @@ export function initMagicBook() {
   const closeBtn = document.getElementById('bookCloseBtn');
   if (!book || !toggleBtn) return;
 
+    setBookToggleState(toggleBtn, book.classList.contains('open'));
+
   // Toggle open/close
   toggleBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     const isOpen = book.classList.contains('open');
+    ensureBookArtLoaded();
     if (isOpen) {
       book.classList.remove('open');
       book.classList.add('closed');
-      toggleBtn.textContent = '📖';
-      toggleBtn.title = 'Open Book';
+      setBookToggleState(toggleBtn, false);
     } else {
       book.classList.remove('closed');
       book.classList.add('open');
-      toggleBtn.textContent = '📕';
-      toggleBtn.title = 'Close Book';
+      setBookToggleState(toggleBtn, true);
     }
   });
 
@@ -132,12 +148,16 @@ function isInteractiveElement(el) {
   if (el.classList.contains('letter-board')) return true;
   if (el.classList.contains('line-word-chip')) return true;
   if (el.classList.contains('book-toggle-btn')) return true;
+  if (el.classList.contains('verse-orbit-chip')) return true;
+  if (el.classList.contains('word-bank-tab')) return true;
+  if (el.classList.contains('word-bank-word')) return true;
+  if (el.classList.contains('verse-action-btn')) return true;
   if (el.id === 'grammarHebrewLine') return true;
-  // Check if inside the letter-board area (verse drop zone)
   if (el.closest('#grammarHebrewLine')) return true;
   if (el.closest('.line-word-chip')) return true;
-  if (el.closest('.word-selector-container')) return true;
-  if (el.closest('.word-selector-actions')) return true;
+  if (el.closest('.word-bank-word')) return true;
+  if (el.closest('.word-bank-tab')) return true;
+  if (el.closest('.verse-action-btn')) return true;
   return false;
 }
 
@@ -217,6 +237,8 @@ let toolDragGhost = null;
 let toolDragSource = null;
 let toolDragStartX = 0;
 let toolDragStartY = 0;
+let toolDragActivated = false;
+let toolSelectedCallback = null;
 const MIN_DRAG_DISTANCE = 15; // px before treating as a real drag
 let sidebarRecenterListenerAdded = false;
 
@@ -248,6 +270,7 @@ function ensureSidebarRecenterListener() {
  * @param {Function} onToolPutAway - callback(toolName) when a tool is dropped back
  */
 export function initToolsSidebar(onToolSelected, onToolPutAway) {
+  toolSelectedCallback = onToolSelected || null;
   const sidebar = document.getElementById('toolsSidebar');
   if (!sidebar) return;
 
@@ -277,7 +300,7 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
 
   const slots = sidebar.querySelectorAll('.tool-slot');
   slots.forEach(slot => {
-    slot.addEventListener('mousedown', (e) => onToolSlotMouseDown(e, slot, onToolSelected));
+    slot.addEventListener('mousedown', (e) => onToolSlotMouseDown(e, slot));
     // Touch: drag-out support (mirrors mouse drag behavior)
     slot.addEventListener('touchstart', (e) => {
       if (slot.classList.contains('locked-hidden')) return;
@@ -287,7 +310,7 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
         clientY: touch.clientY,
         preventDefault: () => { if (e.cancelable) e.preventDefault(); },
         stopPropagation: () => e.stopPropagation()
-      }, slot, onToolSelected);
+      }, slot);
     }, { passive: false });
   });
 
@@ -309,7 +332,7 @@ export function initToolsSidebar(onToolSelected, onToolPutAway) {
   });
 }
 
-function onToolSlotMouseDown(e, slot, onToolSelected) {
+function onToolSlotMouseDown(e, slot) {
   if (slot.classList.contains('locked-hidden')) return;
   e.preventDefault();
 
@@ -317,6 +340,7 @@ function onToolSlotMouseDown(e, slot, onToolSelected) {
   toolDragSource = slot;
   toolDragStartX = e.clientX;
   toolDragStartY = e.clientY;
+  toolDragActivated = false;
 
   // Don't show ghost or dragging-out state yet — wait until mouse moves enough
   // (handled in onToolSlotMouseMove)
@@ -329,31 +353,48 @@ function onToolSlotMouseMove(e) {
   const dy = e.clientY - toolDragStartY;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  // Create ghost once we've moved past the threshold
-  if (!toolDragGhost && dist >= MIN_DRAG_DISTANCE) {
+  // Once drag threshold is crossed, immediately spawn/pull out the real tool.
+  if (!toolDragActivated && dist >= MIN_DRAG_DISTANCE) {
+    toolDragActivated = true;
     toolDragSource.classList.add('dragging-out');
 
     // Pin the sidebar open so the user can drop back into it
     const sidebar = document.getElementById('toolsSidebar');
     if (sidebar) sidebar.classList.add('pinned');
 
-    toolDragGhost = document.createElement('div');
-    toolDragGhost.className = 'tool-drag-ghost';
-    const icon = toolDragSource.querySelector('.tool-slot-icon');
-    if (icon) {
-      toolDragGhost.appendChild(icon.cloneNode(true));
-    }
-    document.body.appendChild(toolDragGhost);
+    activateTool(toolDragSource.dataset.tool, e, toolSelectedCallback);
   }
 
-  if (toolDragGhost) {
-    toolDragGhost.style.left = e.clientX + 'px';
-    toolDragGhost.style.top = e.clientY + 'px';
+  if (toolDragActivated && toolSelectedCallback) {
+    toolSelectedCallback(toolDragSource.dataset.tool, e.clientX, e.clientY);
+  }
+
+  if (toolDragActivated && toolDragSource.dataset.tool === 'book') {
+    moveBookToPointer(e.clientX, e.clientY);
   }
 }
 
+function moveBookToPointer(clientX, clientY) {
+  const book = document.getElementById('magicBook');
+  if (!book || isMobileScreen()) return;
+
+  book.style.display = '';
+  ensureBookArtLoaded();
+  book.classList.remove('open');
+  book.classList.add('closed');
+  book.style.transform = 'none';
+  book.style.left = (clientX - 90) + 'px';
+  book.style.top = (clientY - 120) + 'px';
+
+  const btn = document.getElementById('bookToggleBtn');
+  if (btn) {
+  setBookToggleState(btn, false);
+  }
+}
+
+
+
 function putToolAway(tool, source, onToolPutAway) {
-  console.log('putToolAway called for:', tool);
   if (tool === 'book') {
     if (isMobileScreen()) {
       hideBookMobile();
@@ -363,6 +404,7 @@ function putToolAway(tool, source, onToolPutAway) {
         book.style.display = 'none';
       }
     }
+    if (source) source.classList.remove('active');
   } else {
     if (onToolPutAway) onToolPutAway(tool);
     if (source) source.classList.remove('active');
@@ -373,7 +415,7 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
   if (!toolDragging) return;
   toolDragging = false;
 
-  const wasDragged = toolDragGhost !== null; // ghost only exists after threshold
+  const wasDragged = toolDragActivated;
 
   // Check drop zone BEFORE unpinning (so bounding rect is still fully visible)
   const sidebar = document.getElementById('toolsSidebar');
@@ -391,12 +433,6 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
   // Unpin the sidebar
   if (sidebar) sidebar.classList.remove('pinned');
 
-  // Remove ghost
-  if (toolDragGhost) {
-    toolDragGhost.remove();
-    toolDragGhost = null;
-  }
-
   if (!toolDragSource) return;
 
   const tool = toolDragSource.dataset.tool;
@@ -406,23 +442,20 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
     // Click (no real drag) — toggle: if already active, put it away; otherwise activate
     const isActive = toolDragSource.classList.contains('active') ||
       (tool === 'book' && document.getElementById('magicBook')?.style.display !== 'none');
-    console.log('Sidebar click on', tool, '| isActive:', isActive, '| hasActiveClass:', toolDragSource.classList.contains('active'));
     if (isActive) {
       putToolAway(tool, toolDragSource, onToolPutAway);
     } else {
       activateTool(tool, e, onToolSelected);
     }
   } else if (!droppedInSidebar) {
-    // Dragged out of sidebar — activate at drop location
-    console.log('Sidebar drag-out for', tool);
-    activateTool(tool, e, onToolSelected);
+    // Dragged out of sidebar — tool already active and being moved.
   } else {
     // Dragged back into sidebar — put it away
-    console.log('Sidebar drag-back for', tool);
     putToolAway(tool, toolDragSource, onToolPutAway);
   }
 
   toolDragSource = null;
+  toolDragActivated = false;
 }
 
 /**
@@ -430,36 +463,21 @@ function onToolSlotMouseUp(e, onToolSelected, onToolPutAway) {
  */
 function activateTool(tool, e, onToolSelected) {
   if (tool === 'book') {
-    const book = document.getElementById('magicBook');
-    if (book && book.style.display === 'none') {
-      if (isMobileScreen()) {
-        showBookMobile();
-      } else {
-        book.style.display = '';
-        book.classList.remove('open');
-        book.classList.add('closed');
-        book.style.transform = 'none';
-        book.style.left = (e.clientX - 90) + 'px';
-        book.style.top = (e.clientY - 120) + 'px';
-        const btn = document.getElementById('bookToggleBtn');
-        if (btn) {
-          btn.textContent = '📖';
-          btn.title = 'Open Book';
-        }
-      }
+        if (isMobileScreen()) {
+      showBookMobile();
+    } else {
+      moveBookToPointer(e.clientX, e.clientY);
+      const bookSlot = document.querySelector('.tool-slot[data-tool="book"]');
+      if (bookSlot) bookSlot.classList.add('active');
     }
   } else {
     if (onToolSelected) onToolSelected(tool, e.clientX, e.clientY);
 
     // Update active states on sidebar slots
-    const allSlots = document.querySelectorAll('.tool-slot[data-tool]');
-    allSlots.forEach(s => {
-      if (s.dataset.tool === tool && s.dataset.tool !== 'book') {
-        s.classList.add('active');
-      } else if (s.dataset.tool !== 'book') {
-        s.classList.remove('active');
-      }
-    });
+    const slot = document.querySelector(`.tool-slot[data-tool="${tool}"]`);
+    if (slot && slot.dataset.tool !== 'book') {
+      slot.classList.add('active');
+    }
   }
 }
 

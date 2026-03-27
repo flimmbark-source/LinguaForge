@@ -75,7 +75,16 @@ export function placeWordInVerse(wordId, insertIndex) {
   if (!word) return false;
 
   const instanceId = 'vw-' + Date.now() + '-' + Math.random();
-  addVerseWord({ instanceId, hebrew: word.text }, insertIndex);
+
+  // Phase 2 placeholder flow: when an explicit slot placeholder exists,
+  // replace it in-place instead of inserting and shifting the line.
+  const target = gameState.verseWords[insertIndex];
+  if (target && target.isPlaceholder) {
+    gameState.verseWords.splice(insertIndex, 1, { instanceId, hebrew: word.text });
+  } else {
+    addVerseWord({ instanceId, hebrew: word.text }, insertIndex);
+  }
+
   removeWord(wordId);
   return true;
 }
@@ -102,13 +111,62 @@ export function completeVerse() {
   return true;
 }
 
+
+/**
+ * Check if a selected sequence exactly matches the target verse.
+ * @param {string[]} selectedWords - Hebrew words selected by player
+ * @returns {boolean}
+ */
+export function isSelectedVerseCorrect(selectedWords) {
+  if (!Array.isArray(selectedWords)) return false;
+  if (selectedWords.length !== SOLUTION_HEBREW_ORDER.length) return false;
+  return SOLUTION_HEBREW_ORDER.every((h, i) => selectedWords[i] === h);
+}
+
+/**
+ * Complete verse from glossary selection flow.
+ * @param {string[]} selectedWords
+ * @returns {boolean} True when completion succeeded
+ */
+export function completeSelectedVerse(selectedWords) {
+  if (!isSelectedVerseCorrect(selectedWords)) return false;
+
+  addInk(VERSE_COMPLETION_REWARD);
+  incrementLinesCompleted();
+  clearVerseWords();
+  return true;
+}
+
+/**
+ * Get the viewport origin of the containing block for position:fixed elements
+ * inside the magic book. Normally fixed positioning is relative to the viewport,
+ * but CSS `transform` (portrait: translateX(-50%)) and `backdrop-filter`
+ * (landscape) on .magic-book create a new containing block. We subtract this
+ * offset so that `left = e.clientX - origin.x` maps back to the correct
+ * on-screen position.
+ * @returns {{ x: number, y: number }}
+ */
+function getFixedContainingBlockOrigin() {
+  const book = document.getElementById('magicBook');
+  if (!book) return { x: 0, y: 0 };
+  const style = getComputedStyle(book);
+  const hasTransform = style.transform !== 'none';
+  const hasBackdropFilter = style.backdropFilter && style.backdropFilter !== 'none';
+  if (hasTransform || hasBackdropFilter) {
+    const rect = book.getBoundingClientRect();
+    return { x: rect.left, y: rect.top };
+  }
+  return { x: 0, y: 0 };
+}
+
 /**
  * Setup pointer-based drag for verse word chips (more reliable than HTML5 drag-and-drop)
  * @param {HTMLElement} chip - Word chip element
  * @param {string} instanceId - Instance ID of the verse word
  * @param {Function} onUpdate - Callback when verse is updated
+ * @param {Function} onExtract - Callback when chip is dropped outside verse line
  */
-export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
+export function setupVerseWordChipDrag(chip, instanceId, onUpdate, onExtract) {
   let dragState = null;
 
   chip.addEventListener('pointerdown', e => {
@@ -117,34 +175,50 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
 
     // Create placeholder element
     const placeholder = document.createElement('div');
-    placeholder.className = 'line-word-chip-placeholder';
+    placeholder.className = 'line-word-chip line-word-chip-placeholder';
+    placeholder.textContent = chip.textContent || '';
+    placeholder.setAttribute('aria-hidden', 'true');;
     placeholder.style.width = rect.width + 'px';
     placeholder.style.height = rect.height + 'px';
-    placeholder.style.opacity = '0.3';
-    placeholder.style.border = '2px dashed #666';
-    placeholder.style.background = 'transparent';
+    placeholder.style.opacity = '0.4';
     placeholder.style.boxSizing = 'border-box';
+
+    // Snapshot the containing-block origin at drag start. .magic-book has
+    // transform: translateX(-50%) in portrait and backdrop-filter in landscape,
+    // both of which make it the containing block for position:fixed children.
+    // We subtract that origin so the chip tracks the pointer in viewport space.
+    const origin = getFixedContainingBlockOrigin();
 
     dragState = {
       chip,
       instanceId,
       pointerId: e.pointerId,
-      offsetX: e.clientX - rect.left,
-      offsetY: e.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
       startX: e.clientX,
       startY: e.clientY,
       placeholder,
+      lastClientX: e.clientX,
+      lastClientY: e.clientY,
+      origin,
+      pointerOffsetX: e.clientX - rect.left,
+      pointerOffsetY: e.clientY - rect.top,
+      originalParent: chip.parentElement,
+      originalNextSibling: chip.nextSibling,
     };
 
     // Insert placeholder at current position
     chip.parentElement.insertBefore(placeholder, chip);
 
-    // Make chip draggable
+    // Make chip draggable — position in containing-block coordinates so the
+    // chip appears directly under the pointer (combined with CSS translate(-50%,-50%)).
+    document.body.appendChild(chip);
+    chip.classList.add('dragging-out');
     chip.style.position = 'fixed';
-    chip.style.left = rect.left + 'px';
-    chip.style.top = rect.top + 'px';
-    chip.style.zIndex = '1000';
-    chip.style.opacity = '0.8';
+    chip.style.left = (e.clientX - dragState.pointerOffsetX - origin.x) + 'px';
+    chip.style.top = (e.clientY - dragState.pointerOffsetY - origin.y) + 'px';
+    chip.style.zIndex = '1300';
+    chip.style.opacity = '0.95';
     chip.setPointerCapture(e.pointerId);
 
     gameState.draggedVerseInstanceId = instanceId;
@@ -153,11 +227,11 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
   chip.addEventListener('pointermove', e => {
     if (!dragState || dragState.chip !== chip) return;
     e.preventDefault();
-    const x = e.clientX - dragState.offsetX;
-    const y = e.clientY - dragState.offsetY;
-    chip.style.left = x + 'px';
-    chip.style.top = y + 'px';
-
+    dragState.lastClientX = e.clientX;
+    dragState.lastClientY = e.clientY;
+    const { origin, pointerOffsetX, pointerOffsetY } = dragState;
+    chip.style.left = (e.clientX - pointerOffsetX - origin.x) + 'px';
+    chip.style.top = (e.clientY - pointerOffsetY - origin.y) + 'px';
     // Update placeholder position based on where drop would occur
     updatePlaceholderPosition(e.clientX, e.clientY, instanceId, dragState.placeholder);
   });
@@ -166,13 +240,18 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     if (!dragState || dragState.chip !== chip) return;
     chip.releasePointerCapture(e.pointerId);
 
+    const dropX = Number.isFinite(e.clientX) && e.clientX > 0 ? e.clientX : dragState.lastClientX;
+    const dropY = Number.isFinite(e.clientY) && e.clientY > 0 ? e.clientY : dragState.lastClientY;
+
     // Check if we moved significantly (to distinguish from clicks)
-    const moved = Math.abs(e.clientX - dragState.startX) > 5 || Math.abs(e.clientY - dragState.startY) > 5;
+    const moved = Math.abs(dropX - dragState.startX) > 5 || Math.abs(dropY - dragState.startY) > 5;
 
     if (moved) {
-      // Calculate insertion index BEFORE resetting styling
-      // This ensures we query chip positions while the dragged chip is still out of flow
-      handleVerseWordDrop(e.clientX, e.clientY, instanceId, onUpdate);
+      chip.style.visibility = 'hidden';
+      const droppedInLine = handleVerseWordDrop(dropX, dropY, instanceId, onUpdate);
+      if (!droppedInLine && onExtract) {
+        onExtract(instanceId, dropX, dropY);
+      }
     }
 
     // Remove placeholder
@@ -181,15 +260,29 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     }
 
     // Reset chip styling after reordering
+    chip.classList.remove('dragging-out');
     chip.style.position = '';
     chip.style.left = '';
     chip.style.top = '';
+    chip.style.transform = '';
     chip.style.zIndex = '';
     chip.style.opacity = '';
 
     if (!moved) {
+      if (dragState.placeholder && dragState.placeholder.parentElement) {
+        dragState.placeholder.parentElement.insertBefore(chip, dragState.placeholder);
+      } else if (dragState.originalParent) {
+        dragState.originalParent.insertBefore(chip, dragState.originalNextSibling);
+      }
+      chip.style.visibility = '';
       // Just a click, not a drag - still update UI
       if (onUpdate) onUpdate();
+
+      // Pointer-based drag suppresses the normal click event in some browsers.
+      // Re-dispatch a click on the verse line so clicking a chip in a solved line
+      // still triggers enscribe behavior.
+      const verseLine = document.getElementById('grammarHebrewLine');
+      verseLine?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     }
 
     gameState.draggedVerseInstanceId = null;
@@ -206,11 +299,20 @@ export function setupVerseWordChipDrag(chip, instanceId, onUpdate) {
     }
 
     // Reset chip styling
+    chip.classList.remove('dragging-out');
     chip.style.position = '';
     chip.style.left = '';
     chip.style.top = '';
+    chip.style.transform = '';
     chip.style.zIndex = '';
     chip.style.opacity = '';
+    chip.style.visibility = '';
+
+    if (dragState.placeholder && dragState.placeholder.parentElement) {
+      dragState.placeholder.parentElement.insertBefore(chip, dragState.placeholder);
+    } else if (dragState.originalParent) {
+      dragState.originalParent.insertBefore(chip, dragState.originalNextSibling);
+    }
 
     gameState.draggedVerseInstanceId = null;
     dragState = null;
@@ -287,7 +389,11 @@ function updatePlaceholderPosition(clientX, clientY, instanceId, placeholder) {
  */
 export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
   const verseArea = document.getElementById('grammarHebrewLine');
-  if (!verseArea) return;
+  if (!verseArea) return false;
+
+  const lineRect = verseArea.getBoundingClientRect();
+  const isOverLine = clientX >= lineRect.left && clientX <= lineRect.right && clientY >= lineRect.top && clientY <= lineRect.bottom;
+  if (!isOverLine) return false;
 
   const isRTL = getComputedStyle(verseArea).direction === 'rtl';
   const chips = Array.from(verseArea.children).filter(el =>
@@ -340,6 +446,7 @@ export function handleVerseWordDrop(clientX, clientY, instanceId, onUpdate) {
 
   reorderWord(instanceId, stateIndex);
   if (onUpdate) onUpdate();
+  return true;
 }
 
 /**

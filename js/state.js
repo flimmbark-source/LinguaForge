@@ -13,6 +13,7 @@ export const gameState = {
   letters: 0,
   ink: 0,
   lettersPerClick: 1,
+  hammerHitBonusLetters: 0,
 
   // Words (player inventory)
   words: [],
@@ -41,11 +42,20 @@ export const gameState = {
   // Completed lines counter
   linesCompleted: 0,
 
-  // Glossary: all unique words ever forged (for glossary pages)
+  // Word history and Verse Book workspace state
   forgedWordsHistory: [],
+  parkedWordIds: [],
+  wordContainerPositions: {},
+  verseFailedAttempts: 0,
+  verseLastScore: 0,
+  verseLastTriedSignature: '',
 
-  // Word selector index for verse page
+  // Legacy selector/book state
   wordSelectorIndex: 0,
+  enscribeModeActive: false,
+  enscribeSelectedWords: [],
+  glossarySpreadIndex: 0,
+
 
   // Upgrades
   upgrades: {},
@@ -65,7 +75,7 @@ export const gameState = {
   lettersPerRedHot: 4,
   scribeLettersPerInk: 5,
   inkPerChurn: 1,
-  ripSpeedThreshold: 3400, // Base threshold for hammer rip
+  ripSpeedThreshold: 4000, // Base threshold for hammer rip
   spinRetentionThreshold: 5, // rad/s - threshold for spin retention when hitting ground/anvil
   fastHeatLevel: 0, // Level of Fast Heat upgrade (reduces heating time)
   powerSwingMultiplier: 1, // Multiplier for angular velocity during swings (Power Swing upgrade)

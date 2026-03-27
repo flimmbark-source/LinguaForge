@@ -4,11 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RuneHearth</title>
-  <link rel="stylesheet" href="css/styles.css?v=9" />
+  <link rel="preload" href="Public/Hammer.png" as="image" fetchpriority="high" />
+  <link rel="preload" href="Public/VersebookClosed.png" as="image" fetchpriority="high" />
+  <link rel="preload" href="Public/Versebook.png" as="image" fetchpriority="high" />
+  <link rel="stylesheet" href="css/styles.css?v=11" />
 </head>
 <body>
   
-<!-- MAGIC BOOK: GLOSSARY & VERSE (draggable, toggleable) -->
+<!-- MAGIC BOOK: VERSE EXPERIENCE (draggable, toggleable) -->
   <div id="magicBook" class="magic-book open" style="display:none;">
     <button id="bookToggleBtn" class="book-toggle-btn" title="Open/Close Book">📖</button>
     <button id="bookCloseBtn" class="book-close-btn" title="Close Book">✕</button>
@@ -21,50 +24,136 @@
         <div class="book-cover-ornament">✦</div>
       </div>
     </div>
+    <!-- Sparkle particles around the book -->
+    <div class="book-sparkles" aria-hidden="true">
+      <span class="book-sparkle s1"></span>
+      <span class="book-sparkle s2"></span>
+      <span class="book-sparkle s3"></span>
+      <span class="book-sparkle s4"></span>
+      <span class="book-sparkle s5"></span>
+      <span class="book-sparkle s6"></span>
+      <span class="book-sparkle s7"></span>
+      <span class="book-sparkle s8"></span>
+    </div>
     <!-- Book interior (shown when open) -->
-    <div class="book-interior">
+    <div class="book-interior verse-book-interior">
+      <div class="book-edge book-edge-left"></div>
       <div class="book-spine"></div>
 
-      <!-- GLOSSARY PAGE (left page) -->
-      <div class="book-page book-page-left" id="glossaryPage">
-        <div class="book-page-header">Glossary</div>
-        <div class="book-page-content">
-          <div id="glossaryEntries" class="glossary-entries">
-            <div class="glossary-empty" style="opacity:0.6; font-size:12px;">No words forged yet.</div>
+      <!-- LEFT PAGE: Target Verse & Construction -->
+      <div class="book-page book-page-left verse-page" id="versePageLeft">
+        <div class="book-page-inner">
+          <div class="page-ornate-border">
+            <div class="ornate-corner ornate-corner-tl"></div>
+            <div class="ornate-corner ornate-corner-tr"></div>
+            <div class="ornate-corner ornate-corner-bl"></div>
+            <div class="ornate-corner ornate-corner-br"></div>
           </div>
-        </div>
-      </div>
-
-      <!-- VERSE PAGE (right page) -->
-      <div class="book-page book-page-right" id="versePage">
-        <div class="book-page-header">Assembly</div>
-        <div class="book-page-content">
-          <div style="font-size:12px; opacity:0.8;">Verse</div>
-          <div id="grammarNatural" style="font-size:14px; font-weight:600; min-height:20px;"></div>
-          <div id="grammarScore" style="font-size:11px; opacity:0.7; margin-top:4px;"></div>
-          <div id="grammarHebrewLine" class="letter-board"></div>
-
-          <!-- Word Selector -->
-          <div id="wordSelectorContainer" class="word-selector-container">
-            <button id="wordSelectorPrev" class="word-selector-arrow" title="Previous word">&#9664;</button>
-            <div id="wordSelectorDisplay" class="word-selector-display">
-              <span class="word-selector-empty">No words available</span>
+          <div class="book-page-content verse-page-content">
+            <div class="verse-target-header">
+              <span class="verse-target-ornament">&#x2726;</span>
+              <span class="verse-target-label">TARGET VERSE</span>
+              <span class="verse-target-ornament">&#x2726;</span>
             </div>
-            <button id="wordSelectorNext" class="word-selector-arrow" title="Next word">&#9654;</button>
-          </div>
-          <div class="word-selector-actions">
-            <button id="wordSelectorEnterBtn" class="word-selector-enter-btn" disabled>Enter Word</button>
-            <button id="wordSelectorEraseBtn" class="word-selector-erase-btn">Erase</button>
-          </div>
-
-          <div class="row" style="margin-top:10px;">
-            <button id="enscribeBtn" disabled>Enscribe Line</button>
-            <span class="pill">Lines completed: <span id="linesCompleted">0</span></span>
+            <div id="grammarNatural" class="verse-intent-line"></div>
+            <div class="verse-construct-area">
+              <div class="verse-entry-container">
+                <div id="grammarHebrewLine" class="letter-board verse-line" aria-label="Verse line"></div>
+              </div>
+              <div class="verse-construct-hint">Construct the verse using discovered words.</div>
+            </div>
+            <div class="verse-seal" aria-hidden="true">
+              <svg viewBox="0 0 80 80" class="verse-seal-svg">
+                <circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+                <circle cx="40" cy="40" r="30" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.2"/>
+                <path d="M40 10 L40 70 M10 40 L70 40" stroke="currentColor" stroke-width="0.6" opacity="0.15"/>
+                <path d="M18 18 L62 62 M62 18 L18 62" stroke="currentColor" stroke-width="0.4" opacity="0.1"/>
+                <circle cx="40" cy="40" r="12" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.2"/>
+                <circle cx="40" cy="40" r="4" fill="currentColor" opacity="0.1"/>
+              </svg>
+            </div>
+            <div class="verse-progress-row">
+              <div class="verse-meter-track" aria-hidden="true">
+                <div id="verseMeterFill" class="verse-meter-fill"></div>
+              </div>
+              <div id="verseCompletionLabel" class="verse-completion-label">VERSE COMPLETION: <span id="verseCompletionCount">0</span> / <span id="verseCompletionTotal">7</span></div>
+            </div>
+            <div class="verse-action-buttons">
+              <button id="verseUndoBtn" class="verse-action-btn" type="button" title="Undo last word">
+                <span class="verse-action-icon">&#x21B6;</span>
+                <span>Undo</span>
+              </button>
+              <button id="verseResetBtn" class="verse-action-btn" type="button" aria-label="Clear all words" title="Clear all words">
+                <span class="verse-action-icon">&#x2715;</span>
+                <span>Clear</span>
+              </button>
+              <button id="verseHintBtn" class="verse-action-btn" type="button" title="Get a hint">
+                <span class="verse-action-icon">&#x1F4A1;</span>
+                <span>Hint</span>
+              </button>
+            </div>
+            <div id="verseHint" class="verse-hint" aria-live="polite"></div>
+            <div id="verseTranslationReveal" class="verse-translation-reveal"></div>
           </div>
         </div>
       </div>
+
+      <!-- RIGHT PAGE: Word Bank -->
+      <div class="book-page book-page-right verse-page" id="versePageRight">
+        <div class="book-page-inner">
+          <div class="page-ornate-border">
+            <div class="ornate-corner ornate-corner-tl"></div>
+            <div class="ornate-corner ornate-corner-tr"></div>
+            <div class="ornate-corner ornate-corner-bl"></div>
+            <div class="ornate-corner ornate-corner-br"></div>
+          </div>
+          <div class="book-page-content verse-page-content">
+            <div class="word-bank-tabs" role="tablist">
+              <button class="word-bank-tab active" data-filter="all" role="tab" aria-selected="true">ALL</button>
+              <button class="word-bank-tab" data-filter="verb" role="tab">VERBS</button>
+              <button class="word-bank-tab" data-filter="noun" role="tab">NOUNS</button>
+              <button class="word-bank-tab" data-filter="prefix" role="tab">PREFIXES</button>
+            </div>
+            <div id="verseWordOrbit" class="verse-word-bank" aria-label="Word bank">
+              <div class="word-bank-category" data-category="verb">
+                <div class="word-bank-category-header">
+                  <span class="category-icon category-icon-verb"></span>
+                  <span>VERBS</span>
+                </div>
+                <div class="word-bank-category-words" data-zone="verbZone"></div>
+              </div>
+              <div class="word-bank-category" data-category="noun">
+                <div class="word-bank-category-header">
+                  <span class="category-icon category-icon-noun"></span>
+                  <span>NOUNS</span>
+                </div>
+                <div class="word-bank-category-words" data-zone="nounZone"></div>
+              </div>
+              <div class="word-bank-category" data-category="prefix">
+                <div class="word-bank-category-header">
+                  <span class="category-icon category-icon-prefix"></span>
+                  <span>PREFIXES</span>
+                </div>
+                <div class="word-bank-category-words" data-zone="particlePrefixZone"></div>
+              </div>
+              <div class="word-bank-empty">Discovered words appear here.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="book-edge book-edge-right"></div>
     </div>
   </div>
+
+  <div id="wordInfoSheet" class="word-info-sheet" aria-hidden="true">
+    <div id="wordInfoCard" class="word-info-sheet-card" role="dialog" aria-live="polite">
+      <div id="wordInfoHebrew" class="word-info-hebrew"></div>
+      <div id="wordInfoTranslit" class="word-info-translit"></div>
+      <div id="wordInfoMeaning" class="word-info-meaning"></div>
+      <div id="wordInfoExample" class="word-info-example"></div>
+    </div>
+  </div>
+
 
   <!-- Hidden elements for backward compat (grammar evaluation still uses these) -->
   <div style="display:none;">
@@ -84,6 +173,10 @@
         <div class="tool-slot-icon">🔨</div>
         <div class="tool-slot-label">Hammer</div>
       </div>
+      <div class="tool-slot" data-tool="spyglass" id="toolSlotSpyglass">
+        <div class="tool-slot-icon">🔍</div>
+        <div class="tool-slot-label">Spyglass</div>
+      </div>
       <div class="tool-slot locked-hidden" data-tool="pestle" id="toolSlotPestle">
         <div class="tool-slot-icon">🥄</div>
         <div class="tool-slot-label">Pestle</div>
@@ -98,6 +191,7 @@
   <!-- Hidden original tool buttons for JS compatibility -->
   <div style="display:none;">
     <button id="selectHammer" class="tool-button active" data-tool="hammer"></button>
+    <button id="selectSpyglass" class="tool-button" data-tool="spyglass"></button>
     <button id="selectPestle" class="tool-button locked-hidden" data-tool="pestle"></button>
     <button id="selectShovel" class="tool-button locked-hidden" data-tool="shovel"></button>
   </div>
@@ -140,6 +234,7 @@
   <button id="audioToggleBtn" class="audio-toggle-btn" title="Audio controls">
     <span class="audio-toggle-icon">&#x1F50A;</span>
   </button>
+  <div id="audioControlsBackdrop" class="audio-controls-backdrop hidden" aria-hidden="true"></div>
   <div id="audioControls" class="audio-controls-panel hidden" aria-label="Audio controls">
     <div class="audio-controls-title">Audio</div>
     <label class="audio-controls-row">
@@ -173,7 +268,20 @@
         <div class="hearth-opening">
           <div class="hearth-back-wall"></div>
           <div id="hearthFire" class="hearth-fire"></div>
+          <div id="hearthBreath" class="hearth-breath" aria-hidden="true">
+            <span class="hearth-steam puff-1"></span>
+            <span class="hearth-steam puff-2"></span>
+            <span class="hearth-steam puff-3"></span>
+          </div>
           <div class="hearth-floor"></div>
+        </div>
+        <!-- Steam plume rising above the fire -->
+        <div id="hearthSteamPlume" class="hearth-steam-plume" aria-hidden="true">
+          <span class="steam-wisp wisp-1"></span>
+          <span class="steam-wisp wisp-2"></span>
+          <span class="steam-wisp wisp-3"></span>
+          <span class="steam-wisp wisp-4"></span>
+          <span class="steam-wisp wisp-5"></span>
         </div>
       </div>
 
@@ -182,20 +290,6 @@
     </div>
 
   </div>
-
-<!-- FLOATING MOLD VIEWPORT -->
-<div class="mold-viewport-wrapper">
-  <div class="mold-sidebar-tab">Molds</div>
-  <div class="section mold-panel">
-    <h2 style="margin-bottom:6px;"></h2>
-    <div class="mold-viewport">
-      <button id="prevMoldBtn" class="secondary" aria-label="Previous mold">&lt;</button>
-      <div id="moldList" class="mold-list"></div>
-      <button id="nextMoldBtn" class="secondary" aria-label="Next mold">&gt;</button>
-    </div>
-    <div id="moldIndexLabel" class="mold-index-label">1 / 1</div>
-  </div>
-</div>
 
   <!-- LETTER BASKET (FIXED AT BOTTOM LEFT) -->
   <div class="letter-basket">
@@ -231,6 +325,39 @@
       </div>
     </div>
   </div>
+
+  <!-- Background-anchored world elements -->
+  <div id="anvilGlyph" class="anvil-glyph" aria-hidden="true">
+    <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" class="glyph-svg">
+      <defs>
+        <filter id="glyphGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      <!-- Embossed outline matching anvil face color -->
+      <circle cx="30" cy="30" r="24" fill="none" stroke="#78716c" stroke-width="3" opacity="0.8"/>
+      <circle cx="30" cy="30" r="21" fill="none" stroke="#57534e" stroke-width="1.5" opacity="0.6"/>
+      <!-- Inner arcane glyph lines -->
+      <g class="glyph-inner" filter="url(#glyphGlow)">
+        <circle cx="30" cy="30" r="16" fill="none" stroke="#4da6ff" stroke-width="1.2" opacity="0.9"/>
+        <path d="M30 14 L30 46 M14 30 L46 30" stroke="#4da6ff" stroke-width="1" opacity="0.7"/>
+        <path d="M20 20 L40 40 M40 20 L20 40" stroke="#4da6ff" stroke-width="0.8" opacity="0.6"/>
+        <circle cx="30" cy="30" r="8" fill="none" stroke="#6bb8ff" stroke-width="1" opacity="0.8"/>
+        <circle cx="30" cy="30" r="3" fill="#4da6ff" opacity="0.6"/>
+        <!-- Rune marks -->
+        <path d="M22 16 L26 22 M38 16 L34 22" stroke="#6bb8ff" stroke-width="0.8" opacity="0.7"/>
+        <path d="M22 44 L26 38 M38 44 L34 38" stroke="#6bb8ff" stroke-width="0.8" opacity="0.7"/>
+        <path d="M16 22 L22 26 M16 38 L22 34" stroke="#6bb8ff" stroke-width="0.8" opacity="0.7"/>
+        <path d="M44 22 L38 26 M44 38 L38 34" stroke="#6bb8ff" stroke-width="0.8" opacity="0.7"/>
+      </g>
+    </svg>
+  </div>
+  <div id="bucketFirst" class="world-bucket" data-verse-word="ראשונה"></div>
+  <div id="bucketSecond" class="world-bucket" data-verse-word="שנייה"></div>
 
   <!-- Load JavaScript modules -->
   <script type="module" src="js/app.js?v=9"></script>

@@ -20,6 +20,11 @@ export const hearthState = {
 let lastForgeEnabledState = null;
 let hearthSparkContainer = null;
 
+// Cached DOM refs for updateHearthVisuals to avoid getElementById every frame
+let _cachedHearthDiv = null;
+let _cachedFireDiv = null;
+let _cachedBreathDiv = null;
+
 function getHearthSparkContainer() {
   if (hearthSparkContainer && hearthSparkContainer.isConnected) {
     return hearthSparkContainer;
@@ -104,7 +109,6 @@ export function spawnHearthSpark(x, y, burstCount = 4) {
 export function heatHearth(letterCount = 1) {
   // Check if hearth is unlocked and turned on
   if (!gameState.hearthUnlocked || !gameState.hearthTurnedon) {
-    console.log('Hearth is locked. Purchase the hearth upgrade to use it!');
     return;
   }
 
@@ -132,7 +136,6 @@ export function heatHearth(letterCount = 1) {
   hearthState.isHeated = true;
   playHearthIgnite();
 
-  console.log(`Hearth heated! Level ${hearthState.hearthLevel} (${hearthState.totalLettersConsumed} letters consumed)`);
 
   updateHearthVisuals();
 }
@@ -141,6 +144,10 @@ export function heatHearth(letterCount = 1) {
  * Update hearth state (called every frame)
  * @param {number} dt - Delta time in seconds
  */
+// Throttle hearth visual updates to avoid per-frame DOM writes
+let _hearthVisualAcc = 0;
+const HEARTH_VISUAL_INTERVAL = 0.15; // Update visuals ~7 times/sec instead of 60
+
 export function updateHearth(dt) {
   const forgeEnabled = gameState.hearthUnlocked;
 
@@ -158,15 +165,20 @@ export function updateHearth(dt) {
     const consumptionMultiplier = 1 + ((hearthState.hearthLevel - 1) * 0.5);
     hearthState.heatTimer = Math.max(0, hearthState.heatTimer - (dt * consumptionMultiplier));
 
-    if (hearthState.heatTimer <= 0) {
+    const justExpired = hearthState.heatTimer <= 0;
+    if (justExpired) {
       hearthState.isHeated = false;
       hearthState.maxHeatTime = 0;
       hearthState.hearthLevel = 0;
       hearthState.totalLettersConsumed = 0;
-      console.log('Hearth has gone out and cooled down.');
     }
 
-    updateHearthVisuals();
+    // Throttle visual updates unless the hearth just expired (need immediate feedback)
+    _hearthVisualAcc += dt;
+    if (justExpired || _hearthVisualAcc >= HEARTH_VISUAL_INTERVAL) {
+      _hearthVisualAcc = 0;
+      updateHearthVisuals();
+    }
   }
 }
 
@@ -203,8 +215,19 @@ export function getHearthIntensity() {
  * Update hearth visuals based on state
  */
 export function updateHearthVisuals() {
-  const hearthDiv = document.getElementById('hearth');
-  const fireDiv = document.getElementById('hearthFire');
+  // Use cached DOM refs to avoid getElementById on every frame
+  if (!_cachedHearthDiv || !_cachedHearthDiv.isConnected) {
+    _cachedHearthDiv = document.getElementById('hearth');
+  }
+  if (!_cachedFireDiv || !_cachedFireDiv.isConnected) {
+    _cachedFireDiv = document.getElementById('hearthFire');
+  }
+  if (!_cachedBreathDiv || !_cachedBreathDiv.isConnected) {
+    _cachedBreathDiv = document.getElementById('hearthBreath');
+  }
+  const hearthDiv = _cachedHearthDiv;
+  const fireDiv = _cachedFireDiv;
+  const breathDiv = _cachedBreathDiv;
 
   const forgeEnabled = gameState.hearthUnlocked && gameState.hearthTurnedon;
 
@@ -216,6 +239,7 @@ export function updateHearthVisuals() {
     hearthDiv.removeAttribute('data-hearth-level');
     fireDiv.style.opacity = '0';
     fireDiv.style.transform = 'scale(0)';
+    if (breathDiv) breathDiv.style.opacity = '0';
     fireDiv.classList.add('disabled');
     lastForgeEnabledState = forgeEnabled;
     return;
@@ -243,6 +267,7 @@ export function updateHearthVisuals() {
     // Opacity increases with level
     const baseOpacity = 0.3 + (level * 0.15);
     fireDiv.style.opacity = Math.max(baseOpacity, intensity);
+    if (breathDiv) breathDiv.style.opacity = String(0.3 + (intensity * 0.5));
 
     // Add data attribute for CSS styling based on level
     hearthDiv.setAttribute('data-hearth-level', level);
@@ -254,6 +279,7 @@ export function updateHearthVisuals() {
     fireDiv.style.opacity = '0.4';
     fireDiv.style.transform = 'scale(0.5)';
     fireDiv.classList.remove('fading');
+    if (breathDiv) breathDiv.style.opacity = '0.35';
   }
 
   lastForgeEnabledState = forgeEnabled;
